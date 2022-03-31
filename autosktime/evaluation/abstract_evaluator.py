@@ -4,9 +4,12 @@ import time
 import warnings
 from typing import Optional, Union, Type, TextIO
 
+import numpy as np
 import pandas as pd
 from ConfigSpace import Configuration
 from sktime.forecasting.base import ForecastingHorizon
+# noinspection PyProtectedMember
+from sktime.forecasting.model_selection._split import BaseSplitter, SingleWindowSplitter
 from smac.tae import StatusType
 
 from autosktime.automl_common.common.utils.backend import Backend
@@ -98,6 +101,11 @@ class AbstractEvaluator:
         """Fit, predict and compute the loss for cross-validation and
         holdout (both iterative and non-iterative)"""
         raise NotImplementedError()
+
+    def get_splitter(self) -> BaseSplitter:
+        # TODO not configurable
+        test_size = 30
+        return SingleWindowSplitter(np.arange(0, test_size) + 1)
 
     def _get_model(self) -> AutoSktimeComponent:
         # TODO not configurable

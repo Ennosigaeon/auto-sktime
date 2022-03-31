@@ -70,7 +70,9 @@ class ExecuteTaFunc(AbstractTAFunc):
             memory_limit: Optional[int] = None,
             budget_type: Optional[str] = None,
             use_pynisher: bool = True,
-            **resampling_strategy_args: Any,
+            resampling_strategy_args: Dict[str, Any] = None,
+            ta: Optional[Callable] = None,
+            **kwargs
     ):
         if resampling_strategy == 'holdout':
             from autosktime.evaluation.train_evaluator import eval_holdout
@@ -90,8 +92,8 @@ class ExecuteTaFunc(AbstractTAFunc):
         super().__init__(
             ta=eval_function,
             stats=stats,
-            cost_for_crash=self.worst_possible_result,
-            use_pynisher=use_pynisher
+            use_pynisher=use_pynisher,
+            **kwargs
         )
 
         self.backend = backend
@@ -99,8 +101,11 @@ class ExecuteTaFunc(AbstractTAFunc):
         self.resampling_strategy = resampling_strategy
         self.metric = metric
         self.resampling_strategy = resampling_strategy
-        self.resampling_strategy_args = resampling_strategy_args
         self.budget_type = budget_type
+
+        if resampling_strategy_args is None:
+            resampling_strategy_args = {}
+        self.resampling_strategy_args = resampling_strategy_args
 
         if memory_limit is not None:
             memory_limit = int(math.ceil(memory_limit))

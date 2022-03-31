@@ -1,4 +1,3 @@
-import abc
 import typing
 from typing import Optional, Tuple, List
 
@@ -6,14 +5,11 @@ import numpy as np
 import pandas as pd
 from ConfigSpace import Configuration
 from sktime.forecasting.base import ForecastingHorizon
-from sktime.forecasting.model_selection import SingleWindowSplitter
-# noinspection PyProtectedMember
-from sktime.forecasting.model_selection._split import BaseSplitter
 from smac.tae import StatusType
 
 from autosktime.automl_common.common.utils.backend import Backend
-# noinspection PyProtectedMember
 from autosktime.evaluation import TaFuncResult
+# noinspection PyProtectedMember
 from autosktime.evaluation.abstract_evaluator import AbstractEvaluator, _fit_and_suppress_warnings
 from autosktime.metrics import Scorer
 from autosktime.pipeline.components.base import AutoSktimeComponent
@@ -47,12 +43,6 @@ class TrainEvaluator(AbstractEvaluator):
 
         self.models: List[AutoSktimeComponent] = []
         self.indices: List[Tuple[pd.Index, pd.Index]] = []
-
-    @abc.abstractmethod
-    def get_splitter(self) -> BaseSplitter:
-        # TODO not configurable
-        test_size = 30
-        return SingleWindowSplitter(np.arange(0, test_size) + 1)
 
     def fit_predict_and_loss(self) -> TaFuncResult:
         y = self.datamanager.data['y_train']
