@@ -3,15 +3,16 @@ from typing import Optional
 from sktime.forecasting.base import ForecastingHorizon
 
 from ConfigSpace import ConfigurationSpace, CategoricalHyperparameter
-from autosktime.pipeline.components.base import AutoSktimeComponent, AutoSktimePredictor
+from autosktime.pipeline.components.base import AutoSktimePredictor, DATASET_PROPERTIES, COMPONENT_PROPERTIES
 
 
-class NaiveForecasterComponent(AutoSktimeComponent, AutoSktimePredictor):
+class NaiveForecasterComponent(AutoSktimePredictor):
 
     def __init__(
             self,
             sp: int = 1,
             strategy: str = 'last',
+            random_state=None
     ):
         self.sp = sp
         self.strategy = strategy
@@ -40,14 +41,14 @@ class NaiveForecasterComponent(AutoSktimeComponent, AutoSktimePredictor):
         return prediction
 
     @staticmethod
-    def get_properties(dataset_properties=None):
+    def get_properties(dataset_properties: DATASET_PROPERTIES = None) -> COMPONENT_PROPERTIES:
         from sktime.forecasting.naive import NaiveForecaster
         return NaiveForecaster.get_class_tags()
 
     @staticmethod
-    def get_hyperparameter_search_space(dataset_properties=None):
+    def get_hyperparameter_search_space(dataset_properties: DATASET_PROPERTIES = None) -> ConfigurationSpace:
         strategy = CategoricalHyperparameter('strategy', ['last', 'mean', 'drift'])
-        sp = CategoricalHyperparameter('sp', [1, 2, 4, 7, 12, 24])
+        sp = CategoricalHyperparameter('sp', [1, 2, 4, 7, 12])
 
         cs = ConfigurationSpace()
         cs.add_hyperparameters([strategy, sp])

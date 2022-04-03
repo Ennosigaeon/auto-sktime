@@ -3,10 +3,10 @@ from typing import Optional, Union
 from sktime.forecasting.base import ForecastingHorizon
 
 from ConfigSpace import ConfigurationSpace, UniformIntegerHyperparameter, CategoricalHyperparameter, Constant
-from autosktime.pipeline.components.base import AutoSktimeComponent, AutoSktimePredictor
+from autosktime.pipeline.components.base import AutoSktimePredictor, DATASET_PROPERTIES, COMPONENT_PROPERTIES
 
 
-class ProphetComponent(AutoSktimeComponent, AutoSktimePredictor):
+class ProphetComponent(AutoSktimePredictor):
 
     def __init__(
             self,
@@ -15,7 +15,8 @@ class ProphetComponent(AutoSktimeComponent, AutoSktimePredictor):
             yearly_seasonality: Union[bool, str] = 'auto',
             weekly_seasonality: Union[bool, str] = 'auto',
             daily_seasonality: Union[bool, str] = 'auto',
-            seasonality_mode: str = 'additive'
+            seasonality_mode: str = 'additive',
+            random_state=None
     ):
         self.growth = growth
         self.n_changepoints = n_changepoints
@@ -50,13 +51,14 @@ class ProphetComponent(AutoSktimeComponent, AutoSktimePredictor):
         return self
 
     @staticmethod
-    def get_properties(dataset_properties=None):
+    def get_properties(dataset_properties: DATASET_PROPERTIES = None) -> COMPONENT_PROPERTIES:
         from sktime.forecasting.fbprophet import Prophet
         return Prophet.get_class_tags()
 
     @staticmethod
-    def get_hyperparameter_search_space(dataset_properties=None):
-        # TODO capacity is required for logistic growth, see https://facebook.github.io/prophet/docs/saturating_forecasts.html
+    def get_hyperparameter_search_space(dataset_properties: DATASET_PROPERTIES = None) -> ConfigurationSpace:
+        # TODO capacity is required for logistic growth, see
+        #  https://facebook.github.io/prophet/docs/saturating_forecasts.html
         # growth = CategoricalHyperparameter('growth', ['linear', 'logistic'])
         growth = Constant('growth', 'linear')
         n_changepoints = UniformIntegerHyperparameter('n_changepoints', 0, 50, default_value=25)

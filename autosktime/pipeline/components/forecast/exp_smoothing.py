@@ -4,10 +4,10 @@ from ConfigSpace import ConfigurationSpace, CategoricalHyperparameter, Forbidden
     ForbiddenEqualsClause, InCondition
 from sktime.forecasting.base import ForecastingHorizon
 
-from autosktime.pipeline.components.base import AutoSktimeComponent, AutoSktimePredictor
+from autosktime.pipeline.components.base import AutoSktimePredictor, DATASET_PROPERTIES, COMPONENT_PROPERTIES
 
 
-class ExponentialSmoothingComponent(AutoSktimeComponent, AutoSktimePredictor):
+class ExponentialSmoothingComponent(AutoSktimePredictor):
 
     def __init__(
             self,
@@ -15,6 +15,7 @@ class ExponentialSmoothingComponent(AutoSktimeComponent, AutoSktimePredictor):
             trend: str = None,
             seasonal: str = None,
             damped_trend: bool = False,
+            random_state=None
     ):
         self.sp = sp
         self.trend = trend
@@ -37,12 +38,12 @@ class ExponentialSmoothingComponent(AutoSktimeComponent, AutoSktimePredictor):
         return self
 
     @staticmethod
-    def get_properties(dataset_properties=None):
+    def get_properties(dataset_properties: DATASET_PROPERTIES = None) -> COMPONENT_PROPERTIES:
         from sktime.forecasting.exp_smoothing import ExponentialSmoothing
         return ExponentialSmoothing.get_class_tags()
 
     @staticmethod
-    def get_hyperparameter_search_space(dataset_properties=None):
+    def get_hyperparameter_search_space(dataset_properties: DATASET_PROPERTIES = None) -> ConfigurationSpace:
         cs = ConfigurationSpace()
 
         trend = CategoricalHyperparameter('trend', ['None', 'add', 'mul'])
@@ -51,7 +52,7 @@ class ExponentialSmoothingComponent(AutoSktimeComponent, AutoSktimePredictor):
         damped_trend = CategoricalHyperparameter('damped_trend', [False, True])
         damped_trend_depends_on_trend = InCondition(damped_trend, trend, ['add', 'mul'])
 
-        sp = CategoricalHyperparameter('sp', [1, 2, 4, 7, 12, 24])
+        sp = CategoricalHyperparameter('sp', [1, 2, 4, 7, 12])
         seasonal_sp = ForbiddenAndConjunction(
             ForbiddenInClause(seasonal, ['add', 'mul']),
             ForbiddenEqualsClause(sp, 1)

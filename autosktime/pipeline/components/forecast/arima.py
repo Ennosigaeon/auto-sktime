@@ -1,14 +1,14 @@
-from typing import Optional
+from typing import Optional, Union
 
 from ConfigSpace.forbidden import ForbiddenLambda
 from sktime.forecasting.base import ForecastingHorizon
 
 from ConfigSpace import ConfigurationSpace, UniformIntegerHyperparameter, CategoricalHyperparameter, \
     Constant, InCondition
-from autosktime.pipeline.components.base import AutoSktimeComponent, AutoSktimePredictor
+from autosktime.pipeline.components.base import AutoSktimePredictor, DATASET_PROPERTIES, COMPONENT_PROPERTIES
 
 
-class ARIMAComponent(AutoSktimeComponent, AutoSktimePredictor):
+class ARIMAComponent(AutoSktimePredictor):
 
     def __init__(
             self,
@@ -20,7 +20,8 @@ class ARIMAComponent(AutoSktimeComponent, AutoSktimePredictor):
             Q: int = 0,
             sp: int = 0,
             maxiter: int = 50,
-            with_intercept: bool = True
+            with_intercept: Union[bool, str] = True,
+            random_state=None
     ):
         self.p = p
         self.d = d
@@ -37,13 +38,18 @@ class ARIMAComponent(AutoSktimeComponent, AutoSktimePredictor):
 
         if self.d >= y.shape[0]:
             raise ValueError('Trainings data is too short ({}) for selected d ({}). Try to increase'
-                             'the trainings data or decrease d'.format(y.shape[0], d))
+                             'the trainings data or decrease d'.format(y.shape[0], self.d))
+
+        try:
+            with_intercept = bool(self.with_intercept)
+        except ValueError:
+            with_intercept = self.with_intercept
 
         self.estimator = ARIMA(
             order=(self.p, self.d, self.q),
             seasonal_order=(self.P, self.D, self.Q, self.sp),
             maxiter=self.maxiter,
-            with_intercept=self.with_intercept
+            with_intercept=with_intercept
         )
 
         self.estimator.fit(y, X=X, fh=fh)
@@ -64,12 +70,12 @@ class ARIMAComponent(AutoSktimeComponent, AutoSktimePredictor):
         return prediction
 
     @staticmethod
-    def get_properties(dataset_properties=None):
+    def get_properties(dataset_properties: DATASET_PROPERTIES = None) -> COMPONENT_PROPERTIES:
         from sktime.forecasting.arima import ARIMA
         return ARIMA.get_class_tags()
 
     @staticmethod
-    def get_hyperparameter_search_space(dataset_properties=None):
+    def get_hyperparameter_search_space(dataset_properties: DATASET_PROPERTIES = None) -> ConfigurationSpace:
         # order
         p = UniformIntegerHyperparameter('p', lower=0, upper=5, default_value=1)
         d = UniformIntegerHyperparameter('d', lower=0, upper=2, default_value=0)
@@ -79,11 +85,11 @@ class ARIMAComponent(AutoSktimeComponent, AutoSktimePredictor):
         P = UniformIntegerHyperparameter('P', lower=0, upper=2, default_value=0)
         D = UniformIntegerHyperparameter('D', lower=0, upper=1, default_value=0)
         Q = UniformIntegerHyperparameter('Q', lower=0, upper=2, default_value=0)
-        sp = CategoricalHyperparameter('sp', choices=[0, 2, 4, 7, 12, 24], default_value=0)
+        sp = CategoricalHyperparameter('sp', choices=[0, 2, 4, 7, 12], default_value=0)
 
-        P_depends_on_sp = InCondition(P, sp, [2, 4, 7, 12, 24])
-        D_depends_on_sp = InCondition(D, sp, [2, 4, 7, 12, 24])
-        Q_depends_on_sp = InCondition(Q, sp, [2, 4, 7, 12, 24])
+        P_depends_on_sp = InCondition(P, sp, [2, 4, 7, 12])
+        D_depends_on_sp = InCondition(D, sp, [2, 4, 7, 12])
+        Q_depends_on_sp = InCondition(Q, sp, [2, 4, 7, 12])
 
         def _invalid_sp(hp, sp) -> bool:
             return 1 < sp <= hp
@@ -92,7 +98,7 @@ class ARIMAComponent(AutoSktimeComponent, AutoSktimePredictor):
         q_must_be_smaller_than_sp = ForbiddenLambda(q, sp, _invalid_sp)
 
         maxiter = Constant('maxiter', 50)
-        with_intercept = Constant('with_intercept', True)
+        with_intercept = Constant('with_intercept', 'True')
 
         cs = ConfigurationSpace()
         cs.add_hyperparameters([p, d, q, P, D, Q, sp, maxiter, with_intercept])

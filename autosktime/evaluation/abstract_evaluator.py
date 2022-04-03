@@ -22,8 +22,8 @@ __all__ = [
     'AbstractEvaluator'
 ]
 
-from autosktime.pipeline.components.base import AutoSktimeComponent
-from autosktime.pipeline.components.forecast.ets import ETSComponent
+from autosktime.pipeline.components.base import AutoSktimeComponent, AutoSktimePredictor
+from autosktime.pipeline.components.forecast import ForecasterChoice
 
 
 def _fit_and_suppress_warnings(
@@ -81,7 +81,7 @@ class AbstractEvaluator:
         self.budget_type = budget_type
         self.starttime = time.time()
 
-    def _predict_forecast(self, fh: ForecastingHorizon, model: AutoSktimeComponent) -> pd.Series:
+    def _predict_forecast(self, fh: ForecastingHorizon, model: AutoSktimePredictor) -> pd.Series:
         def send_warnings_to_log(
                 message: Union[Warning, str],
                 category: Type[Warning],
@@ -107,9 +107,9 @@ class AbstractEvaluator:
         test_size = 30
         return SingleWindowSplitter(np.arange(0, test_size) + 1)
 
-    def _get_model(self) -> AutoSktimeComponent:
+    def _get_model(self) -> AutoSktimePredictor:
         # TODO not configurable
-        return ETSComponent(**self.configuration.get_dictionary())
+        return ForecasterChoice().set_hyperparameters(self.configuration)
 
     def _loss(self, y_true: pd.Series, y_hat: pd.Series) -> float:
         return calculate_loss(y_true, y_hat, self.task_type, self.metric)
@@ -138,7 +138,7 @@ class AbstractEvaluator:
             seed=self.seed,
             idx=self.num_run,
             budget=self.budget,
-            model=self.model,
+            model=self.model,  # TODO type does not match
             cv_model=self.models if hasattr(self, 'models') else None,
             test_predictions=y_pred.values,
             valid_predictions=None,

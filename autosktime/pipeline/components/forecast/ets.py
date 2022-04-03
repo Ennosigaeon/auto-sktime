@@ -4,10 +4,10 @@ from ConfigSpace import ConfigurationSpace, CategoricalHyperparameter, Forbidden
     ForbiddenEqualsClause, InCondition
 from sktime.forecasting.base import ForecastingHorizon
 
-from autosktime.pipeline.components.base import AutoSktimeComponent, AutoSktimePredictor
+from autosktime.pipeline.components.base import AutoSktimePredictor, DATASET_PROPERTIES, COMPONENT_PROPERTIES
 
 
-class ETSComponent(AutoSktimeComponent, AutoSktimePredictor):
+class ETSComponent(AutoSktimePredictor):
 
     def __init__(
             self,
@@ -16,14 +16,13 @@ class ETSComponent(AutoSktimeComponent, AutoSktimePredictor):
             trend: str = None,
             seasonal: str = None,
             damped_trend: bool = False,
-            **kwargs
+            random_state=None
     ):
         self.sp = sp
         self.error = error
         self.trend = trend
         self.seasonal = seasonal
         self.damped_trend = damped_trend
-        self.kwargs = kwargs
 
     def fit(self, y, X=None, fh: Optional[ForecastingHorizon] = None):
         from sktime.forecasting.ets import AutoETS
@@ -37,18 +36,17 @@ class ETSComponent(AutoSktimeComponent, AutoSktimePredictor):
             trend=trend,
             seasonal=seasonal,
             damped_trend=self.damped_trend,
-            **self.kwargs
         )
         self.estimator.fit(y, X=X, fh=fh)
         return self
 
     @staticmethod
-    def get_properties(dataset_properties=None):
+    def get_properties(dataset_properties: DATASET_PROPERTIES = None) -> COMPONENT_PROPERTIES:
         from sktime.forecasting.ets import AutoETS
         return AutoETS.get_class_tags()
 
     @staticmethod
-    def get_hyperparameter_search_space(dataset_properties=None):
+    def get_hyperparameter_search_space(dataset_properties: DATASET_PROPERTIES = None) -> ConfigurationSpace:
         cs = ConfigurationSpace()
 
         error = CategoricalHyperparameter('error', ['add', 'mul'])
@@ -58,7 +56,7 @@ class ETSComponent(AutoSktimeComponent, AutoSktimePredictor):
         damped_trend = CategoricalHyperparameter('damped_trend', [False, True])
         damped_trend_depends_on_trend = InCondition(damped_trend, trend, ['add', 'mul'])
 
-        sp = CategoricalHyperparameter('sp', [1, 2, 4, 7, 12, 24])
+        sp = CategoricalHyperparameter('sp', [1, 2, 4, 7, 12])
         seasonal_sp = ForbiddenAndConjunction(
             ForbiddenInClause(seasonal, ['add', 'mul']),
             ForbiddenEqualsClause(sp, 1)
