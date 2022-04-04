@@ -7,12 +7,12 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union, NamedTuple
 
 import numpy as np
 import pynisher
-from ConfigSpace import Configuration
 from smac.runhistory.runhistory import RunInfo, RunValue
 from smac.stats.stats import Stats
 from smac.tae import StatusType
 from smac.tae.execute_func import AbstractTAFunc
 
+from ConfigSpace import Configuration
 from autosktime.automl_common.common.utils.backend import Backend
 from autosktime.metrics import Scorer
 
@@ -77,9 +77,11 @@ class ExecuteTaFunc(AbstractTAFunc):
         if resampling_strategy == 'holdout':
             from autosktime.evaluation.train_evaluator import eval_holdout
             eval_function = eval_holdout
+        elif resampling_strategy == 'sliding_window':
+            from autosktime.evaluation.train_evaluator import eval_sliding_window
+            eval_function = eval_sliding_window
         else:
-            raise ValueError('Unknown resampling strategy %s' %
-                             resampling_strategy)
+            raise ValueError('Unknown resampling strategy {}'.format(resampling_strategy))
 
         self.worst_possible_result = get_cost_of_crash(metric)
 
@@ -87,6 +89,7 @@ class ExecuteTaFunc(AbstractTAFunc):
             fit_predict_try_except_decorator,
             ta=eval_function,
             cost_for_crash=self.worst_possible_result,
+            resampling_strategy_args=resampling_strategy_args
         )
 
         super().__init__(

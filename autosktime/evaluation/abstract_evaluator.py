@@ -2,16 +2,15 @@ import abc
 import logging
 import time
 import warnings
-from typing import Optional, Union, Type, TextIO
+from typing import Optional, Union, Type, TextIO, Any, Dict
 
-import numpy as np
 import pandas as pd
-from ConfigSpace import Configuration
 from sktime.forecasting.base import ForecastingHorizon
 # noinspection PyProtectedMember
-from sktime.forecasting.model_selection._split import BaseSplitter, SingleWindowSplitter
+from sktime.forecasting.model_selection._split import BaseSplitter
 from smac.tae import StatusType
 
+from ConfigSpace import Configuration
 from autosktime.automl_common.common.utils.backend import Backend
 from autosktime.constants import FORECAST_TASK
 from autosktime.data import AbstractDataManager
@@ -102,10 +101,10 @@ class AbstractEvaluator:
         holdout (both iterative and non-iterative)"""
         raise NotImplementedError()
 
-    def get_splitter(self) -> BaseSplitter:
-        # TODO not configurable
-        test_size = 30
-        return SingleWindowSplitter(np.arange(0, test_size) + 1)
+    def _get_splitter(self, splitter: Type[BaseSplitter], splitter_kwargs: Dict[str, Any]) -> BaseSplitter:
+        if splitter_kwargs is None:
+            splitter_kwargs = {}
+        return splitter(**splitter_kwargs)
 
     def _get_model(self) -> AutoSktimePredictor:
         # TODO not configurable
