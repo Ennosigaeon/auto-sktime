@@ -1,5 +1,6 @@
-from typing import Optional, Union
+from typing import Union
 
+import pandas as pd
 from sktime.forecasting.base import ForecastingHorizon
 
 from ConfigSpace import ConfigurationSpace, UniformIntegerHyperparameter, CategoricalHyperparameter, Constant
@@ -25,7 +26,7 @@ class ProphetComponent(AutoSktimePredictor):
         self.daily_seasonality = daily_seasonality
         self.seasonality_mode = seasonality_mode
 
-    def fit(self, y, X=None, fh: Optional[ForecastingHorizon] = None):
+    def fit(self, y, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
         from sktime.forecasting.fbprophet import Prophet
 
         def as_bool(value: Union[str, bool]) -> bool:

@@ -1,5 +1,6 @@
-from typing import Optional, Union
+from typing import Union
 
+import pandas as pd
 from ConfigSpace.forbidden import ForbiddenLambda
 from sktime.forecasting.base import ForecastingHorizon
 
@@ -33,7 +34,7 @@ class ARIMAComponent(AutoSktimePredictor):
         self.maxiter = maxiter
         self.with_intercept = with_intercept
 
-    def fit(self, y, X=None, fh: Optional[ForecastingHorizon] = None):
+    def fit(self, y, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
         from sktime.forecasting.arima import ARIMA
 
         if self.d >= y.shape[0]:
@@ -55,11 +56,7 @@ class ARIMAComponent(AutoSktimePredictor):
         self.estimator.fit(y, X=X, fh=fh)
         return self
 
-    def predict(
-            self,
-            fh: Optional[ForecastingHorizon] = None,
-            X=None
-    ):
+    def predict(self, fh: ForecastingHorizon = None, X: pd.DataFrame = None):
         prediction = super().predict(fh, X)
 
         if self.d > 0 and fh is not None and self.estimator.fh[0] == fh.to_pandas()[0]:

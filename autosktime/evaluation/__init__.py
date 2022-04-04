@@ -37,7 +37,7 @@ def fit_predict_try_except_decorator(
         exception_traceback = traceback.format_exc()
         error_message = repr(e)
 
-        print("Exception handling in `fit_predict_try_except_decorator`: "
+        logging.getLogger("TAE").exception("Exception handling in `fit_predict_try_except_decorator`: "
               "traceback: {} \nerror message: {}".format(exception_traceback, error_message))
 
         return TaFuncResult(
@@ -160,7 +160,7 @@ class ExecuteTaFunc(AbstractTAFunc):
         elif run_info.cutoff != int(np.ceil(run_info.cutoff)) and not isinstance(run_info.cutoff, int):
             run_info = run_info._replace(cutoff=int(np.ceil(run_info.cutoff)))
 
-        self.logger.info("Starting to evaluate configuration {}".format(run_info.config.config_id))
+        self.logger.info("Starting to evaluate configuration {}: {}".format(run_info.config.config_id, run_info.config.get_dictionary()))
         info, value = super().run_wrapper(run_info=run_info)
 
         if 'status' in value.additional_info:

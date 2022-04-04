@@ -1,5 +1,4 @@
-from typing import Optional
-
+import pandas as pd
 from sktime.forecasting.base import ForecastingHorizon
 
 from ConfigSpace import ConfigurationSpace, CategoricalHyperparameter
@@ -17,7 +16,7 @@ class NaiveForecasterComponent(AutoSktimePredictor):
         self.sp = sp
         self.strategy = strategy
 
-    def fit(self, y, X=None, fh: Optional[ForecastingHorizon] = None):
+    def fit(self, y, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
         from sktime.forecasting.naive import NaiveForecaster
         self.estimator = NaiveForecaster(
             sp=self.sp,
@@ -26,12 +25,9 @@ class NaiveForecasterComponent(AutoSktimePredictor):
         self.estimator.fit(y, X=X, fh=fh)
         return self
 
-    def predict(
-            self,
-            fh: Optional[ForecastingHorizon] = None,
-            X=None
-    ):
-        prediction = super().predict(fh, X)
+    def predict(self, fh: ForecastingHorizon = None, X: pd.DataFrame = None):
+        # Naive forecaster can not handle X
+        prediction = super().predict(fh, X=None)
 
         if self.sp > 1 and fh is not None and self.estimator.fh[0] == fh.to_pandas()[0]:
             # NaiveForecaster uses the last self.sp terms for forecasting. In case that the training

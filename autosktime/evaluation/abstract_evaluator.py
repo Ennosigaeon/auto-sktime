@@ -28,7 +28,8 @@ from autosktime.pipeline.components.forecast import ForecasterChoice
 def _fit_and_suppress_warnings(
         logger: logging.Logger,
         model: AutoSktimeComponent,
-        y: pd.Series
+        y: pd.Series,
+        X: Optional[pd.DataFrame]
 ) -> AutoSktimeComponent:
     def send_warnings_to_log(
             message: Union[Warning, str],
@@ -42,7 +43,7 @@ def _fit_and_suppress_warnings(
 
     with warnings.catch_warnings():
         warnings.showwarning = send_warnings_to_log
-        model.fit(y)
+        model.fit(y, X=X)
 
     return model
 
@@ -80,7 +81,12 @@ class AbstractEvaluator:
         self.budget_type = budget_type
         self.starttime = time.time()
 
-    def _predict_forecast(self, fh: ForecastingHorizon, model: AutoSktimePredictor) -> pd.Series:
+    def _predict_forecast(
+            self,
+            fh: ForecastingHorizon,
+            X: Optional[pd.DataFrame],
+            model: AutoSktimePredictor
+    ) -> pd.Series:
         def send_warnings_to_log(
                 message: Union[Warning, str],
                 category: Type[Warning],
@@ -93,7 +99,7 @@ class AbstractEvaluator:
 
         with warnings.catch_warnings():
             warnings.showwarning = send_warnings_to_log
-            return model.predict(fh)
+            return model.predict(fh, X=X)
 
     @abc.abstractmethod
     def fit_predict_and_loss(self) -> None:

@@ -2,17 +2,17 @@ import copy
 import logging
 from typing import Dict, Any, Optional
 
-from ConfigSpace import ConfigurationSpace
 from smac.callbacks import IncorporateRunResultCallback
 from smac.facade.smac_ac_facade import SMAC4AC
 from smac.intensification.simple_intensifier import SimpleIntensifier
 from smac.runhistory.runhistory2epm import RunHistory2EPM4LogCost
 from smac.scenario.scenario import Scenario
 
+from ConfigSpace import ConfigurationSpace
 from autosktime.automl_common.common.utils.backend import Backend
-from autosktime.metrics import Scorer
 from autosktime.data import AbstractDataManager
 from autosktime.evaluation import ExecuteTaFunc, get_cost_of_crash
+from autosktime.metrics import Scorer
 
 
 class AutoMLSMBO:

@@ -1,5 +1,4 @@
-from typing import Optional
-
+import pandas as pd
 from sktime.forecasting.base import ForecastingHorizon
 
 from ConfigSpace import ConfigurationSpace, CategoricalHyperparameter
@@ -17,7 +16,7 @@ class ThetaComponent(AutoSktimePredictor):
         self.sp = sp
         self.deseasonalize = deseasonalize
 
-    def fit(self, y, X=None, fh: Optional[ForecastingHorizon] = None):
+    def fit(self, y, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
         from sktime.forecasting.theta import ThetaForecaster
         self.estimator = ThetaForecaster(
             sp=self.sp,
@@ -26,11 +25,7 @@ class ThetaComponent(AutoSktimePredictor):
         self.estimator.fit(y, X=X, fh=fh)
         return self
 
-    def predict(
-            self,
-            fh: Optional[ForecastingHorizon] = None,
-            X=None
-    ):
+    def predict(self, fh: ForecastingHorizon = None, X: pd.DataFrame = None):
         prediction = super().predict(fh, X)
 
         if self.sp > 1 and fh is not None and self.estimator.fh[0] == fh.to_pandas()[0]:

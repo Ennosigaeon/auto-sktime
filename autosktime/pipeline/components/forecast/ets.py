@@ -1,4 +1,5 @@
-from typing import Optional
+import pandas as pd
+from sktime.forecasting.base import ForecastingHorizon
 
 from ConfigSpace import ConfigurationSpace, CategoricalHyperparameter, ForbiddenInClause, ForbiddenAndConjunction, \
     ForbiddenEqualsClause, InCondition
@@ -24,7 +25,7 @@ class ETSComponent(AutoSktimePredictor):
         self.seasonal = seasonal
         self.damped_trend = damped_trend
 
-    def fit(self, y, X=None, fh: Optional[ForecastingHorizon] = None):
+    def fit(self, y, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
         from sktime.forecasting.ets import AutoETS
 
         trend = None if self.trend == 'None' else self.trend

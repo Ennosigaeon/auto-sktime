@@ -5,12 +5,13 @@ import pkgutil
 import sys
 from abc import ABC
 from collections import OrderedDict
-from typing import Optional, Dict, Type, List, Any
+from typing import Dict, Type, List, Any
 
 import pandas as pd
-from ConfigSpace import Configuration, ConfigurationSpace
 from sklearn.base import BaseEstimator
 from sktime.forecasting.base import ForecastingHorizon
+
+from ConfigSpace import Configuration, ConfigurationSpace
 
 DATASET_PROPERTIES = Any
 COMPONENT_PROPERTIES = Any
@@ -52,7 +53,7 @@ class AutoSktimeComponent(BaseEstimator):
         """
         raise NotImplementedError()
 
-    def fit(self, y: pd.Series, X=None, fh: ForecastingHorizon = None):
+    def fit(self, y: pd.Series, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
         """The fit function calls the fit function of the underlying
         sktime model and returns `self`.
 
@@ -93,11 +94,7 @@ class AutoSktimeComponent(BaseEstimator):
 class AutoSktimePredictor(AutoSktimeComponent, ABC):
 
     # noinspection PyUnresolvedReferences
-    def predict(
-            self,
-            fh: Optional[ForecastingHorizon] = None,
-            X=None
-    ):
+    def predict(self, fh: ForecastingHorizon = None, X: pd.DataFrame = None):
         if self.estimator is None:
             raise NotImplementedError
         return self.estimator.predict(fh=fh, X=X)
@@ -192,7 +189,7 @@ class AutoSktimeChoice(AutoSktimePredictor, ABC):
     ) -> Configuration:
         raise NotImplementedError()
 
-    def fit(self, y: pd.Series, X=None, fh: ForecastingHorizon = None):
+    def fit(self, y: pd.Series, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
         self.fitted_ = True
         self.estimator.fit(y, X=X, fh=fh)
         return self

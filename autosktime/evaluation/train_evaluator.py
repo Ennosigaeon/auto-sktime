@@ -50,7 +50,7 @@ class TrainEvaluator(AbstractEvaluator):
         self.indices: List[Tuple[pd.Index, pd.Index]] = []
 
     def fit_predict_and_loss(self) -> TaFuncResult:
-        y = self.datamanager.data['y_train']
+        y = self.datamanager.y
 
         n = self.splitter.get_n_splits(y)
         self.models = [None] * n
@@ -107,18 +107,26 @@ class TrainEvaluator(AbstractEvaluator):
             train: np.ndarray,
             test: np.ndarray
     ) -> Tuple[pd.Series, pd.Series]:
-        y = self.datamanager.data['y_train']
+        y = self.datamanager.y
         y_train = y.iloc[train]
         y_test = y.iloc[test]
 
+        X = self.datamanager.X
+        if X is None:
+            X_train = None
+            X_test = None
+        else:
+            X_train = X.iloc[train, :]
+            X_test = X.iloc[test, :]
+
         model = self._get_model()
-        _fit_and_suppress_warnings(self.logger, model, y_train)
+        _fit_and_suppress_warnings(self.logger, model, y_train, X_train)
 
         self.models[fold] = model
         self.indices[fold] = (y_train.index, y_test.index)
 
-        train_pred = self.predict_function(ForecastingHorizon(y_train.index, is_relative=False), model)
-        test_pred = self.predict_function(ForecastingHorizon(y_test.index, is_relative=False), model)
+        train_pred = self.predict_function(ForecastingHorizon(y_train.index, is_relative=False), X_train, model)
+        test_pred = self.predict_function(ForecastingHorizon(y_test.index, is_relative=False), X_test, model)
 
         return train_pred, test_pred
 
