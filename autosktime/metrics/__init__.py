@@ -1,3 +1,4 @@
+import warnings
 from abc import abstractmethod
 from typing import Any, Optional
 
@@ -85,4 +86,6 @@ class MeanAbsolutePercentageError(Scorer):
         super().__init__('mape', 0., 1., 1., kwargs)
 
     def __call__(self, y_true: np.ndarray, y_pred: np.ndarray, horizon_weight: Optional[np.ndarray] = None) -> float:
-        return mean_absolute_percentage_error(y_true, y_pred, horizon_weight=horizon_weight, **self._kwargs)
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', FutureWarning)
+            return mean_absolute_percentage_error(y_true, y_pred, horizon_weight=horizon_weight, **self._kwargs)

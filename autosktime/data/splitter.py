@@ -13,13 +13,14 @@ from sktime.forecasting.model_selection._split import ACCEPTED_Y_TYPES, SPLIT_GE
 class SingleWindowSplitter(SingleWindowSplitter_):
 
     def __init__(self, fh: float = 0.2):
-        super().__init__(fh)
+        super().__init__(1)
+        self.fh_ = fh
         self._is_init = False
 
     def _init(self, y: ACCEPTED_Y_TYPES):
         if not self._is_init:
             n_timepoints = y.shape[0]
-            test_size = np.floor(n_timepoints * self.fh) + 1
+            test_size = np.floor(n_timepoints * self.fh_) + 1
             self.fh = ForecastingHorizon(np.arange(1, test_size, dtype=int))
             self._is_init = True
 
