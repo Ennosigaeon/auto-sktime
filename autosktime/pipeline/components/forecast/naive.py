@@ -2,6 +2,7 @@ import pandas as pd
 from sktime.forecasting.base import ForecastingHorizon
 
 from ConfigSpace import ConfigurationSpace, CategoricalHyperparameter
+from autosktime.constants import IGNORES_EXOGENOUS_X, HANDLES_UNIVARIATE, HANDLES_MISSING, HANDLES_MULTIVARIATE
 from autosktime.pipeline.components.base import AutoSktimePredictor, DATASET_PROPERTIES, COMPONENT_PROPERTIES
 
 
@@ -38,8 +39,13 @@ class NaiveForecasterComponent(AutoSktimePredictor):
 
     @staticmethod
     def get_properties(dataset_properties: DATASET_PROPERTIES = None) -> COMPONENT_PROPERTIES:
-        from sktime.forecasting.naive import NaiveForecaster
-        return NaiveForecaster.get_class_tags()
+        return {
+            HANDLES_UNIVARIATE: True,
+            HANDLES_MULTIVARIATE: True,
+            IGNORES_EXOGENOUS_X: True,
+            HANDLES_MISSING: True,
+            'enforce_index_type': None
+        }
 
     @staticmethod
     def get_hyperparameter_search_space(dataset_properties: DATASET_PROPERTIES = None) -> ConfigurationSpace:

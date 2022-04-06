@@ -2,6 +2,7 @@ import pandas as pd
 from sktime.forecasting.base import ForecastingHorizon
 
 from ConfigSpace import ConfigurationSpace, CategoricalHyperparameter
+from autosktime.constants import IGNORES_EXOGENOUS_X, HANDLES_UNIVARIATE, HANDLES_MISSING, HANDLES_MULTIVARIATE
 from autosktime.pipeline.components.base import AutoSktimePredictor, DATASET_PROPERTIES, COMPONENT_PROPERTIES
 
 
@@ -37,8 +38,13 @@ class ThetaComponent(AutoSktimePredictor):
 
     @staticmethod
     def get_properties(dataset_properties: DATASET_PROPERTIES = None) -> COMPONENT_PROPERTIES:
-        from sktime.forecasting.theta import ThetaForecaster
-        return ThetaForecaster.get_class_tags()
+        return {
+            HANDLES_UNIVARIATE: True,
+            HANDLES_MULTIVARIATE: False,
+            IGNORES_EXOGENOUS_X: True,
+            HANDLES_MISSING: False,
+            'enforce_index_type': None
+        }
 
     @staticmethod
     def get_hyperparameter_search_space(dataset_properties: DATASET_PROPERTIES = None) -> ConfigurationSpace:

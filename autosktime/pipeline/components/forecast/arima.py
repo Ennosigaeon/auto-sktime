@@ -6,6 +6,7 @@ from sktime.forecasting.base import ForecastingHorizon
 
 from ConfigSpace import ConfigurationSpace, UniformIntegerHyperparameter, CategoricalHyperparameter, \
     Constant, InCondition
+from autosktime.constants import IGNORES_EXOGENOUS_X, HANDLES_UNIVARIATE, HANDLES_MISSING, HANDLES_MULTIVARIATE
 from autosktime.pipeline.components.base import AutoSktimePredictor, DATASET_PROPERTIES, COMPONENT_PROPERTIES
 
 
@@ -68,8 +69,13 @@ class ARIMAComponent(AutoSktimePredictor):
 
     @staticmethod
     def get_properties(dataset_properties: DATASET_PROPERTIES = None) -> COMPONENT_PROPERTIES:
-        from sktime.forecasting.arima import ARIMA
-        return ARIMA.get_class_tags()
+        return {
+            HANDLES_UNIVARIATE: True,
+            HANDLES_MULTIVARIATE: False,
+            IGNORES_EXOGENOUS_X: False,
+            HANDLES_MISSING: False,
+            'enforce_index_type': None
+        }
 
     @staticmethod
     def get_hyperparameter_search_space(dataset_properties: DATASET_PROPERTIES = None) -> ConfigurationSpace:
