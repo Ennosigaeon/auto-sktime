@@ -1,9 +1,12 @@
 import pandas as pd
+
+from autosktime.data import DatasetProperties
 from sktime.forecasting.base import ForecastingHorizon
 
 from ConfigSpace import ConfigurationSpace, CategoricalHyperparameter
-from autosktime.constants import IGNORES_EXOGENOUS_X, HANDLES_UNIVARIATE, HANDLES_MISSING, HANDLES_MULTIVARIATE
-from autosktime.pipeline.components.base import AutoSktimePredictor, DATASET_PROPERTIES, COMPONENT_PROPERTIES
+from autosktime.constants import IGNORES_EXOGENOUS_X, HANDLES_UNIVARIATE, HANDLES_MISSING, HANDLES_MULTIVARIATE, \
+    SUPPORTED_INDEX_TYPES
+from autosktime.pipeline.components.base import AutoSktimePredictor, COMPONENT_PROPERTIES
 
 
 class ThetaComponent(AutoSktimePredictor):
@@ -37,17 +40,17 @@ class ThetaComponent(AutoSktimePredictor):
         return prediction
 
     @staticmethod
-    def get_properties(dataset_properties: DATASET_PROPERTIES = None) -> COMPONENT_PROPERTIES:
+    def get_properties(dataset_properties: DatasetProperties = None) -> COMPONENT_PROPERTIES:
         return {
             HANDLES_UNIVARIATE: True,
             HANDLES_MULTIVARIATE: False,
             IGNORES_EXOGENOUS_X: True,
             HANDLES_MISSING: False,
-            'enforce_index_type': None
+            SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.PeriodIndex]
         }
 
     @staticmethod
-    def get_hyperparameter_search_space(dataset_properties: DATASET_PROPERTIES = None) -> ConfigurationSpace:
+    def get_hyperparameter_search_space(dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
         deseasonalize = CategoricalHyperparameter('deseasonalize', [True, False])
         sp = CategoricalHyperparameter('sp', [1, 2, 4, 7, 12])
 

@@ -9,18 +9,19 @@ from typing import Dict, Type, List, Any
 
 import pandas as pd
 from sklearn.base import BaseEstimator
+
+from autosktime.data import DatasetProperties
 from sktime.forecasting.base import ForecastingHorizon
 
 from ConfigSpace import Configuration, ConfigurationSpace
 
-DATASET_PROPERTIES = Any
 COMPONENT_PROPERTIES = Any
 
 
 class AutoSktimeComponent(BaseEstimator):
     @staticmethod
     @abc.abstractmethod
-    def get_properties(dataset_properties: DATASET_PROPERTIES = None) -> COMPONENT_PROPERTIES:
+    def get_properties(dataset_properties: DatasetProperties = None) -> COMPONENT_PROPERTIES:
         """Get the properties of the underlying algorithm.
 
         Find more information at :ref:`get_properties`
@@ -38,7 +39,7 @@ class AutoSktimeComponent(BaseEstimator):
 
     @staticmethod
     @abc.abstractmethod
-    def get_hyperparameter_search_space(dataset_properties: DATASET_PROPERTIES = None) -> ConfigurationSpace:
+    def get_hyperparameter_search_space(dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
         """Return the configuration space of this classification algorithm.
 
         Parameters
@@ -129,7 +130,7 @@ class AutoSktimeChoice(AutoSktimePredictor, ABC):
 
     def get_available_components(
             self,
-            dataset_properties: DATASET_PROPERTIES = None,
+            dataset_properties: DatasetProperties = None,
             include: List[str] = None,
             exclude: List[str] = None
     ) -> Dict[str, Type[AutoSktimeComponent]]:
@@ -182,7 +183,7 @@ class AutoSktimeChoice(AutoSktimePredictor, ABC):
     @abc.abstractmethod
     def get_hyperparameter_search_space(
             self,
-            dataset_properties: DATASET_PROPERTIES = None,
+            dataset_properties: DatasetProperties = None,
             default: str = None,
             include: List[str] = None,
             exclude: List[str] = None

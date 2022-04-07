@@ -2,11 +2,15 @@ import os
 from collections import OrderedDict
 from typing import List, Dict, Type
 
+import pandas as pd
 from ConfigSpace.configuration_space import ConfigurationSpace
 from ConfigSpace.hyperparameters import CategoricalHyperparameter
 
+from autosktime.constants import SUPPORTED_INDEX_TYPES, HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, IGNORES_EXOGENOUS_X, \
+    HANDLES_MISSING
+from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import AutoSktimeComponent, find_components, AutoSktimeChoice, \
-    DATASET_PROPERTIES, AutoSktimePredictor
+    AutoSktimePredictor
 
 forecaster_directory = os.path.split(__file__)[0]
 _forecasters = find_components(__package__, forecaster_directory, AutoSktimePredictor)
@@ -15,8 +19,14 @@ _forecasters = find_components(__package__, forecaster_directory, AutoSktimePred
 class ForecasterChoice(AutoSktimeChoice):
 
     @staticmethod
-    def get_properties(dataset_properties: DATASET_PROPERTIES = None):
-        return {}
+    def get_properties(dataset_properties: DatasetProperties = None):
+        return {
+            HANDLES_UNIVARIATE: True,
+            HANDLES_MULTIVARIATE: False,
+            IGNORES_EXOGENOUS_X: False,
+            HANDLES_MISSING: False,
+            SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.DatetimeIndex, pd.PeriodIndex]
+        }
 
     @classmethod
     def get_components(cls) -> Dict[str, Type[AutoSktimeComponent]]:
@@ -27,7 +37,7 @@ class ForecasterChoice(AutoSktimeChoice):
     @classmethod
     def get_available_components(
             cls,
-            dataset_properties: DATASET_PROPERTIES = None,
+            dataset_properties: DatasetProperties = None,
             include: List[str] = None,
             exclude: List[str] = None
     ) -> Dict[str, Type[AutoSktimeComponent]]:
@@ -54,7 +64,9 @@ class ForecasterChoice(AutoSktimeChoice):
             if entry == ForecasterChoice:
                 continue
 
-            # TODO check dataset properties with component properties
+            if dataset_properties is not None:
+                if dataset_properties.index_type not in entry.get_properties()[SUPPORTED_INDEX_TYPES]:
+                    continue
 
             components_dict[name] = entry
 
@@ -62,14 +74,11 @@ class ForecasterChoice(AutoSktimeChoice):
 
     def get_hyperparameter_search_space(
             self,
-            dataset_properties: DATASET_PROPERTIES = None,
+            dataset_properties: DatasetProperties = None,
             default: str = None,
             include: List[str] = None,
             exclude: List[str] = None
     ) -> ConfigurationSpace:
-        if dataset_properties is None:
-            dataset_properties = {}
-
         if include is not None and exclude is not None:
             raise ValueError("The arguments include and exclude cannot be used together.")
 
