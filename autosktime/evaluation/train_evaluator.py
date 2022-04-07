@@ -12,7 +12,7 @@ from autosktime.data.splitter import BaseSplitter
 from autosktime.evaluation import TaFuncResult
 # noinspection PyProtectedMember
 from autosktime.evaluation.abstract_evaluator import AbstractEvaluator, _fit_and_suppress_warnings
-from autosktime.metrics import Scorer
+from autosktime.metrics import BaseMetric
 from autosktime.pipeline.components.base import AutoSktimeComponent
 
 EvalResult = NamedTuple('EvalResult', [
@@ -32,7 +32,7 @@ class TrainEvaluator(AbstractEvaluator):
     def __init__(
             self,
             backend: Backend,
-            metric: Scorer,
+            metric: BaseMetric,
             configuration: Configuration,
             splitter: BaseSplitter,
             seed: int = 1,
@@ -139,7 +139,7 @@ class TrainEvaluator(AbstractEvaluator):
 def evaluate(
         config: Configuration,
         backend: Backend,
-        metric: Scorer,
+        metric: BaseMetric,
         seed: int,
         num_run: int,
         splitter: BaseSplitter,

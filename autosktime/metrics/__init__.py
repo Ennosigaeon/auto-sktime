@@ -1,71 +1,52 @@
 import warnings
-from abc import abstractmethod
-from typing import Any, Optional
+from typing import Optional
 
 import numpy as np
-import pandas as pd
-from sktime.performance_metrics.forecasting import mean_absolute_percentage_error
+from sktime.forecasting.model_selection._split import ACCEPTED_Y_TYPES
+from sktime.performance_metrics.forecasting import (
+    MeanAbsolutePercentageError as MeanAbsolutePercentageError_,
+    MedianAbsolutePercentageError as MedianAbsolutePercentageError_
+)
+# noinspection PyProtectedMember
+from sktime.performance_metrics.forecasting._classes import _BaseForecastingErrorMetric
 
 from autosktime.constants import FORECAST_TASK
 
+BaseMetric = _BaseForecastingErrorMetric
 
-class Scorer:
-    def __init__(
-            self,
-            name: str,
-            optimum: float,
-            worst_possible_result: float,
-            sign: float,
-            kwargs: Any
-    ) -> None:
-        self.name = name
-        self.optimum = optimum
-        self._kwargs = kwargs
 
-        self._worst_possible_result = worst_possible_result
-        self._sign = sign
-
-    @abstractmethod
-    def __call__(
-            self,
-            y_true: pd.Series,
-            y_pred: pd.Series,
-            horizon_weight: Optional[np.ndarray] = None
-    ) -> float:
-        raise NotImplementedError()
-
-    def __repr__(self) -> str:
-        return self.name
+class _BoundedMetricMixin:
+    optimum: float
+    worst_possible_result: float
 
 
 def calculate_loss(
-        solution: pd.Series,
-        prediction: pd.Series,
+        solution: ACCEPTED_Y_TYPES,
+        prediction: ACCEPTED_Y_TYPES,
         task_type: int,
-        metric: Scorer,
+        metric: BaseMetric,
 ) -> float:
     """
     Returns a loss (a magnitude that allows casting the
     optimization problem as a minimization one) for the
-    given Auto-Sklearn Scorer object
+    given BaseMetric object
 
     Parameters
     ----------
-    solution: np.ndarray
+    solution: Union[pd.Series, pd.DataFrame, np.ndarray, pd.Index]
         The ground truth of the targets
-    prediction: np.ndarray
+    prediction: Union[pd.Series, pd.DataFrame, np.ndarray, pd.Index]
         The best estimate from the model, of the given targets
     task_type: int
-        To understand if the problem task is classification
-        or regression
-    metric: Scorer
+        To understand the problem task
+    metric: BaseMetric
         Object that host a function to calculate how good the
         prediction is according to the solution.
 
     Returns
     -------
-    float or Dict[str, float]
-        A loss function for each of the provided scorer objects
+    float
+        The loss value
     """
 
     if task_type in FORECAST_TASK:
@@ -73,19 +54,40 @@ def calculate_loss(
     else:
         raise NotImplementedError('Scoring of non FORECAST_TASK not supported')
 
-    if metric._sign > 0:
-        rval = score
+    if metric.greater_is_better:
+        if hasattr(metric, 'optimum'):
+            return metric.optimum - score
+        else:
+            raise ValueError('Metric {} has to implement {}'.format(type(metric), _BoundedMetricMixin))
     else:
-        rval = metric.optimum - score
-    return rval
+        return score
 
 
-class MeanAbsolutePercentageError(Scorer):
+def get_cost_of_crash(metric: BaseMetric) -> float:
+    if metric.greater_is_better and hasattr(metric, 'optimum') and hasattr(metric, 'worst_possible_result'):
+        return metric.optimum - metric.worst_possible_result
+    elif not metric.greater_is_better and hasattr(metric, 'worst_possible_result'):
+        return metric.worst_possible_result
+    else:
+        raise ValueError('Metric {} has to implement {}'.format(type(metric), _BoundedMetricMixin))
 
-    def __init__(self, **kwargs):
-        super().__init__('mape', 0., 1., 1., kwargs)
+
+class MeanAbsolutePercentageError(_BoundedMetricMixin, MeanAbsolutePercentageError_):
+
+    def __init__(self):
+        super().__init__()
+        self.optimum = 0.
+        self.worst_possible_result = 1.
 
     def __call__(self, y_true: np.ndarray, y_pred: np.ndarray, horizon_weight: Optional[np.ndarray] = None) -> float:
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', FutureWarning)
-            return mean_absolute_percentage_error(y_true, y_pred, horizon_weight=horizon_weight, **self._kwargs)
+            return super().__call__(y_true, y_pred, horizon_weight=horizon_weight)
+
+
+class MedianAbsolutePercentageError(_BoundedMetricMixin, MedianAbsolutePercentageError_):
+
+    def __init__(self):
+        super().__init__()
+        self.optimum = 0.
+        self.worst_possible_result = 1.

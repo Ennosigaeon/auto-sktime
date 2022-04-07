@@ -13,7 +13,7 @@ from autosktime.automl_common.common.utils.backend import Backend
 from autosktime.constants import FORECAST_TASK
 from autosktime.data import AbstractDataManager
 from autosktime.evaluation import TaFuncResult
-from autosktime.metrics import Scorer, calculate_loss
+from autosktime.metrics import BaseMetric, calculate_loss
 
 __all__ = [
     'AbstractEvaluator'
@@ -50,7 +50,7 @@ class AbstractEvaluator:
     def __init__(
             self,
             backend: Backend,
-            metric: Scorer,
+            metric: BaseMetric,
             configuration: Configuration,
             seed: int = 1,
             num_run: int = 0,
@@ -132,6 +132,7 @@ class AbstractEvaluator:
         return TaFuncResult(loss=loss, additional_run_info=additional_run_info, status=status)
 
     def file_output(self, y_pred: pd.Series) -> None:
+        # noinspection PyTypeChecker
         self.backend.save_numrun_to_dir(
             seed=self.seed,
             idx=self.num_run,

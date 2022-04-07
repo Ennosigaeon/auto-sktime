@@ -15,7 +15,7 @@ from smac.tae.execute_func import AbstractTAFunc
 from ConfigSpace import Configuration
 from autosktime.automl_common.common.utils.backend import Backend
 from autosktime.data.splitter import BaseSplitter
-from autosktime.metrics import Scorer
+from autosktime.metrics import BaseMetric, get_cost_of_crash
 
 TaFuncResult = NamedTuple('TaFuncResult', [
     ('loss', float),
@@ -48,17 +48,6 @@ def fit_predict_try_except_decorator(
         )
 
 
-def get_cost_of_crash(metric: Scorer) -> float:
-    # This function translates worst_possible_result to be a minimization problem. For metrics like accuracy that are
-    # bounded to [0,1] metric.optimum == 1 is the worst cost.
-    if metric._sign > 0:
-        worst_possible_result = metric._worst_possible_result
-    else:
-        worst_possible_result = metric.optimum - metric._worst_possible_result
-
-    return worst_possible_result
-
-
 class ExecuteTaFunc(AbstractTAFunc):
 
     def __init__(
@@ -66,7 +55,7 @@ class ExecuteTaFunc(AbstractTAFunc):
             backend: Backend,
             seed: int,
             splitter: BaseSplitter,
-            metric: Scorer,
+            metric: BaseMetric,
             stats: Stats,
             memory_limit: Optional[int] = None,
             budget_type: Optional[str] = None,

@@ -13,7 +13,7 @@ from autosktime.automl_common.common.utils.backend import Backend
 from autosktime.data import AbstractDataManager
 from autosktime.data.splitter import BaseSplitter
 from autosktime.evaluation import ExecuteTaFunc, get_cost_of_crash
-from autosktime.metrics import Scorer
+from autosktime.metrics import BaseMetric
 
 
 class AutoMLSMBO:
@@ -26,7 +26,7 @@ class AutoMLSMBO:
             total_walltime_limit: float,
             func_eval_time_limit: float,
             memory_limit: float,
-            metric: Scorer,
+            metric: BaseMetric,
             splitter: BaseSplitter,
             seed: int = 1,
             trials_callback: Optional[IncorporateRunResultCallback] = None
