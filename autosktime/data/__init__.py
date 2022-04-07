@@ -1,15 +1,41 @@
 import abc
-from typing import Any, Dict, Optional, Union, Type
+from collections.abc import MutableMapping
+from typing import Any, Dict, Optional, Union, Type, Iterator
 
 import pandas as pd
 
 from autosktime.constants import UNIVARIATE_ENDOGENOUS_FORECAST, UNIVARIATE_EXOGENOUS_FORECAST
 
 
-class DatasetProperties:
+class DatasetProperties(MutableMapping):
 
-    def __init__(self, index_type: Type[pd.Index]):
-        self.index_type = index_type
+    def __init__(self, index_type: Type[pd.Index] = None, **kwargs):
+        self._data = dict(
+            kwargs,
+            index_type=index_type,
+        )
+
+    @property
+    def index_type(self):
+        return self._data['index_type']
+
+    def __setitem__(self, k: str, v: Any) -> None:
+        self._data[k] = v
+
+    def __delitem__(self, v: str) -> None:
+        del self._data[v]
+
+    def __getitem__(self, k: str) -> Any:
+        return self._data[k]
+
+    def __len__(self) -> int:
+        return len(self._data)
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._data)
+
+    def __copy__(self) -> 'DatasetProperties':
+        return DatasetProperties(**self._data)
 
 
 class AbstractDataManager:
