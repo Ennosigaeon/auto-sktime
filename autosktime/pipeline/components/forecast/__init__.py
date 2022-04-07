@@ -34,44 +34,6 @@ class ForecasterChoice(AutoSktimeChoice):
         components.update(_forecasters)
         return components
 
-    @classmethod
-    def get_available_components(
-            cls,
-            dataset_properties: DatasetProperties = None,
-            include: List[str] = None,
-            exclude: List[str] = None
-    ) -> Dict[str, Type[AutoSktimeComponent]]:
-        available_comp = cls.get_components()
-        components_dict = OrderedDict()
-
-        if include is not None and exclude is not None:
-            raise ValueError("The argument include and exclude cannot be used together.")
-
-        if include is not None:
-            for incl in include:
-                if incl not in available_comp:
-                    raise ValueError("Trying to include unknown component: {}".format(incl))
-
-        for name in available_comp:
-            if include is not None and name not in include:
-                continue
-            elif exclude is not None and name in exclude:
-                continue
-
-            entry = available_comp[name]
-
-            # Avoid infinite loop
-            if entry == ForecasterChoice:
-                continue
-
-            if dataset_properties is not None:
-                if dataset_properties.index_type not in entry.get_properties()[SUPPORTED_INDEX_TYPES]:
-                    continue
-
-            components_dict[name] = entry
-
-        return components_dict
-
     def get_hyperparameter_search_space(
             self,
             dataset_properties: DatasetProperties = None,

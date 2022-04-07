@@ -10,6 +10,7 @@ from typing import Dict, Type, List, Any
 import pandas as pd
 from sklearn.base import BaseEstimator
 
+from autosktime.constants import SUPPORTED_INDEX_TYPES
 from autosktime.data import DatasetProperties
 from sktime.forecasting.base import ForecastingHorizon
 
@@ -53,6 +54,11 @@ class AutoSktimeComponent(BaseEstimator):
             The configuration space of this classification algorithm.
         """
         raise NotImplementedError()
+
+    @staticmethod
+    def check_dependencies():
+        """Raises an exception is missing dependencies are not installed"""
+        pass
 
     def fit(self, y: pd.Series, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
         """The fit function calls the fit function of the underlying
@@ -145,11 +151,21 @@ class AutoSktimeChoice(AutoSktimePredictor, ABC):
                     raise ValueError("Trying to include unknown component: {}".format(incl))
 
         components_dict = OrderedDict()
-        for name in available_comp:
+        for name, entry in available_comp.items():
             if include is not None and name not in include:
                 continue
             elif exclude is not None and name in exclude:
                 continue
+
+            if dataset_properties is not None:
+                if dataset_properties.index_type not in entry.get_properties()[SUPPORTED_INDEX_TYPES]:
+                    continue
+
+            try:
+                available_comp[name].check_dependencies()
+            except ModuleNotFoundError:
+                continue
+
             components_dict[name] = available_comp[name]
 
         return components_dict

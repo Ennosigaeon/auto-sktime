@@ -9,6 +9,8 @@ from ConfigSpace import ConfigurationSpace, UniformIntegerHyperparameter, Catego
 from autosktime.constants import IGNORES_EXOGENOUS_X, HANDLES_UNIVARIATE, HANDLES_MISSING, HANDLES_MULTIVARIATE, \
     SUPPORTED_INDEX_TYPES
 from autosktime.pipeline.components.base import AutoSktimePredictor, COMPONENT_PROPERTIES
+# noinspection PyProtectedMember
+from sktime.utils.validation._dependencies import _check_soft_dependencies
 
 
 class ProphetComponent(AutoSktimePredictor):
@@ -87,3 +89,7 @@ class ProphetComponent(AutoSktimePredictor):
         cs.add_forbidden_clauses([])
 
         return cs
+
+    @staticmethod
+    def check_dependencies():
+        _check_soft_dependencies('prophet', severity='error')
