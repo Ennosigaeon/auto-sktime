@@ -1,11 +1,16 @@
-from typing import Optional, Union
+from typing import Union
 
+import pandas as pd
 from ConfigSpace.forbidden import ForbiddenLambda
+
+from autosktime.data import DatasetProperties
 from sktime.forecasting.base import ForecastingHorizon
 
 from ConfigSpace import ConfigurationSpace, UniformIntegerHyperparameter, CategoricalHyperparameter, \
     Constant, InCondition
-from autosktime.pipeline.components.base import AutoSktimePredictor, DATASET_PROPERTIES, COMPONENT_PROPERTIES
+from autosktime.constants import IGNORES_EXOGENOUS_X, HANDLES_UNIVARIATE, HANDLES_MISSING, HANDLES_MULTIVARIATE, \
+    SUPPORTED_INDEX_TYPES
+from autosktime.pipeline.components.base import AutoSktimePredictor, COMPONENT_PROPERTIES
 
 
 class ARIMAComponent(AutoSktimePredictor):
@@ -33,7 +38,7 @@ class ARIMAComponent(AutoSktimePredictor):
         self.maxiter = maxiter
         self.with_intercept = with_intercept
 
-    def fit(self, y, X=None, fh: Optional[ForecastingHorizon] = None):
+    def fit(self, y, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
         from sktime.forecasting.arima import ARIMA
 
         if self.d >= y.shape[0]:
@@ -55,11 +60,7 @@ class ARIMAComponent(AutoSktimePredictor):
         self.estimator.fit(y, X=X, fh=fh)
         return self
 
-    def predict(
-            self,
-            fh: Optional[ForecastingHorizon] = None,
-            X=None
-    ):
+    def predict(self, fh: ForecastingHorizon = None, X: pd.DataFrame = None):
         prediction = super().predict(fh, X)
 
         if self.d > 0 and fh is not None and self.estimator.fh[0] == fh.to_pandas()[0]:
@@ -70,12 +71,17 @@ class ARIMAComponent(AutoSktimePredictor):
         return prediction
 
     @staticmethod
-    def get_properties(dataset_properties: DATASET_PROPERTIES = None) -> COMPONENT_PROPERTIES:
-        from sktime.forecasting.arima import ARIMA
-        return ARIMA.get_class_tags()
+    def get_properties(dataset_properties: DatasetProperties = None) -> COMPONENT_PROPERTIES:
+        return {
+            HANDLES_UNIVARIATE: True,
+            HANDLES_MULTIVARIATE: False,
+            IGNORES_EXOGENOUS_X: False,
+            HANDLES_MISSING: False,
+            SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.DatetimeIndex, pd.PeriodIndex]
+        }
 
     @staticmethod
-    def get_hyperparameter_search_space(dataset_properties: DATASET_PROPERTIES = None) -> ConfigurationSpace:
+    def get_hyperparameter_search_space(dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
         # order
         p = UniformIntegerHyperparameter('p', lower=0, upper=5, default_value=1)
         d = UniformIntegerHyperparameter('d', lower=0, upper=2, default_value=0)

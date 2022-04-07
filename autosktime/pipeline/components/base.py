@@ -5,21 +5,23 @@ import pkgutil
 import sys
 from abc import ABC
 from collections import OrderedDict
-from typing import Optional, Dict, Type, List, Any
+from typing import Dict, Type, List, Any
 
 import pandas as pd
-from ConfigSpace import Configuration, ConfigurationSpace
 from sklearn.base import BaseEstimator
+
+from autosktime.data import DatasetProperties
 from sktime.forecasting.base import ForecastingHorizon
 
-DATASET_PROPERTIES = Any
+from ConfigSpace import Configuration, ConfigurationSpace
+
 COMPONENT_PROPERTIES = Any
 
 
 class AutoSktimeComponent(BaseEstimator):
     @staticmethod
     @abc.abstractmethod
-    def get_properties(dataset_properties: DATASET_PROPERTIES = None) -> COMPONENT_PROPERTIES:
+    def get_properties(dataset_properties: DatasetProperties = None) -> COMPONENT_PROPERTIES:
         """Get the properties of the underlying algorithm.
 
         Find more information at :ref:`get_properties`
@@ -37,7 +39,7 @@ class AutoSktimeComponent(BaseEstimator):
 
     @staticmethod
     @abc.abstractmethod
-    def get_hyperparameter_search_space(dataset_properties: DATASET_PROPERTIES = None) -> ConfigurationSpace:
+    def get_hyperparameter_search_space(dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
         """Return the configuration space of this classification algorithm.
 
         Parameters
@@ -52,7 +54,7 @@ class AutoSktimeComponent(BaseEstimator):
         """
         raise NotImplementedError()
 
-    def fit(self, y: pd.Series, X=None, fh: ForecastingHorizon = None):
+    def fit(self, y: pd.Series, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
         """The fit function calls the fit function of the underlying
         sktime model and returns `self`.
 
@@ -93,11 +95,7 @@ class AutoSktimeComponent(BaseEstimator):
 class AutoSktimePredictor(AutoSktimeComponent, ABC):
 
     # noinspection PyUnresolvedReferences
-    def predict(
-            self,
-            fh: Optional[ForecastingHorizon] = None,
-            X=None
-    ):
+    def predict(self, fh: ForecastingHorizon = None, X: pd.DataFrame = None):
         if self.estimator is None:
             raise NotImplementedError
         return self.estimator.predict(fh=fh, X=X)
@@ -132,7 +130,7 @@ class AutoSktimeChoice(AutoSktimePredictor, ABC):
 
     def get_available_components(
             self,
-            dataset_properties: DATASET_PROPERTIES = None,
+            dataset_properties: DatasetProperties = None,
             include: List[str] = None,
             exclude: List[str] = None
     ) -> Dict[str, Type[AutoSktimeComponent]]:
@@ -185,14 +183,14 @@ class AutoSktimeChoice(AutoSktimePredictor, ABC):
     @abc.abstractmethod
     def get_hyperparameter_search_space(
             self,
-            dataset_properties: DATASET_PROPERTIES = None,
+            dataset_properties: DatasetProperties = None,
             default: str = None,
             include: List[str] = None,
             exclude: List[str] = None
     ) -> Configuration:
         raise NotImplementedError()
 
-    def fit(self, y: pd.Series, X=None, fh: ForecastingHorizon = None):
+    def fit(self, y: pd.Series, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
         self.fitted_ = True
         self.estimator.fit(y, X=X, fh=fh)
         return self

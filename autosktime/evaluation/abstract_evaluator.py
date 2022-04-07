@@ -2,16 +2,15 @@ import abc
 import logging
 import time
 import warnings
-from typing import Optional, Union, Type, TextIO
+from typing import Optional, Union, Type, TextIO, Any, Dict
 
-import numpy as np
 import pandas as pd
-from ConfigSpace import Configuration
 from sktime.forecasting.base import ForecastingHorizon
 # noinspection PyProtectedMember
-from sktime.forecasting.model_selection._split import BaseSplitter, SingleWindowSplitter
+from sktime.forecasting.model_selection._split import BaseSplitter
 from smac.tae import StatusType
 
+from ConfigSpace import Configuration
 from autosktime.automl_common.common.utils.backend import Backend
 from autosktime.constants import FORECAST_TASK
 from autosktime.data import AbstractDataManager
@@ -29,7 +28,8 @@ from autosktime.pipeline.components.forecast import ForecasterChoice
 def _fit_and_suppress_warnings(
         logger: logging.Logger,
         model: AutoSktimeComponent,
-        y: pd.Series
+        y: pd.Series,
+        X: Optional[pd.DataFrame]
 ) -> AutoSktimeComponent:
     def send_warnings_to_log(
             message: Union[Warning, str],
@@ -43,7 +43,7 @@ def _fit_and_suppress_warnings(
 
     with warnings.catch_warnings():
         warnings.showwarning = send_warnings_to_log
-        model.fit(y)
+        model.fit(y, X=X)
 
     return model
 
@@ -81,7 +81,12 @@ class AbstractEvaluator:
         self.budget_type = budget_type
         self.starttime = time.time()
 
-    def _predict_forecast(self, fh: ForecastingHorizon, model: AutoSktimePredictor) -> pd.Series:
+    def _predict_forecast(
+            self,
+            fh: ForecastingHorizon,
+            X: Optional[pd.DataFrame],
+            model: AutoSktimePredictor
+    ) -> pd.Series:
         def send_warnings_to_log(
                 message: Union[Warning, str],
                 category: Type[Warning],
@@ -94,7 +99,7 @@ class AbstractEvaluator:
 
         with warnings.catch_warnings():
             warnings.showwarning = send_warnings_to_log
-            return model.predict(fh)
+            return model.predict(fh, X=X)
 
     @abc.abstractmethod
     def fit_predict_and_loss(self) -> None:
@@ -102,10 +107,10 @@ class AbstractEvaluator:
         holdout (both iterative and non-iterative)"""
         raise NotImplementedError()
 
-    def get_splitter(self) -> BaseSplitter:
-        # TODO not configurable
-        test_size = 30
-        return SingleWindowSplitter(np.arange(0, test_size) + 1)
+    def _get_splitter(self, splitter: Type[BaseSplitter], splitter_kwargs: Dict[str, Any]) -> BaseSplitter:
+        if splitter_kwargs is None:
+            splitter_kwargs = {}
+        return splitter(**splitter_kwargs)
 
     def _get_model(self) -> AutoSktimePredictor:
         # TODO not configurable

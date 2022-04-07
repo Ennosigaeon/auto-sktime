@@ -1,9 +1,14 @@
-from typing import Optional, Union
+from typing import Union
 
+import pandas as pd
+
+from autosktime.data import DatasetProperties
 from sktime.forecasting.base import ForecastingHorizon
 
 from ConfigSpace import ConfigurationSpace, UniformIntegerHyperparameter, CategoricalHyperparameter, Constant
-from autosktime.pipeline.components.base import AutoSktimePredictor, DATASET_PROPERTIES, COMPONENT_PROPERTIES
+from autosktime.constants import IGNORES_EXOGENOUS_X, HANDLES_UNIVARIATE, HANDLES_MISSING, HANDLES_MULTIVARIATE, \
+    SUPPORTED_INDEX_TYPES
+from autosktime.pipeline.components.base import AutoSktimePredictor, COMPONENT_PROPERTIES
 
 
 class ProphetComponent(AutoSktimePredictor):
@@ -25,7 +30,7 @@ class ProphetComponent(AutoSktimePredictor):
         self.daily_seasonality = daily_seasonality
         self.seasonality_mode = seasonality_mode
 
-    def fit(self, y, X=None, fh: Optional[ForecastingHorizon] = None):
+    def fit(self, y, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
         from sktime.forecasting.fbprophet import Prophet
 
         def as_bool(value: Union[str, bool]) -> bool:
@@ -51,12 +56,17 @@ class ProphetComponent(AutoSktimePredictor):
         return self
 
     @staticmethod
-    def get_properties(dataset_properties: DATASET_PROPERTIES = None) -> COMPONENT_PROPERTIES:
-        from sktime.forecasting.fbprophet import Prophet
-        return Prophet.get_class_tags()
+    def get_properties(dataset_properties: DatasetProperties = None) -> COMPONENT_PROPERTIES:
+        return {
+            HANDLES_UNIVARIATE: True,
+            HANDLES_MULTIVARIATE: False,
+            IGNORES_EXOGENOUS_X: False,
+            HANDLES_MISSING: False,
+            SUPPORTED_INDEX_TYPES: [pd.DatetimeIndex]
+        }
 
     @staticmethod
-    def get_hyperparameter_search_space(dataset_properties: DATASET_PROPERTIES = None) -> ConfigurationSpace:
+    def get_hyperparameter_search_space(dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
         # TODO capacity is required for logistic growth, see
         #  https://facebook.github.io/prophet/docs/saturating_forecasts.html
         # growth = CategoricalHyperparameter('growth', ['linear', 'logistic'])
