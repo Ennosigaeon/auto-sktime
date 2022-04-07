@@ -14,6 +14,7 @@ from smac.tae.execute_func import AbstractTAFunc
 
 from ConfigSpace import Configuration
 from autosktime.automl_common.common.utils.backend import Backend
+from autosktime.data.splitter import BaseSplitter
 from autosktime.metrics import Scorer
 
 TaFuncResult = NamedTuple('TaFuncResult', [
@@ -37,8 +38,8 @@ def fit_predict_try_except_decorator(
         exception_traceback = traceback.format_exc()
         error_message = repr(e)
 
-        logging.getLogger("TAE").exception("Exception handling in `fit_predict_try_except_decorator`: "
-              "traceback: {} \nerror message: {}".format(exception_traceback, error_message))
+        logging.getLogger("TAE").exception("Exception handling in `fit_predict_try_except_decorator`: traceback: {} \n"
+                                           "error message: {}".format(exception_traceback, error_message))
 
         return TaFuncResult(
             loss=cost_for_crash,
@@ -64,24 +65,17 @@ class ExecuteTaFunc(AbstractTAFunc):
             self,
             backend: Backend,
             seed: int,
-            resampling_strategy: str,
+            splitter: BaseSplitter,
             metric: Scorer,
             stats: Stats,
             memory_limit: Optional[int] = None,
             budget_type: Optional[str] = None,
             use_pynisher: bool = False,
-            resampling_strategy_args: Dict[str, Any] = None,
             ta: Optional[Callable] = None,
             **kwargs
     ):
-        if resampling_strategy == 'holdout':
-            from autosktime.evaluation.train_evaluator import eval_holdout
-            eval_function = eval_holdout
-        elif resampling_strategy == 'sliding_window':
-            from autosktime.evaluation.train_evaluator import eval_sliding_window
-            eval_function = eval_sliding_window
-        else:
-            raise ValueError('Unknown resampling strategy {}'.format(resampling_strategy))
+        from autosktime.evaluation.train_evaluator import evaluate
+        eval_function = evaluate
 
         self.worst_possible_result = get_cost_of_crash(metric)
 
@@ -89,7 +83,7 @@ class ExecuteTaFunc(AbstractTAFunc):
             fit_predict_try_except_decorator,
             ta=eval_function,
             cost_for_crash=self.worst_possible_result,
-            resampling_strategy_args=resampling_strategy_args
+            splitter=splitter
         )
 
         super().__init__(
@@ -101,14 +95,8 @@ class ExecuteTaFunc(AbstractTAFunc):
 
         self.backend = backend
         self.seed = seed
-        self.resampling_strategy = resampling_strategy
         self.metric = metric
-        self.resampling_strategy = resampling_strategy
         self.budget_type = budget_type
-
-        if resampling_strategy_args is None:
-            resampling_strategy_args = {}
-        self.resampling_strategy_args = resampling_strategy_args
 
         if memory_limit is not None:
             memory_limit = int(math.ceil(memory_limit))
@@ -160,7 +148,8 @@ class ExecuteTaFunc(AbstractTAFunc):
         elif run_info.cutoff != int(np.ceil(run_info.cutoff)) and not isinstance(run_info.cutoff, int):
             run_info = run_info._replace(cutoff=int(np.ceil(run_info.cutoff)))
 
-        self.logger.info("Starting to evaluate configuration {}: {}".format(run_info.config.config_id, run_info.config.get_dictionary()))
+        self.logger.info("Starting to evaluate configuration {}: {}".format(run_info.config.config_id,
+                                                                            run_info.config.get_dictionary()))
         info, value = super().run_wrapper(run_info=run_info)
 
         if 'status' in value.additional_info:

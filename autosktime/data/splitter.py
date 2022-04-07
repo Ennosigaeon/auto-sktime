@@ -7,10 +7,13 @@ from sktime.forecasting.model_selection import (
     SlidingWindowSplitter as SlidingWindowSplitter_
 )
 # noinspection PyProtectedMember
-from sktime.forecasting.model_selection._split import ACCEPTED_Y_TYPES, SPLIT_GENERATOR_TYPE
+from sktime.forecasting.model_selection._split import ACCEPTED_Y_TYPES, SPLIT_GENERATOR_TYPE, \
+    BaseSplitter as BaseSplitter_
+
+BaseSplitter = BaseSplitter_
 
 
-class SingleWindowSplitter(SingleWindowSplitter_):
+class HoldoutSplitter(SingleWindowSplitter_):
 
     def __init__(self, fh: float = 0.2):
         super().__init__(1)

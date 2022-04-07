@@ -2,12 +2,10 @@ import abc
 import logging
 import time
 import warnings
-from typing import Optional, Union, Type, TextIO, Any, Dict
+from typing import Optional, Union, Type, TextIO
 
 import pandas as pd
 from sktime.forecasting.base import ForecastingHorizon
-# noinspection PyProtectedMember
-from sktime.forecasting.model_selection._split import BaseSplitter
 from smac.tae import StatusType
 
 from ConfigSpace import Configuration
@@ -106,11 +104,6 @@ class AbstractEvaluator:
         """Fit, predict and compute the loss for cross-validation and
         holdout (both iterative and non-iterative)"""
         raise NotImplementedError()
-
-    def _get_splitter(self, splitter: Type[BaseSplitter], splitter_kwargs: Dict[str, Any]) -> BaseSplitter:
-        if splitter_kwargs is None:
-            splitter_kwargs = {}
-        return splitter(**splitter_kwargs)
 
     def _get_model(self) -> AutoSktimePredictor:
         # TODO not configurable

@@ -1,16 +1,14 @@
-from functools import partial
-from typing import Optional, Tuple, List, Type, Dict, Any, NamedTuple
+from typing import Optional, Tuple, List, NamedTuple
 
 import numpy as np
 import pandas as pd
 from sktime.forecasting.base import ForecastingHorizon
 # noinspection PyProtectedMember
-from sktime.forecasting.model_selection._split import BaseSplitter
 from smac.tae import StatusType
 
 from ConfigSpace import Configuration
 from autosktime.automl_common.common.utils.backend import Backend
-from autosktime.data.splitter import SingleWindowSplitter, SlidingWindowSplitter
+from autosktime.data.splitter import BaseSplitter
 from autosktime.evaluation import TaFuncResult
 # noinspection PyProtectedMember
 from autosktime.evaluation.abstract_evaluator import AbstractEvaluator, _fit_and_suppress_warnings
@@ -36,15 +34,14 @@ class TrainEvaluator(AbstractEvaluator):
             backend: Backend,
             metric: Scorer,
             configuration: Configuration,
-            splitter: Type[BaseSplitter],
-            splitter_kwargs: Dict[str, Any] = None,
+            splitter: BaseSplitter,
             seed: int = 1,
             num_run: int = 0,
             budget: Optional[float] = None,
             budget_type: Optional[str] = None,
     ):
         super().__init__(backend, metric, configuration, seed, num_run, budget, budget_type)
-        self.splitter = self._get_splitter(splitter, splitter_kwargs)
+        self.splitter = splitter
 
         self.models: List[AutoSktimeComponent] = []
         self.indices: List[Tuple[pd.Index, pd.Index]] = []
@@ -139,26 +136,21 @@ class TrainEvaluator(AbstractEvaluator):
         raise NotImplementedError('Budgets not supported yet')
 
 
-def _eval(
+def evaluate(
         config: Configuration,
         backend: Backend,
         metric: Scorer,
         seed: int,
         num_run: int,
-        splitter: Type[BaseSplitter],
+        splitter: BaseSplitter,
         budget: Optional[float] = 100.0,
         budget_type: Optional[str] = None,
-        resampling_strategy_args: Dict[str, Any] = None,
 ) -> TaFuncResult:
-    if resampling_strategy_args is None:
-        resampling_strategy_args = {}
-
     evaluator = TrainEvaluator(
         backend=backend,
         metric=metric,
         configuration=config,
         splitter=splitter,
-        splitter_kwargs=resampling_strategy_args,
         seed=seed,
         num_run=num_run,
         budget=budget,
@@ -166,8 +158,3 @@ def _eval(
     )
     result = evaluator.fit_predict_and_loss()
     return result
-
-
-eval_holdout = partial(_eval, splitter=SingleWindowSplitter)
-
-eval_sliding_window = partial(_eval, splitter=SlidingWindowSplitter)

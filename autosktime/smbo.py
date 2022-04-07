@@ -1,6 +1,6 @@
 import copy
 import logging
-from typing import Dict, Any, Optional
+from typing import Optional
 
 from smac.callbacks import IncorporateRunResultCallback
 from smac.facade.smac_ac_facade import SMAC4AC
@@ -11,6 +11,7 @@ from smac.scenario.scenario import Scenario
 from ConfigSpace import ConfigurationSpace
 from autosktime.automl_common.common.utils.backend import Backend
 from autosktime.data import AbstractDataManager
+from autosktime.data.splitter import BaseSplitter
 from autosktime.evaluation import ExecuteTaFunc, get_cost_of_crash
 from autosktime.metrics import Scorer
 
@@ -26,9 +27,8 @@ class AutoMLSMBO:
             func_eval_time_limit: float,
             memory_limit: float,
             metric: Scorer,
+            splitter: BaseSplitter,
             seed: int = 1,
-            resampling_strategy: str = 'holdout',
-            resampling_strategy_args: Dict[str, Any] = None,
             trials_callback: Optional[IncorporateRunResultCallback] = None
     ):
         # data related
@@ -40,10 +40,7 @@ class AutoMLSMBO:
         self.config_space = config_space
 
         # Evaluation
-        self.resampling_strategy = resampling_strategy
-        if resampling_strategy_args is None:
-            resampling_strategy_args = {}
-        self.resampling_strategy_args = resampling_strategy_args
+        self.splitter = splitter
 
         # and a bunch of useful limits
         self.worst_possible_result = get_cost_of_crash(self.metric)
@@ -87,8 +84,7 @@ class AutoMLSMBO:
         ta_kwargs = {
             'backend': copy.deepcopy(self.backend),
             'seed': self.seed,
-            'resampling_strategy': self.resampling_strategy,
-            'resampling_strategy_args': self.resampling_strategy_args,
+            'splitter': self.splitter,
             'metric': self.metric,
             'memory_limit': self.memory_limit,
         }
