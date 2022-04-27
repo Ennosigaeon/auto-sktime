@@ -5,8 +5,7 @@ from sktime.forecasting.base import ForecastingHorizon
 from sktime.utils.validation._dependencies import _check_soft_dependencies
 
 from ConfigSpace import ConfigurationSpace, CategoricalHyperparameter, EqualsCondition
-from autosktime.constants import IGNORES_EXOGENOUS_X, HANDLES_UNIVARIATE, HANDLES_MISSING, HANDLES_MULTIVARIATE, \
-    SUPPORTED_INDEX_TYPES
+from autosktime.constants import IGNORES_EXOGENOUS_X, HANDLES_UNIVARIATE,  HANDLES_MULTIVARIATE,    SUPPORTED_INDEX_TYPES
 from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import AutoSktimePredictor, COMPONENT_PROPERTIES
 
@@ -50,7 +49,6 @@ class TBATSForecasterComponent(AutoSktimePredictor):
             HANDLES_UNIVARIATE: True,
             HANDLES_MULTIVARIATE: True,
             IGNORES_EXOGENOUS_X: True,
-            HANDLES_MISSING: True,
             SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.DatetimeIndex, pd.PeriodIndex]
         }
 

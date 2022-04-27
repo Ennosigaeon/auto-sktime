@@ -12,9 +12,9 @@ from sklearn.base import BaseEstimator
 
 from autosktime.constants import SUPPORTED_INDEX_TYPES
 from autosktime.data import DatasetProperties
-from sktime.forecasting.base import ForecastingHorizon
+from sktime.forecasting.base import ForecastingHorizon, BaseForecaster
 
-from ConfigSpace import Configuration, ConfigurationSpace
+from ConfigSpace import Configuration, ConfigurationSpace, CategoricalHyperparameter
 
 COMPONENT_PROPERTIES = Any
 
@@ -60,23 +60,8 @@ class AutoSktimeComponent(BaseEstimator):
         """Raises an exception is missing dependencies are not installed"""
         pass
 
-    def fit(self, y: pd.Series, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
-        """The fit function calls the fit function of the underlying
-        sktime model and returns `self`.
-
-        Parameters
-        ----------
-        y : pd.Series
-            Target time series to which to fit the forecaster.
-        fh : int, list or np.array, optional (default=None)
-            The forecasters' horizon with the steps ahead to predict.
-        X : pd.DataFrame, optional (default=None)
-            Exogenous variables are ignored
-
-        Returns
-        -------
-        self : returns an instance of self.
-        """
+    @abc.abstractmethod
+    def fit(self, *args, **kwargs):
         raise NotImplementedError()
 
     def set_hyperparameters(self, configuration: Configuration, init_params: Dict[str, Any] = None):
@@ -98,7 +83,27 @@ class AutoSktimeComponent(BaseEstimator):
         return self
 
 
-class AutoSktimePredictor(AutoSktimeComponent, ABC):
+class AutoSktimePredictor(AutoSktimeComponent, BaseForecaster, ABC):
+
+    @abc.abstractmethod
+    def fit(self, y: pd.Series, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
+        """The fit function calls the fit function of the underlying
+        sktime model and returns `self`.
+
+        Parameters
+        ----------
+        y : pd.Series
+            Target time series to which to fit the forecaster.
+        fh : int, list or np.array, optional (default=None)
+            The forecasters' horizon with the steps ahead to predict.
+        X : pd.DataFrame, optional (default=None)
+            Exogenous variables are ignored
+
+        Returns
+        -------
+        self : returns an instance of self.
+        """
+        raise NotImplementedError()
 
     # noinspection PyUnresolvedReferences
     def predict(self, fh: ForecastingHorizon = None, X: pd.DataFrame = None):
@@ -107,7 +112,8 @@ class AutoSktimePredictor(AutoSktimeComponent, ABC):
         return self.estimator.predict(fh=fh, X=X)
 
 
-def find_components(package, directory, base_class) -> Dict[str, AutoSktimeComponent]:
+
+def find_components(package, directory, base_class) -> Dict[str, Type[AutoSktimeComponent]]:
     components = OrderedDict()
 
     for module_loader, module_name, ispkg in pkgutil.iter_modules([directory]):
@@ -126,6 +132,7 @@ def find_components(package, directory, base_class) -> Dict[str, AutoSktimeCompo
 
 class AutoSktimeChoice(AutoSktimePredictor, ABC):
     def __init__(self, random_state=None):
+        super().__init__()
         self.random_state = random_state
         self.choice = None
 
@@ -196,15 +203,45 @@ class AutoSktimeChoice(AutoSktimePredictor, ABC):
 
         return self
 
-    @abc.abstractmethod
     def get_hyperparameter_search_space(
             self,
             dataset_properties: DatasetProperties = None,
             default: str = None,
             include: List[str] = None,
             exclude: List[str] = None
-    ) -> Configuration:
-        raise NotImplementedError()
+    ) -> ConfigurationSpace:
+        if include is not None and exclude is not None:
+            raise ValueError("The arguments include and exclude cannot be used together.")
+
+        cs = ConfigurationSpace()
+
+        # Compile a list of all objects for this problem
+        available_components = self.get_available_components(dataset_properties, include, exclude)
+
+        if len(available_components) == 0:
+            raise ValueError("No estimators found")
+
+        if default is None:
+            for default_ in available_components.keys():
+                if include is not None and default_ not in include:
+                    continue
+                if exclude is not None and default_ in exclude:
+                    continue
+                default = default_
+                break
+
+        # noinspection PyArgumentList
+        estimator = CategoricalHyperparameter('__choice__', list(available_components.keys()), default_value=default)
+        cs.add_hyperparameter(estimator)
+
+        for comp_name in available_components.keys():
+            comp_cs = available_components[comp_name].get_hyperparameter_search_space(dataset_properties)
+            parent_hyperparameter = {'parent': estimator, 'value': comp_name}
+            cs.add_configuration_space(comp_name, comp_cs, parent_hyperparameter=parent_hyperparameter)
+
+        self.configuration_space = cs
+        self.dataset_properties = dataset_properties
+        return cs
 
     def fit(self, y: pd.Series, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
         self.fitted_ = True
