@@ -10,7 +10,7 @@ from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import AutoSktimePredictor, COMPONENT_PROPERTIES
 
 
-class TBATSForecasterComponent(AutoSktimePredictor):
+class TBATSComponent(AutoSktimePredictor):
     from sktime.forecasting.tbats import TBATS
 
     _estimator_class = TBATS

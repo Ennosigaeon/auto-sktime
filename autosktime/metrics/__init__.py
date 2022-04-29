@@ -79,7 +79,12 @@ class MeanAbsolutePercentageError(_BoundedMetricMixin, MeanAbsolutePercentageErr
         self.optimum = 0.
         self.worst_possible_result = 1.
 
-    def __call__(self, y_true: np.ndarray, y_pred: np.ndarray, horizon_weight: Optional[np.ndarray] = None) -> float:
+    def __call__(
+            self,
+            y_true: ACCEPTED_Y_TYPES,
+            y_pred: ACCEPTED_Y_TYPES,
+            horizon_weight: Optional[np.ndarray] = None
+    ) -> float:
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', FutureWarning)
             return super().__call__(y_true, y_pred, horizon_weight=horizon_weight)

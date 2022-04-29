@@ -10,7 +10,7 @@ from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import AutoSktimePredictor, COMPONENT_PROPERTIES
 
 
-class BATSForecasterComponent(AutoSktimePredictor):
+class BATSComponent(AutoSktimePredictor):
     from sktime.forecasting.bats import BATS
 
     _estimator_class = BATS
