@@ -11,6 +11,9 @@ from autosktime.pipeline.components.base import AutoSktimePredictor, COMPONENT_P
 
 
 class BATSForecasterComponent(AutoSktimePredictor):
+    from sktime.forecasting.bats import BATS
+
+    _estimator_class = BATS
 
     def __init__(
             self,
@@ -22,16 +25,17 @@ class BATSForecasterComponent(AutoSktimePredictor):
             use_arma_errors: bool = True,
             random_state=None
     ):
+        super().__init__()
         self.use_box_cox = use_box_cox
         self.box_cox_bounds = box_cox_bounds
         self.use_trend = use_trend
         self.use_damped_trend = use_damped_trend
         self.sp = sp
         self.use_arma_errors = use_arma_errors
+        self.random_state = random_state
 
-    def fit(self, y, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
-        from sktime.forecasting.bats import BATS
-        self.estimator = BATS(
+    def _fit(self, y, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
+        self.estimator = self._estimator_class(
             use_box_cox=self.use_box_cox,
             box_cox_bounds=self.box_cox_bounds,
             use_trend=self.use_trend,

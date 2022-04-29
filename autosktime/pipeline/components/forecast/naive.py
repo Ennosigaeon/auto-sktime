@@ -9,6 +9,9 @@ from autosktime.pipeline.components.base import AutoSktimePredictor, COMPONENT_P
 
 
 class NaiveForecasterComponent(AutoSktimePredictor):
+    from sktime.forecasting.naive import NaiveForecaster
+
+    _estimator_class = NaiveForecaster
 
     def __init__(
             self,
@@ -16,12 +19,13 @@ class NaiveForecasterComponent(AutoSktimePredictor):
             strategy: str = 'last',
             random_state=None
     ):
+        super().__init__()
         self.sp = sp
         self.strategy = strategy
+        self.random_state = random_state
 
-    def fit(self, y, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
-        from sktime.forecasting.naive import NaiveForecaster
-        self.estimator = NaiveForecaster(
+    def _fit(self, y, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
+        self.estimator = self._estimator_class(
             sp=self.sp,
             strategy=self.strategy,
         )

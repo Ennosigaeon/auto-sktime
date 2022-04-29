@@ -9,6 +9,9 @@ from autosktime.pipeline.components.base import AutoSktimePredictor, COMPONENT_P
 
 
 class ThetaComponent(AutoSktimePredictor):
+    from sktime.forecasting.theta import ThetaForecaster
+
+    _estimator_class = ThetaForecaster
 
     def __init__(
             self,
@@ -16,12 +19,13 @@ class ThetaComponent(AutoSktimePredictor):
             deseasonalize: bool = True,
             random_state=None
     ):
+        super().__init__()
         self.sp = sp
         self.deseasonalize = deseasonalize
+        self.random_state = random_state
 
-    def fit(self, y, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
-        from sktime.forecasting.theta import ThetaForecaster
-        self.estimator = ThetaForecaster(
+    def _fit(self, y, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
+        self.estimator = self._estimator_class(
             sp=self.sp,
             deseasonalize=self.deseasonalize,
         )

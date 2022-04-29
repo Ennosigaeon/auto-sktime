@@ -10,6 +10,9 @@ from autosktime.pipeline.components.base import AutoSktimePredictor, COMPONENT_P
 
 
 class ETSComponent(AutoSktimePredictor):
+    from sktime.forecasting.ets import AutoETS
+
+    _estimator_class = AutoETS
 
     def __init__(
             self,
@@ -20,19 +23,19 @@ class ETSComponent(AutoSktimePredictor):
             damped_trend: bool = False,
             random_state=None
     ):
+        super().__init__()
         self.sp = sp
         self.error = error
         self.trend = trend
         self.seasonal = seasonal
         self.damped_trend = damped_trend
+        self.random_state = random_state
 
-    def fit(self, y, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
-        from sktime.forecasting.ets import AutoETS
-
+    def _fit(self, y, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
         trend = None if self.trend == 'None' else self.trend
         seasonal = None if self.seasonal == 'None' else self.seasonal
 
-        self.estimator = AutoETS(
+        self.estimator = self._estimator_class(
             sp=self.sp,
             error=self.error,
             trend=trend,

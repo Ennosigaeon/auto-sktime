@@ -5,13 +5,13 @@ import pkgutil
 import sys
 from abc import ABC
 from collections import OrderedDict
-from typing import Dict, Type, List, Any
+from typing import Dict, Type, List, Any, Union
 
 import pandas as pd
-from sklearn.base import BaseEstimator
 
 from autosktime.constants import SUPPORTED_INDEX_TYPES
 from autosktime.data import DatasetProperties
+from sktime.base import BaseEstimator
 from sktime.forecasting.base import ForecastingHorizon, BaseForecaster
 
 from ConfigSpace import Configuration, ConfigurationSpace, CategoricalHyperparameter
@@ -20,6 +20,15 @@ COMPONENT_PROPERTIES = Any
 
 
 class AutoSktimeComponent(BaseEstimator):
+    # TODO check which methods really have to be wrapped
+
+    _estimator_class: Type[BaseEstimator] = None
+    estimator: BaseEstimator = None
+
+    _tags = {
+        'fit_is_empty': False
+    }
+
     @staticmethod
     @abc.abstractmethod
     def get_properties(dataset_properties: DatasetProperties = None) -> COMPONENT_PROPERTIES:
@@ -60,9 +69,11 @@ class AutoSktimeComponent(BaseEstimator):
         """Raises an exception is missing dependencies are not installed"""
         pass
 
-    @abc.abstractmethod
-    def fit(self, *args, **kwargs):
-        raise NotImplementedError()
+    def get_tags(self):
+        estimator = self.estimator if self.estimator is not None else self._estimator_class()
+        tags = estimator.get_tags()
+        tags.update(self._tags)
+        return tags
 
     def set_hyperparameters(self, configuration: Configuration, init_params: Dict[str, Any] = None):
         params = configuration.get_dictionary()
@@ -84,9 +95,19 @@ class AutoSktimeComponent(BaseEstimator):
 
 
 class AutoSktimePredictor(AutoSktimeComponent, BaseForecaster, ABC):
+    # TODO check which methods really have to be wrapped
+
+    _estimator_class: Type[BaseForecaster] = None
+    estimator: BaseForecaster = None
+
+    # noinspection PyUnresolvedReferences
+    def get_fitted_params(self):
+        if self.estimator is None:
+            raise NotImplementedError
+        return self.estimator.get_fitted_params()
 
     @abc.abstractmethod
-    def fit(self, y: pd.Series, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
+    def _fit(self, y: pd.Series, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
         """The fit function calls the fit function of the underlying
         sktime model and returns `self`.
 
@@ -106,7 +127,7 @@ class AutoSktimePredictor(AutoSktimeComponent, BaseForecaster, ABC):
         raise NotImplementedError()
 
     # noinspection PyUnresolvedReferences
-    def predict(self, fh: ForecastingHorizon = None, X: pd.DataFrame = None):
+    def _predict(self, fh: ForecastingHorizon = None, X: pd.DataFrame = None):
         if self.estimator is None:
             raise NotImplementedError
         return self.estimator.predict(fh=fh, X=X)
@@ -130,11 +151,15 @@ def find_components(package, directory, base_class) -> Dict[str, Type[AutoSktime
     return components
 
 
-class AutoSktimeChoice(AutoSktimePredictor, ABC):
-    def __init__(self, random_state=None):
+class AutoSktimeChoice(AutoSktimeComponent, ABC):
+    _tags = {
+        "requires-fh-in-fit": False
+    }
+
+    def __init__(self, estimator: AutoSktimeComponent = None, random_state=None):
         super().__init__()
+        self.estimator = estimator
         self.random_state = random_state
-        self.choice = None
 
     @classmethod
     @abc.abstractmethod
@@ -242,8 +267,3 @@ class AutoSktimeChoice(AutoSktimePredictor, ABC):
         self.configuration_space = cs
         self.dataset_properties = dataset_properties
         return cs
-
-    def fit(self, y: pd.Series, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
-        self.fitted_ = True
-        self.estimator.fit(y, X=X, fh=fh)
-        return self

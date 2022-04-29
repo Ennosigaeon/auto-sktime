@@ -13,6 +13,9 @@ from autosktime.pipeline.components.base import AutoSktimePredictor, COMPONENT_P
 
 
 class ARIMAComponent(AutoSktimePredictor):
+    from sktime.forecasting.arima import ARIMA
+
+    _estimator_class = ARIMA
 
     def __init__(
             self,
@@ -27,6 +30,7 @@ class ARIMAComponent(AutoSktimePredictor):
             with_intercept: Union[bool, str] = True,
             random_state=None
     ):
+        super().__init__()
         self.p = p
         self.d = d
         self.q = q
@@ -36,10 +40,9 @@ class ARIMAComponent(AutoSktimePredictor):
         self.sp = sp
         self.maxiter = maxiter
         self.with_intercept = with_intercept
+        self.random_state = random_state
 
-    def fit(self, y, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
-        from sktime.forecasting.arima import ARIMA
-
+    def _fit(self, y, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
         if self.d >= y.shape[0]:
             raise ValueError('Trainings data is too short ({}) for selected d ({}). Try to increase'
                              'the trainings data or decrease d'.format(y.shape[0], self.d))
@@ -49,7 +52,7 @@ class ARIMAComponent(AutoSktimePredictor):
         except ValueError:
             with_intercept = self.with_intercept
 
-        self.estimator = ARIMA(
+        self.estimator = self._estimator_class(
             order=(self.p, self.d, self.q),
             seasonal_order=(self.P, self.D, self.Q, self.sp),
             maxiter=self.maxiter,

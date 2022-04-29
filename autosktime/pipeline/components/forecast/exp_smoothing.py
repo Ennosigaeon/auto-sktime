@@ -10,6 +10,9 @@ from autosktime.pipeline.components.base import AutoSktimePredictor, COMPONENT_P
 
 
 class ExponentialSmoothingComponent(AutoSktimePredictor):
+    from sktime.forecasting.exp_smoothing import ExponentialSmoothing
+
+    _estimator_class = ExponentialSmoothing
 
     def __init__(
             self,
@@ -19,18 +22,18 @@ class ExponentialSmoothingComponent(AutoSktimePredictor):
             damped_trend: bool = False,
             random_state=None
     ):
+        super().__init__()
         self.sp = sp
         self.trend = trend
         self.seasonal = seasonal
         self.damped_trend = damped_trend
+        self.random_state = random_state
 
-    def fit(self, y, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
-        from sktime.forecasting.exp_smoothing import ExponentialSmoothing
-
+    def _fit(self, y, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
         trend = None if self.trend == 'None' else self.trend
         seasonal = None if self.seasonal == 'None' else self.seasonal
 
-        self.estimator = ExponentialSmoothing(
+        self.estimator = self._estimator_class(
             sp=self.sp,
             trend=trend,
             seasonal=seasonal,
