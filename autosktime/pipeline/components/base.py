@@ -9,12 +9,12 @@ from typing import Dict, Type, List, Any, Union
 
 import pandas as pd
 
+from ConfigSpace import Configuration, ConfigurationSpace, CategoricalHyperparameter
 from autosktime.constants import SUPPORTED_INDEX_TYPES
 from autosktime.data import DatasetProperties
 from sktime.base import BaseEstimator
 from sktime.forecasting.base import ForecastingHorizon, BaseForecaster
-
-from ConfigSpace import Configuration, ConfigurationSpace, CategoricalHyperparameter
+from sktime.transformations.base import BaseTransformer
 
 COMPONENT_PROPERTIES = Any
 
@@ -133,6 +133,28 @@ class AutoSktimePredictor(AutoSktimeComponent, BaseForecaster, ABC):
         return self.estimator.predict(fh=fh, X=X)
 
 
+class AutoSktimeTransformer(AutoSktimeComponent, BaseTransformer, ABC):
+    # TODO check which methods really have to be wrapped
+
+    _estimator_class: Type[BaseTransformer] = None
+    estimator: BaseTransformer = None
+
+    @abc.abstractmethod
+    def _fit(self, X: Union[pd.Series, pd.DataFrame], y: pd.Series = None):
+        raise NotImplementedError()
+
+    # noinspection PyUnresolvedReferences
+    def _transform(self, X: Union[pd.Series, pd.DataFrame], y: pd.Series = None):
+        if self.estimator is None:
+            raise NotImplementedError
+        return self.estimator.transform(X, y=y)
+
+    # noinspection PyUnresolvedReferences
+    def _inverse_transform(self, X: Union[pd.Series, pd.DataFrame], y: pd.Series = None):
+        if self.estimator is None:
+            raise NotImplementedError
+        return self.estimator.inverse_transform(X, y=y)
+
 
 def find_components(package, directory, base_class) -> Dict[str, Type[AutoSktimeComponent]]:
     components = OrderedDict()
@@ -190,7 +212,8 @@ class AutoSktimeChoice(AutoSktimeComponent, ABC):
                 continue
 
             if dataset_properties is not None:
-                if dataset_properties.index_type not in entry.get_properties()[SUPPORTED_INDEX_TYPES]:
+                if (dataset_properties.index_type is not None and
+                        dataset_properties.index_type not in entry.get_properties()[SUPPORTED_INDEX_TYPES]):
                     continue
 
             try:
@@ -223,8 +246,16 @@ class AutoSktimeChoice(AutoSktimeComponent, ABC):
         new_params['random_state'] = self.random_state
 
         self.new_params = new_params
-        # noinspection PyArgumentList
-        self.estimator = self.get_components()[choice](**new_params)
+        try:
+            # noinspection PyArgumentList
+            self.estimator = self.get_components()[choice](**new_params)
+        except TypeError as ex:
+            # Provide selected type as additional info in message
+            raise TypeError('{}.{}'.format(self.get_components()[choice], ex))
+
+        # Copy tags from selected estimator
+        tags = self.estimator.get_tags()
+        self.set_tags(**tags)
 
         return self
 

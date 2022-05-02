@@ -1,15 +1,13 @@
 from typing import Union
 
 import pandas as pd
-from ConfigSpace.forbidden import ForbiddenLambda
-
-from autosktime.data import DatasetProperties
-from sktime.forecasting.base import ForecastingHorizon
 
 from ConfigSpace import ConfigurationSpace, UniformIntegerHyperparameter, CategoricalHyperparameter, \
-    Constant, InCondition
+    Constant, InCondition, ForbiddenGreaterThan
 from autosktime.constants import IGNORES_EXOGENOUS_X, HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, SUPPORTED_INDEX_TYPES
+from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import AutoSktimePredictor, COMPONENT_PROPERTIES
+from sktime.forecasting.base import ForecastingHorizon
 
 
 class ARIMAComponent(AutoSktimePredictor):
@@ -98,11 +96,8 @@ class ARIMAComponent(AutoSktimePredictor):
         D_depends_on_sp = InCondition(D, sp, [2, 4, 7, 12])
         Q_depends_on_sp = InCondition(Q, sp, [2, 4, 7, 12])
 
-        def _invalid_sp(hp, sp) -> bool:
-            return 1 < sp <= hp
-
-        p_must_be_smaller_than_sp = ForbiddenLambda(p, sp, _invalid_sp)
-        q_must_be_smaller_than_sp = ForbiddenLambda(q, sp, _invalid_sp)
+        p_must_be_smaller_than_sp = ForbiddenGreaterThan(sp, p)
+        q_must_be_smaller_than_sp = ForbiddenGreaterThan(sp, q)
 
         maxiter = Constant('maxiter', 50)
         with_intercept = Constant('with_intercept', 'True')
