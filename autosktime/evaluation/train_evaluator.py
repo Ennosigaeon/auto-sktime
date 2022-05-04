@@ -80,6 +80,7 @@ class TrainEvaluator(AbstractEvaluator):
             train_losses[i] = self._loss(
                 y[train_split],
                 train_pred,
+                error='worst'
             )
             train_weights[i] = len(train_split)
 
@@ -87,6 +88,7 @@ class TrainEvaluator(AbstractEvaluator):
             test_loss[i] = self._loss(
                 y[test_split],
                 test_pred,
+                error='raise'
             )
             test_weights[i] = len(test_split)
 

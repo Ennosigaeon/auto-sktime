@@ -1,19 +1,19 @@
 from typing import Union
 
 import pandas as pd
-from ConfigSpace.forbidden import ForbiddenLambda
-
-from autosktime.data import DatasetProperties
-from sktime.forecasting.base import ForecastingHorizon
 
 from ConfigSpace import ConfigurationSpace, UniformIntegerHyperparameter, CategoricalHyperparameter, \
-    Constant, InCondition
-from autosktime.constants import IGNORES_EXOGENOUS_X, HANDLES_UNIVARIATE, HANDLES_MISSING, HANDLES_MULTIVARIATE, \
-    SUPPORTED_INDEX_TYPES
+    Constant, InCondition, ForbiddenGreaterThan
+from autosktime.constants import IGNORES_EXOGENOUS_X, HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, SUPPORTED_INDEX_TYPES
+from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import AutoSktimePredictor, COMPONENT_PROPERTIES
+from sktime.forecasting.base import ForecastingHorizon
 
 
 class ARIMAComponent(AutoSktimePredictor):
+    from sktime.forecasting.arima import ARIMA
+
+    _estimator_class = ARIMA
 
     def __init__(
             self,
@@ -28,6 +28,7 @@ class ARIMAComponent(AutoSktimePredictor):
             with_intercept: Union[bool, str] = True,
             random_state=None
     ):
+        super().__init__()
         self.p = p
         self.d = d
         self.q = q
@@ -37,10 +38,9 @@ class ARIMAComponent(AutoSktimePredictor):
         self.sp = sp
         self.maxiter = maxiter
         self.with_intercept = with_intercept
+        self.random_state = random_state
 
-    def fit(self, y, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
-        from sktime.forecasting.arima import ARIMA
-
+    def _fit(self, y, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
         if self.d >= y.shape[0]:
             raise ValueError('Trainings data is too short ({}) for selected d ({}). Try to increase'
                              'the trainings data or decrease d'.format(y.shape[0], self.d))
@@ -50,7 +50,7 @@ class ARIMAComponent(AutoSktimePredictor):
         except ValueError:
             with_intercept = self.with_intercept
 
-        self.estimator = ARIMA(
+        self.estimator = self._estimator_class(
             order=(self.p, self.d, self.q),
             seasonal_order=(self.P, self.D, self.Q, self.sp),
             maxiter=self.maxiter,
@@ -76,7 +76,6 @@ class ARIMAComponent(AutoSktimePredictor):
             HANDLES_UNIVARIATE: True,
             HANDLES_MULTIVARIATE: False,
             IGNORES_EXOGENOUS_X: False,
-            HANDLES_MISSING: False,
             SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.DatetimeIndex, pd.PeriodIndex]
         }
 
@@ -97,11 +96,8 @@ class ARIMAComponent(AutoSktimePredictor):
         D_depends_on_sp = InCondition(D, sp, [2, 4, 7, 12])
         Q_depends_on_sp = InCondition(Q, sp, [2, 4, 7, 12])
 
-        def _invalid_sp(hp, sp) -> bool:
-            return 1 < sp <= hp
-
-        p_must_be_smaller_than_sp = ForbiddenLambda(p, sp, _invalid_sp)
-        q_must_be_smaller_than_sp = ForbiddenLambda(q, sp, _invalid_sp)
+        p_must_be_smaller_than_sp = ForbiddenGreaterThan(sp, p)
+        q_must_be_smaller_than_sp = ForbiddenGreaterThan(sp, q)
 
         maxiter = Constant('maxiter', 50)
         with_intercept = Constant('with_intercept', 'True')

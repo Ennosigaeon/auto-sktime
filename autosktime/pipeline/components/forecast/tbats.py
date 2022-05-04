@@ -5,13 +5,15 @@ from sktime.forecasting.base import ForecastingHorizon
 from sktime.utils.validation._dependencies import _check_soft_dependencies
 
 from ConfigSpace import ConfigurationSpace, CategoricalHyperparameter, EqualsCondition
-from autosktime.constants import IGNORES_EXOGENOUS_X, HANDLES_UNIVARIATE, HANDLES_MISSING, HANDLES_MULTIVARIATE, \
-    SUPPORTED_INDEX_TYPES
+from autosktime.constants import IGNORES_EXOGENOUS_X, HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, SUPPORTED_INDEX_TYPES
 from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import AutoSktimePredictor, COMPONENT_PROPERTIES
 
 
-class TBATSForecasterComponent(AutoSktimePredictor):
+class TBATSComponent(AutoSktimePredictor):
+    from sktime.forecasting.tbats import TBATS
+
+    _estimator_class = TBATS
 
     def __init__(
             self,
@@ -23,16 +25,17 @@ class TBATSForecasterComponent(AutoSktimePredictor):
             use_arma_errors: bool = True,
             random_state=None
     ):
+        super().__init__()
         self.use_box_cox = use_box_cox
         self.box_cox_bounds = box_cox_bounds
         self.use_trend = use_trend
         self.use_damped_trend = use_damped_trend
         self.sp = sp
         self.use_arma_errors = use_arma_errors
+        self.random_state = random_state
 
-    def fit(self, y, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
-        from sktime.forecasting.tbats import TBATS
-        self.estimator = TBATS(
+    def _fit(self, y, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
+        self.estimator = self._estimator_class(
             use_box_cox=self.use_box_cox,
             box_cox_bounds=self.box_cox_bounds,
             use_trend=self.use_trend,
@@ -50,7 +53,6 @@ class TBATSForecasterComponent(AutoSktimePredictor):
             HANDLES_UNIVARIATE: True,
             HANDLES_MULTIVARIATE: True,
             IGNORES_EXOGENOUS_X: True,
-            HANDLES_MISSING: True,
             SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.DatetimeIndex, pd.PeriodIndex]
         }
 

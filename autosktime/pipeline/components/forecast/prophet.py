@@ -6,14 +6,16 @@ from autosktime.data import DatasetProperties
 from sktime.forecasting.base import ForecastingHorizon
 
 from ConfigSpace import ConfigurationSpace, UniformIntegerHyperparameter, CategoricalHyperparameter, Constant
-from autosktime.constants import IGNORES_EXOGENOUS_X, HANDLES_UNIVARIATE, HANDLES_MISSING, HANDLES_MULTIVARIATE, \
-    SUPPORTED_INDEX_TYPES
+from autosktime.constants import IGNORES_EXOGENOUS_X, HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE,    SUPPORTED_INDEX_TYPES
 from autosktime.pipeline.components.base import AutoSktimePredictor, COMPONENT_PROPERTIES
 # noinspection PyProtectedMember
 from sktime.utils.validation._dependencies import _check_soft_dependencies
 
 
 class ProphetComponent(AutoSktimePredictor):
+    from sktime.forecasting.fbprophet import Prophet
+
+    _estimator_class = Prophet
 
     def __init__(
             self,
@@ -25,16 +27,16 @@ class ProphetComponent(AutoSktimePredictor):
             seasonality_mode: str = 'additive',
             random_state=None
     ):
+        super().__init__()
         self.growth = growth
         self.n_changepoints = n_changepoints
         self.yearly_seasonality = yearly_seasonality
         self.weekly_seasonality = weekly_seasonality
         self.daily_seasonality = daily_seasonality
         self.seasonality_mode = seasonality_mode
+        self.random_state = random_state
 
-    def fit(self, y, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
-        from sktime.forecasting.fbprophet import Prophet
-
+    def _fit(self, y, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
         def as_bool(value: Union[str, bool]) -> bool:
             try:
                 return bool(value)
@@ -45,7 +47,7 @@ class ProphetComponent(AutoSktimePredictor):
         weekly_seasonality = as_bool(self.weekly_seasonality)
         daily_seasonality = as_bool(self.daily_seasonality)
 
-        self.estimator = Prophet(
+        self.estimator = self._estimator_class(
             growth=self.growth,
             n_changepoints=self.n_changepoints,
             yearly_seasonality=yearly_seasonality,
@@ -63,7 +65,6 @@ class ProphetComponent(AutoSktimePredictor):
             HANDLES_UNIVARIATE: True,
             HANDLES_MULTIVARIATE: False,
             IGNORES_EXOGENOUS_X: False,
-            HANDLES_MISSING: False,
             SUPPORTED_INDEX_TYPES: [pd.DatetimeIndex]
         }
 

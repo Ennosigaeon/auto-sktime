@@ -5,21 +5,30 @@ import pkgutil
 import sys
 from abc import ABC
 from collections import OrderedDict
-from typing import Dict, Type, List, Any
+from typing import Dict, Type, List, Any, Union
 
 import pandas as pd
-from sklearn.base import BaseEstimator
 
+from ConfigSpace import Configuration, ConfigurationSpace, CategoricalHyperparameter
 from autosktime.constants import SUPPORTED_INDEX_TYPES
 from autosktime.data import DatasetProperties
-from sktime.forecasting.base import ForecastingHorizon
-
-from ConfigSpace import Configuration, ConfigurationSpace
+from sktime.base import BaseEstimator
+from sktime.forecasting.base import ForecastingHorizon, BaseForecaster
+from sktime.transformations.base import BaseTransformer
 
 COMPONENT_PROPERTIES = Any
 
 
 class AutoSktimeComponent(BaseEstimator):
+    # TODO check which methods really have to be wrapped
+
+    _estimator_class: Type[BaseEstimator] = None
+    estimator: BaseEstimator = None
+
+    _tags = {
+        'fit_is_empty': False
+    }
+
     @staticmethod
     @abc.abstractmethod
     def get_properties(dataset_properties: DatasetProperties = None) -> COMPONENT_PROPERTIES:
@@ -60,24 +69,11 @@ class AutoSktimeComponent(BaseEstimator):
         """Raises an exception is missing dependencies are not installed"""
         pass
 
-    def fit(self, y: pd.Series, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
-        """The fit function calls the fit function of the underlying
-        sktime model and returns `self`.
-
-        Parameters
-        ----------
-        y : pd.Series
-            Target time series to which to fit the forecaster.
-        fh : int, list or np.array, optional (default=None)
-            The forecasters' horizon with the steps ahead to predict.
-        X : pd.DataFrame, optional (default=None)
-            Exogenous variables are ignored
-
-        Returns
-        -------
-        self : returns an instance of self.
-        """
-        raise NotImplementedError()
+    def get_tags(self):
+        estimator = self.estimator if self.estimator is not None else self._estimator_class()
+        tags = estimator.get_tags()
+        tags.update(self._tags)
+        return tags
 
     def set_hyperparameters(self, configuration: Configuration, init_params: Dict[str, Any] = None):
         params = configuration.get_dictionary()
@@ -98,16 +94,69 @@ class AutoSktimeComponent(BaseEstimator):
         return self
 
 
-class AutoSktimePredictor(AutoSktimeComponent, ABC):
+class AutoSktimePredictor(AutoSktimeComponent, BaseForecaster, ABC):
+    # TODO check which methods really have to be wrapped
+
+    _estimator_class: Type[BaseForecaster] = None
+    estimator: BaseForecaster = None
 
     # noinspection PyUnresolvedReferences
-    def predict(self, fh: ForecastingHorizon = None, X: pd.DataFrame = None):
+    def get_fitted_params(self):
+        if self.estimator is None:
+            raise NotImplementedError
+        return self.estimator.get_fitted_params()
+
+    @abc.abstractmethod
+    def _fit(self, y: pd.Series, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
+        """The fit function calls the fit function of the underlying
+        sktime model and returns `self`.
+
+        Parameters
+        ----------
+        y : pd.Series
+            Target time series to which to fit the forecaster.
+        fh : int, list or np.array, optional (default=None)
+            The forecasters' horizon with the steps ahead to predict.
+        X : pd.DataFrame, optional (default=None)
+            Exogenous variables are ignored
+
+        Returns
+        -------
+        self : returns an instance of self.
+        """
+        raise NotImplementedError()
+
+    # noinspection PyUnresolvedReferences
+    def _predict(self, fh: ForecastingHorizon = None, X: pd.DataFrame = None):
         if self.estimator is None:
             raise NotImplementedError
         return self.estimator.predict(fh=fh, X=X)
 
 
-def find_components(package, directory, base_class) -> Dict[str, AutoSktimeComponent]:
+class AutoSktimeTransformer(AutoSktimeComponent, BaseTransformer, ABC):
+    # TODO check which methods really have to be wrapped
+
+    _estimator_class: Type[BaseTransformer] = None
+    estimator: BaseTransformer = None
+
+    @abc.abstractmethod
+    def _fit(self, X: Union[pd.Series, pd.DataFrame], y: pd.Series = None):
+        raise NotImplementedError()
+
+    # noinspection PyUnresolvedReferences
+    def _transform(self, X: Union[pd.Series, pd.DataFrame], y: pd.Series = None):
+        if self.estimator is None:
+            raise NotImplementedError
+        return self.estimator.transform(X, y=y)
+
+    # noinspection PyUnresolvedReferences
+    def _inverse_transform(self, X: Union[pd.Series, pd.DataFrame], y: pd.Series = None):
+        if self.estimator is None:
+            raise NotImplementedError
+        return self.estimator.inverse_transform(X, y=y)
+
+
+def find_components(package, directory, base_class) -> Dict[str, Type[AutoSktimeComponent]]:
     components = OrderedDict()
 
     for module_loader, module_name, ispkg in pkgutil.iter_modules([directory]):
@@ -124,10 +173,15 @@ def find_components(package, directory, base_class) -> Dict[str, AutoSktimeCompo
     return components
 
 
-class AutoSktimeChoice(AutoSktimePredictor, ABC):
-    def __init__(self, random_state=None):
+class AutoSktimeChoice(AutoSktimeComponent, ABC):
+    _tags = {
+        "requires-fh-in-fit": False
+    }
+
+    def __init__(self, estimator: AutoSktimeComponent = None, random_state=None):
+        super().__init__()
+        self.estimator = estimator
         self.random_state = random_state
-        self.choice = None
 
     @classmethod
     @abc.abstractmethod
@@ -158,7 +212,8 @@ class AutoSktimeChoice(AutoSktimePredictor, ABC):
                 continue
 
             if dataset_properties is not None:
-                if dataset_properties.index_type not in entry.get_properties()[SUPPORTED_INDEX_TYPES]:
+                if (dataset_properties.index_type is not None and
+                        dataset_properties.index_type not in entry.get_properties()[SUPPORTED_INDEX_TYPES]):
                     continue
 
             try:
@@ -191,22 +246,55 @@ class AutoSktimeChoice(AutoSktimePredictor, ABC):
         new_params['random_state'] = self.random_state
 
         self.new_params = new_params
-        # noinspection PyArgumentList
-        self.estimator = self.get_components()[choice](**new_params)
+        try:
+            # noinspection PyArgumentList
+            self.estimator = self.get_components()[choice](**new_params)
+        except TypeError as ex:
+            # Provide selected type as additional info in message
+            raise TypeError('{}.{}'.format(self.get_components()[choice], ex))
+
+        # Copy tags from selected estimator
+        tags = self.estimator.get_tags()
+        self.set_tags(**tags)
 
         return self
 
-    @abc.abstractmethod
     def get_hyperparameter_search_space(
             self,
             dataset_properties: DatasetProperties = None,
             default: str = None,
             include: List[str] = None,
             exclude: List[str] = None
-    ) -> Configuration:
-        raise NotImplementedError()
+    ) -> ConfigurationSpace:
+        if include is not None and exclude is not None:
+            raise ValueError("The arguments include and exclude cannot be used together.")
 
-    def fit(self, y: pd.Series, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
-        self.fitted_ = True
-        self.estimator.fit(y, X=X, fh=fh)
-        return self
+        cs = ConfigurationSpace()
+
+        # Compile a list of all objects for this problem
+        available_components = self.get_available_components(dataset_properties, include, exclude)
+
+        if len(available_components) == 0:
+            raise ValueError("No estimators found")
+
+        if default is None:
+            for default_ in available_components.keys():
+                if include is not None and default_ not in include:
+                    continue
+                if exclude is not None and default_ in exclude:
+                    continue
+                default = default_
+                break
+
+        # noinspection PyArgumentList
+        estimator = CategoricalHyperparameter('__choice__', list(available_components.keys()), default_value=default)
+        cs.add_hyperparameter(estimator)
+
+        for comp_name in available_components.keys():
+            comp_cs = available_components[comp_name].get_hyperparameter_search_space(dataset_properties)
+            parent_hyperparameter = {'parent': estimator, 'value': comp_name}
+            cs.add_configuration_space(comp_name, comp_cs, parent_hyperparameter=parent_hyperparameter)
+
+        self.configuration_space = cs
+        self.dataset_properties = dataset_properties
+        return cs

@@ -4,12 +4,14 @@ from autosktime.data import DatasetProperties
 from sktime.forecasting.base import ForecastingHorizon
 
 from ConfigSpace import ConfigurationSpace, CategoricalHyperparameter
-from autosktime.constants import IGNORES_EXOGENOUS_X, HANDLES_UNIVARIATE, HANDLES_MISSING, HANDLES_MULTIVARIATE, \
-    SUPPORTED_INDEX_TYPES
+from autosktime.constants import IGNORES_EXOGENOUS_X, HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, SUPPORTED_INDEX_TYPES
 from autosktime.pipeline.components.base import AutoSktimePredictor, COMPONENT_PROPERTIES
 
 
 class NaiveForecasterComponent(AutoSktimePredictor):
+    from sktime.forecasting.naive import NaiveForecaster
+
+    _estimator_class = NaiveForecaster
 
     def __init__(
             self,
@@ -17,12 +19,13 @@ class NaiveForecasterComponent(AutoSktimePredictor):
             strategy: str = 'last',
             random_state=None
     ):
+        super().__init__()
         self.sp = sp
         self.strategy = strategy
+        self.random_state = random_state
 
-    def fit(self, y, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
-        from sktime.forecasting.naive import NaiveForecaster
-        self.estimator = NaiveForecaster(
+    def _fit(self, y, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
+        self.estimator = self._estimator_class(
             sp=self.sp,
             strategy=self.strategy,
         )
@@ -46,7 +49,6 @@ class NaiveForecasterComponent(AutoSktimePredictor):
             HANDLES_UNIVARIATE: True,
             HANDLES_MULTIVARIATE: True,
             IGNORES_EXOGENOUS_X: True,
-            HANDLES_MISSING: True,
             SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.DatetimeIndex, pd.PeriodIndex]
         }
 

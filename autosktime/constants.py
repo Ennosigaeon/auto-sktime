@@ -18,7 +18,6 @@ STRING_TO_TASK_TYPES = {
 
 HANDLES_UNIVARIATE = 'cap:handles-univariate'
 HANDLES_MULTIVARIATE = 'cap:handles-multivariate'
-HANDLES_MISSING = 'cap:handles-missing'
 HANDLES_CATEGORICAL = 'cap:handles-categorical'
 IGNORES_EXOGENOUS_X = 'ignores-exogenous-X'
 SUPPORTED_INDEX_TYPES = 'supported-index-types'

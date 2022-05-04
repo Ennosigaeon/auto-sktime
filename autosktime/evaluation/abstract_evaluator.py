@@ -5,7 +5,6 @@ import warnings
 from typing import Optional, Union, Type, TextIO
 
 import pandas as pd
-from sktime.forecasting.base import ForecastingHorizon
 from smac.tae import StatusType
 
 from ConfigSpace import Configuration
@@ -13,14 +12,15 @@ from autosktime.automl_common.common.utils.backend import Backend
 from autosktime.constants import FORECAST_TASK
 from autosktime.data import AbstractDataManager
 from autosktime.evaluation import TaFuncResult
-from autosktime.metrics import BaseMetric, calculate_loss
+from autosktime.metrics import BaseMetric, calculate_loss, _BoundedMetricMixin
+from autosktime.pipeline.templates.univariate_endogenous import UnivariateEndogenousPipeline
+from sktime.forecasting.base import ForecastingHorizon
 
 __all__ = [
     'AbstractEvaluator'
 ]
 
 from autosktime.pipeline.components.base import AutoSktimeComponent, AutoSktimePredictor
-from autosktime.pipeline.components.forecast import ForecasterChoice
 
 
 def _fit_and_suppress_warnings(
@@ -107,10 +107,23 @@ class AbstractEvaluator:
 
     def _get_model(self) -> AutoSktimePredictor:
         # TODO not configurable
-        return ForecasterChoice().set_hyperparameters(self.configuration)
+        return UnivariateEndogenousPipeline(
+            config=self.configuration,
+            dataset_properties=self.datamanager.dataset_properties)
 
-    def _loss(self, y_true: pd.Series, y_hat: pd.Series) -> float:
-        return calculate_loss(y_true, y_hat, self.task_type, self.metric)
+    def _loss(self, y_true: pd.Series, y_hat: pd.Series, error: str = 'raise') -> float:
+        try:
+            return calculate_loss(y_true, y_hat, self.task_type, self.metric)
+        except ValueError:
+            if error == 'raise':
+                raise
+            elif error == 'worst':
+                if isinstance(self.metric, _BoundedMetricMixin) or hasattr(self.metric, 'worst_possible_result'):
+                    return self.metric.worst_possible_result
+                else:
+                    raise
+            else:
+                raise ValueError("Unknown exception handling '{}' method".format(error))
 
     def finish_up(
             self,

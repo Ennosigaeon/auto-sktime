@@ -35,16 +35,15 @@ def fit_predict_try_except_decorator(
             # Re-raise the memory error to let the pynisher handle that correctly
             raise e
 
-        exception_traceback = traceback.format_exc()
-        error_message = repr(e)
-
-        logging.getLogger("TAE").exception("Exception handling in `fit_predict_try_except_decorator`: traceback: {} \n"
-                                           "error message: {}".format(exception_traceback, error_message))
+        logging.getLogger("TAE").exception("Exception handling in `fit_predict_try_except_decorator`:")
 
         return TaFuncResult(
             loss=cost_for_crash,
             status=StatusType.CRASHED,
-            additional_run_info={'traceback': exception_traceback, 'error': error_message}
+            additional_run_info={
+                'traceback': traceback.format_exc(),
+                'error': repr(e)
+            }
         )
 
 
