@@ -5,10 +5,10 @@ import pandas as pd
 from ConfigSpace import ConfigurationSpace, CategoricalHyperparameter
 from autosktime.constants import IGNORES_EXOGENOUS_X, HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, SUPPORTED_INDEX_TYPES
 from autosktime.data import DatasetProperties
-from autosktime.pipeline.components.base import COMPONENT_PROPERTIES, AutoSktimeTransformer, AutoSktimePredictor
+from autosktime.pipeline.components.base import COMPONENT_PROPERTIES, AutoSktimeTransformer
 
 
-class ImputerComponent(AutoSktimeTransformer, AutoSktimePredictor):
+class ImputerComponent(AutoSktimeTransformer):
     from sktime.transformations.series.impute import Imputer
 
     _estimator_class = Imputer
