@@ -2,18 +2,18 @@ from typing import Optional, Tuple, List, NamedTuple
 
 import numpy as np
 import pandas as pd
-from sktime.forecasting.base import ForecastingHorizon
-# noinspection PyProtectedMember
 from smac.tae import StatusType
 
 from ConfigSpace import Configuration
 from autosktime.automl_common.common.utils.backend import Backend
 from autosktime.data.splitter import BaseSplitter
+from autosktime.ensembles.util import get_ensemble_targets
 from autosktime.evaluation import TaFuncResult
 # noinspection PyProtectedMember
 from autosktime.evaluation.abstract_evaluator import AbstractEvaluator, _fit_and_suppress_warnings
 from autosktime.metrics import BaseMetric
-from autosktime.pipeline.components.base import AutoSktimeComponent
+from autosktime.pipeline.components.base import AutoSktimeComponent, AutoSktimePredictor
+from sktime.forecasting.base import ForecastingHorizon
 
 EvalResult = NamedTuple('EvalResult', [
     ('y_pred', pd.Series),
@@ -37,11 +37,13 @@ class TrainEvaluator(AbstractEvaluator):
             splitter: BaseSplitter,
             seed: int = 1,
             num_run: int = 0,
+            ensemble_size: float = 0.2,
             budget: Optional[float] = None,
             budget_type: Optional[str] = None,
     ):
         super().__init__(backend, metric, configuration, seed, num_run, budget, budget_type)
         self.splitter = splitter
+        self.ensemble_size = ensemble_size
 
         self.models: List[AutoSktimeComponent] = []
         self.indices: List[Tuple[pd.Index, pd.Index]] = []
@@ -98,7 +100,17 @@ class TrainEvaluator(AbstractEvaluator):
         train_loss = np.average(train_losses, weights=train_weights)
         test_loss = np.average(test_loss, weights=test_loss)
 
-        return self.finish_up(loss=test_loss, train_loss=train_loss, y_pred=test_pred, status=StatusType.SUCCESS)
+        # Retrain model on complete data
+        # TODO is this really the correct place? Maybe only retrain well-performing models?
+        self.model, y_ens = self._fit_and_predict_final_model(self.ensemble_size)
+
+        return self.finish_up(
+            loss=test_loss,
+            train_loss=train_loss,
+            y_pred=test_pred,
+            y_ens=y_ens,
+            status=StatusType.SUCCESS
+        )
 
     def _fit_and_predict_fold_standard(
             self,
@@ -136,6 +148,19 @@ class TrainEvaluator(AbstractEvaluator):
             test: np.ndarray,
     ) -> Tuple[pd.Series, pd.Series]:
         raise NotImplementedError('Budgets not supported yet')
+
+    def _fit_and_predict_final_model(self, ensemble_size: float = 0.2) -> Tuple[AutoSktimePredictor, pd.Series]:
+        y = self.datamanager.y
+        X = self.datamanager.X
+
+        model = self._get_model()
+        _fit_and_suppress_warnings(self.logger, model, y, X)
+        self.model = model
+
+        y_test, X_test = get_ensemble_targets(self.datamanager, ensemble_size)
+        test_pred = self.predict_function(ForecastingHorizon(y_test.index, is_relative=False), X_test, model)
+
+        return model, test_pred
 
 
 def evaluate(
