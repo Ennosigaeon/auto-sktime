@@ -12,6 +12,7 @@ import traceback
 from dataclasses import dataclass
 from typing import Optional, Union, Dict, List, Tuple
 
+import dask.distributed
 import numpy as np
 import pandas as pd
 import pynisher
@@ -21,12 +22,14 @@ from smac.callbacks import IncorporateRunResultCallback
 from smac.optimizer.smbo import SMBO
 from smac.runhistory.runhistory import RunInfo, RunValue
 from smac.tae.base import StatusType
+from smac.tae.dask_runner import DaskParallelRunner
 
 from autosktime.automl_common.common.utils.backend import Backend
 from autosktime.data import AbstractDataManager
 from autosktime.ensembles.selection import EnsembleSelection
 from autosktime.ensembles.util import get_ensemble_train, PrefittedEnsembleForecaster
 from autosktime.metrics import calculate_loss, BaseMetric
+from autosktime.util.dask_single_thread_client import SingleThreadedClient
 from sktime.forecasting.compose import EnsembleForecaster
 
 Y_ENSEMBLE = 0
@@ -124,11 +127,14 @@ class EnsembleBuilderManager(IncorporateRunResultCallback):
         if result.status in (StatusType.STOP, StatusType.ABORT) or smbo._stop:
             return
 
-        # TODO build ensemble after each successful configuration evaluation
-        # self.build_ensemble(smbo.tae_runner.client)
+        if isinstance(smbo.tae_runner, DaskParallelRunner):
+            self.build_ensemble(smbo.tae_runner.client)
+        else:
+            self.build_ensemble(SingleThreadedClient())
 
     def build_ensemble(
             self,
+            dask_client: dask.distributed.Client,
     ) -> None:
         logger = logging.getLogger('EnsembleBuilder')
 
@@ -149,16 +155,17 @@ class EnsembleBuilderManager(IncorporateRunResultCallback):
             # memory
             try:
                 logger.info(
-                    "{} Starting Ensemble builder job at {} for iteration {}.".format(
-                        # Log the client to make sure we
-                        # remain connected to the scheduler
+                    "{}/{} Started Ensemble builder job at {} for iteration {}.".format(
+                        # Log the client to make sure we remain connected to the scheduler
                         self.pending_future,
-                        time.strftime("%Y.%m.%d-%H.%M.%S"),
+                        dask_client,
+                        time.strftime("%Y-%m-%d %H:%M:%S"),
                         self.iteration,
                     )
                 )
 
-                _fit_and_return_ensemble(
+                self.pending_future = dask_client.submit(
+                    _fit_and_return_ensemble,
                     backend=self.backend,
                     dataset_name=self.dataset_name,
                     task_type=self.task,
