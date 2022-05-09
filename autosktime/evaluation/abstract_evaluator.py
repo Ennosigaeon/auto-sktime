@@ -68,7 +68,7 @@ class AbstractEvaluator:
         self.num_run = num_run
 
         if self.task_type in FORECAST_TASK:
-            self.model = self._get_model()
+            self.model: Optional[AutoSktimePredictor] = None
             self.predict_function = self._predict_forecast
         else:
             raise ValueError('Unknown task_type {}'.format(self.task_type))
@@ -130,9 +130,10 @@ class AbstractEvaluator:
             loss: float,
             train_loss: float,
             y_pred: pd.Series,
+            y_ens: pd.Series,
             status: StatusType,
     ) -> TaFuncResult:
-        self.file_output(y_pred)
+        self.file_output(y_pred, y_ens)
 
         additional_run_info = {
             'test_loss': {self.metric.name: loss},
@@ -144,7 +145,7 @@ class AbstractEvaluator:
 
         return TaFuncResult(loss=loss, additional_run_info=additional_run_info, status=status)
 
-    def file_output(self, y_pred: pd.Series) -> None:
+    def file_output(self, y_pred: pd.Series, y_ens: pd.Series) -> None:
         # noinspection PyTypeChecker
         self.backend.save_numrun_to_dir(
             seed=self.seed,
@@ -154,5 +155,5 @@ class AbstractEvaluator:
             cv_model=self.models if hasattr(self, 'models') else None,
             test_predictions=y_pred.values,
             valid_predictions=None,
-            ensemble_predictions=None
+            ensemble_predictions=y_ens
         )

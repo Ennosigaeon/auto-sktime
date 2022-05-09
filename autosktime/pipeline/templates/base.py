@@ -160,3 +160,6 @@ class ConfigurableTransformedTargetForecaster(TransformedTargetForecaster, ABC):
     def get_fitted_params(self):
         # Only implemented for type checker, not actually used
         return super(ConfigurableTransformedTargetForecaster, self).get_fitted_params()
+
+
+BasePipeline = ConfigurableTransformedTargetForecaster

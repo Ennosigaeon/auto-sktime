@@ -29,6 +29,7 @@ class AutoMLSMBO:
             metric: BaseMetric,
             splitter: BaseSplitter,
             seed: int = 1,
+            ensemble_callback: Optional[IncorporateRunResultCallback] = None,
             trials_callback: Optional[IncorporateRunResultCallback] = None
     ):
         # data related
@@ -49,6 +50,7 @@ class AutoMLSMBO:
         self.memory_limit = memory_limit
         self.seed = seed
 
+        self.ensemble_callback = ensemble_callback
         self.trials_callback = trials_callback
 
         self.logger = logging.getLogger(__name__)
@@ -99,6 +101,8 @@ class AutoMLSMBO:
             intensifier=SimpleIntensifier,
         )
 
+        if self.ensemble_callback is not None:
+            smac.register_callback(self.ensemble_callback)
         if self.trials_callback is not None:
             smac.register_callback(self.trials_callback)
 
