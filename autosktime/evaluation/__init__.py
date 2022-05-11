@@ -35,7 +35,7 @@ def fit_predict_try_except_decorator(
             # Re-raise the memory error to let the pynisher handle that correctly
             raise e
 
-        logging.getLogger("TAE").exception("Exception handling in `fit_predict_try_except_decorator`:")
+        logging.getLogger('TAE').exception('Exception handling in `fit_predict_try_except_decorator`:')
 
         return TaFuncResult(
             loss=cost_for_crash,
@@ -90,7 +90,7 @@ class ExecuteTaFunc(AbstractTAFunc):
             memory_limit = int(math.ceil(memory_limit))
         self.memory_limit = memory_limit
 
-        self.logger: logging.Logger = logging.getLogger("TAE")
+        self.logger: logging.Logger = logging.getLogger('TAE')
 
     def run_wrapper(
             self,
@@ -124,7 +124,7 @@ class ExecuteTaFunc(AbstractTAFunc):
             run_info = run_info._replace(cutoff=int(remaining_time - 5))
 
         if run_info.cutoff < 1.0:
-            self.logger.info("Not starting configuration {} because time is up".format(run_info.config.config_id))
+            self.logger.info('Not starting configuration {} because time is up'.format(run_info.config.config_id))
             return run_info, RunValue(
                 status=StatusType.STOP,
                 cost=self.worst_possible_result,
@@ -136,7 +136,7 @@ class ExecuteTaFunc(AbstractTAFunc):
         elif run_info.cutoff != int(np.ceil(run_info.cutoff)) and not isinstance(run_info.cutoff, int):
             run_info = run_info._replace(cutoff=int(np.ceil(run_info.cutoff)))
 
-        self.logger.info("Starting to evaluate configuration {}: {}".format(run_info.config.config_id,
+        self.logger.info('Starting to evaluate configuration {}: {}'.format(run_info.config.config_id,
                                                                             run_info.config.get_dictionary()))
         info, value = super().run_wrapper(run_info=run_info)
 
@@ -181,5 +181,5 @@ class ExecuteTaFunc(AbstractTAFunc):
         additional_run_info['configuration_origin'] = config.origin
         additional_run_info['status'] = info.status
 
-        self.logger.info("Finished evaluating configuration {}".format(config.config_id))
+        self.logger.info('Finished evaluating configuration {}'.format(config.config_id))
         return cost, additional_run_info

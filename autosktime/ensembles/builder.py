@@ -144,7 +144,7 @@ class EnsembleBuilderManager(IncorporateRunResultCallback):
                 result = self.pending_future.result()
                 self.pending_future = None
                 if result:
-                    logger.debug("iteration={} @ elapsed_time={}".format(
+                    logger.debug('iteration={} @ elapsed_time={}'.format(
                         self.iteration,
                         time.time() - self.start_time,
                     ))
@@ -155,11 +155,11 @@ class EnsembleBuilderManager(IncorporateRunResultCallback):
             # memory
             try:
                 logger.info(
-                    "{}/{} Started Ensemble builder job at {} for iteration {}.".format(
+                    '{}/{} Started Ensemble builder job at {} for iteration {}.'.format(
                         # Log the client to make sure we remain connected to the scheduler
                         self.pending_future,
                         dask_client,
-                        time.strftime("%Y-%m-%d %H:%M:%S"),
+                        time.strftime('%Y-%m-%d %H:%M:%S'),
                         self.iteration,
                     )
                 )
@@ -270,17 +270,17 @@ class EnsembleBuilder:
         self.ensemble_size = ensemble_size
 
         if isinstance(ensemble_nbest, numbers.Integral) and ensemble_nbest < 1:
-            raise ValueError("Integer ensemble_nbest has to be larger 1: {}".format(ensemble_nbest))
+            raise ValueError('Integer ensemble_nbest has to be larger 1: {}'.format(ensemble_nbest))
         elif not isinstance(ensemble_nbest, numbers.Integral):
             if not 0 < ensemble_nbest <= 1:
-                raise ValueError("Float ensemble_nbest best has to be > 0 and <= 1: {}".format(ensemble_nbest))
+                raise ValueError('Float ensemble_nbest best has to be > 0 and <= 1: {}'.format(ensemble_nbest))
 
         self.ensemble_nbest = ensemble_nbest
 
         # max_models_on_disc can be a float, in such case we need to remember the user specified Megabytes and translate
         # this to max number of ensemble models. max_resident_models keeps the maximum number of models on disc
         if max_models_on_disc is not None and max_models_on_disc < 0:
-            raise ValueError("max_models_on_disc has to be a positive number or None")
+            raise ValueError('max_models_on_disc has to be a positive number or None')
         self.max_models_on_disc = max_models_on_disc
         self.max_resident_models = None
 
@@ -305,23 +305,23 @@ class EnsembleBuilder:
         self.ensemble_memory_file = os.path.join(self.backend.internals_directory, 'ensemble_read_preds.pkl')
         if os.path.exists(self.ensemble_memory_file):
             try:
-                with (open(self.ensemble_memory_file, "rb")) as memory:
+                with (open(self.ensemble_memory_file, 'rb')) as memory:
                     predictions, self.last_hash = pickle.load(memory)
                     self.predictions: Dict[str, Optional[pd.Series]] = predictions
             except Exception as e:
                 self.logger.warning(
-                    "Could not load the previous iterations of ensemble_builder predictions."
-                    "This might impact the quality of the run. Exception={} {}".format(e, traceback.format_exc())
+                    'Could not load the previous iterations of ensemble_builder predictions.'
+                    'This might impact the quality of the run. Exception={} {}'.format(e, traceback.format_exc())
                 )
         self.ensemble_loss_file = os.path.join(self.backend.internals_directory, 'ensemble_read_losses.pkl')
         if os.path.exists(self.ensemble_loss_file):
             try:
-                with (open(self.ensemble_loss_file, "rb")) as memory:
+                with (open(self.ensemble_loss_file, 'rb')) as memory:
                     self.read_losses: Dict[str, ModelLoss] = pickle.load(memory)
             except Exception as e:
                 self.logger.warning(
-                    "Could not load the previous iterations of ensemble_builder losses."
-                    "This might impact the quality of the run. Exception={} {}".format(e, traceback.format_exc())
+                    'Could not load the previous iterations of ensemble_builder losses.'
+                    'This might impact the quality of the run. Exception={} {}'.format(e, traceback.format_exc())
                 )
 
         self.validation_performance_ = np.inf
@@ -383,22 +383,22 @@ class EnsembleBuilder:
             self._delete_excess_models(selected_keys=candidate_models)
 
         # Save the read losses status for the next iteration
-        with open(self.ensemble_loss_file, "wb") as memory:
+        with open(self.ensemble_loss_file, 'wb') as memory:
             pickle.dump(self.read_losses, memory)
 
         # The loaded predictions and the hash can only be saved after the ensemble has been built, because the hash is
         # computed during the construction of the ensemble
-        with open(self.ensemble_memory_file, "wb") as memory:
+        with open(self.ensemble_memory_file, 'wb') as memory:
             pickle.dump((self.predictions, self.last_hash), memory)
 
     def compute_loss_per_model(self):
-        self.logger.debug("Read ensemble data set predictions")
+        self.logger.debug('Read ensemble data set predictions')
 
         if self.y_true_ensemble is None:
             try:
                 self.y_true_ensemble = self.backend.load_targets_ensemble()
             except FileNotFoundError:
-                self.logger.debug("Could not find true targets on ensemble data set: {}".format(traceback.format_exc()))
+                self.logger.debug('Could not find true targets on ensemble data set: {}'.format(traceback.format_exc()))
                 return False
 
         pred_path = os.path.join(
@@ -412,7 +412,7 @@ class EnsembleBuilder:
 
         # no predictions so far -- no files
         if len(self.y_ens_files) == 0:
-            self.logger.debug("Found no prediction files on ensemble data set: {}".format(pred_path))
+            self.logger.debug('Found no prediction files on ensemble data set: {}'.format(pred_path))
             return False
 
         # First sort files chronologically
@@ -429,7 +429,7 @@ class EnsembleBuilder:
         n_read_files = 0
         # Now read file wrt to num_run
         for y_ens_fn, match, _seed, _num_run, _budget, mtime in sorted(to_read, key=lambda x: x[5]):
-            if not y_ens_fn.endswith(".npy"):
+            if not y_ens_fn.endswith('.npy'):
                 self.logger.info('Error loading file (not .npy): {}'.format(y_ens_fn))
                 continue
 
@@ -472,7 +472,7 @@ class EnsembleBuilder:
     def _get_disk_consumption(self, pred_path: str):
         match = self.model_fn_re.search(pred_path)
         if not match:
-            raise ValueError("Invalid path format {}".format(pred_path))
+            raise ValueError('Invalid path format {}'.format(pred_path))
         _seed = int(match.group(1))
         _num_run = int(match.group(2))
         _budget = float(match.group(3))
@@ -489,7 +489,7 @@ class EnsembleBuilder:
     def get_n_best_preds(self) -> List[str]:
         """
         get best n predictions (i.e., keys of self.read_losses)
-        according to the loss on the "ensemble set"
+        according to the loss on the 'ensemble set'
         n: self.ensemble_nbest
 
         Side effects:
@@ -503,12 +503,12 @@ class EnsembleBuilder:
         if not isinstance(self.ensemble_nbest, numbers.Integral):
             keep_nbest = max(1, min(len(sorted_keys), int(len(sorted_keys) * self.ensemble_nbest)))
             self.logger.debug(
-                "Library pruning: using only top {:.2f} percent of the models for ensemble ({}/{})".format(
+                'Library pruning: using only top {:.2f} percent of the models for ensemble ({}/{})'.format(
                     self.ensemble_nbest * 100, keep_nbest, len(sorted_keys)
                 ))
         else:
             keep_nbest = min(self.ensemble_nbest, len(sorted_keys))
-            self.logger.debug("Library Pruning: using for ensemble {}/{} models".format(keep_nbest, len(sorted_keys)))
+            self.logger.debug('Library Pruning: using for ensemble {}/{} models'.format(keep_nbest, len(sorted_keys)))
 
         # One can only read at most max_models_on_disc models
         if isinstance(self.max_models_on_disc, numbers.Integral):
@@ -528,7 +528,7 @@ class EnsembleBuilder:
 
                 # Make sure that at least 1 model survives
                 self.max_resident_models = max(1, int(max_models))
-                self.logger.warning("Limiting num of models as accumulated={} worst={} num_models={}".format(
+                self.logger.warning('Limiting num of models as accumulated={} worst={} num_models={}'.format(
                     (sum(c[1] for c in consumption) + largest_consumption),
                     largest_consumption,
                     self.max_resident_models
@@ -537,7 +537,7 @@ class EnsembleBuilder:
             self.max_resident_models = None
 
         if self.max_resident_models is not None and keep_nbest > self.max_resident_models:
-            self.logger.debug("Restricting the number of models to {}/{} due to argument max_models_on_disc".format(
+            self.logger.debug('Restricting the number of models to {}/{} due to argument max_models_on_disc'.format(
                 self.max_resident_models, keep_nbest))
             keep_nbest = self.max_resident_models
 
@@ -581,11 +581,11 @@ class EnsembleBuilder:
                             for k in selected_keys]
 
         # check hash if ensemble training data changed
-        current_hash = "".join([f'{hash_pandas_object(pred).sum()}' for pred in predictions_train])
+        current_hash = ''.join([f'{hash_pandas_object(pred).sum()}' for pred in predictions_train])
 
         if self.last_hash == current_hash:
             self.logger.debug(
-                "No new model predictions selected -- skip ensemble building -- current performance: {}".format(
+                'No new model predictions selected -- skip ensemble building -- current performance: {}'.format(
                     self.validation_performance_))
             return None
         self.last_hash = current_hash
@@ -598,11 +598,11 @@ class EnsembleBuilder:
         )
 
         try:
-            self.logger.debug("Fitting the ensemble on {} models.".format(len(predictions_train)))
+            self.logger.debug('Fitting the ensemble on {} models.'.format(len(predictions_train)))
             start_time = time.time()
             ensemble.fit(predictions_train, self.y_true_ensemble, include_num_runs)
             end_time = time.time()
-            self.logger.debug("Fitting the ensemble took {:.2f} seconds.".format(end_time - start_time))
+            self.logger.debug('Fitting the ensemble took {:.2f} seconds.'.format(end_time - start_time))
             self.logger.info(ensemble)
             self.validation_performance_ = min(self.validation_performance_, ensemble.get_validation_performance())
         except ValueError:
@@ -640,12 +640,12 @@ class EnsembleBuilder:
             try:
                 os.rename(directory, '{}.old'.format(directory))
                 shutil.rmtree('{}.old'.format(directory))
-                self.logger.info("Deleted files of non-candidate model {}".format(pred_path))
+                self.logger.info('Deleted files of non-candidate model {}'.format(pred_path))
                 self.read_losses[pred_path].disc_space_cost_mb = None
                 self.read_losses[pred_path].loaded = 3
                 self.read_losses[pred_path].ens_loss = np.inf
             except Exception as e:
-                self.logger.error("Failed to delete non-candidate model {} due to error {}".format(pred_path, e))
+                self.logger.error('Failed to delete non-candidate model {} due to error {}'.format(pred_path, e))
 
     @staticmethod
     def _read_np_fn(path) -> pd.Series:

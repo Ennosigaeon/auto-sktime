@@ -71,8 +71,8 @@ class EnsembleSelection(AbstractEnsemble):
             raise ValueError('Unknown task type {}.'.format(self.task_type))
         if not isinstance(self.metric, BaseMetric):
             raise ValueError(
-                "The provided metric must be an instance of {}, nevertheless it is"
-                " {}({})".format(BaseMetric, self.metric, type(self.metric)))
+                'The provided metric must be an instance of {}, nevertheless it is'
+                ' {}({})'.format(BaseMetric, self.metric, type(self.metric)))
         if self.mode not in ('fast', 'slow'):
             raise ValueError('Unknown mode {}'.format(self.mode))
 
@@ -189,11 +189,11 @@ class EnsembleSelection(AbstractEnsemble):
     def __str__(self) -> str:
         trajectory_str = ' '.join([f'{id}: {perf:.5f}' for id, perf in enumerate(self.trajectory_)])
         identifiers_str = ' '.join([f'{id}' for idx, id in enumerate(self.identifiers_) if self.weights_[idx] > 0])
-        return ("Ensemble Selection:\n"
-                f"\tTrajectory: {trajectory_str}\n"
-                f"\tMembers: {self.indices_}\n"
-                f"\tWeights: {self.weights_}\n"
-                f"\tIdentifiers: {identifiers_str}\n")
+        return ('Ensemble Selection:\n'
+                f'\tTrajectory: {trajectory_str}\n'
+                f'\tMembers: {self.indices_}\n'
+                f'\tWeights: {self.weights_}\n'
+                f'\tIdentifiers: {identifiers_str}\n')
 
     def get_models_with_weights(
             self,
