@@ -80,15 +80,14 @@ class AutoSktimeComponent(BaseEstimator):
 
         for param, value in params.items():
             if not hasattr(self, param):
-                raise ValueError('Cannot set hyperparameter {} for {} because '
-                                 'the hyperparameter does not exist.'.format(param, self))
+                raise ValueError(
+                    f'Cannot set hyperparameter {param} for {self} because the hyperparameter does not exist.')
             setattr(self, param, value)
 
         if init_params is not None:
             for param, value in init_params.items():
                 if not hasattr(self, param):
-                    raise ValueError('Cannot set init param {} for {} because '
-                                     'the init param does not exist.'.format(param, self))
+                    raise ValueError(f'Cannot set init param {param} for {self} because the init param does not exist.')
                 setattr(self, param, value)
 
         return self
@@ -160,7 +159,7 @@ def find_components(package, directory, base_class) -> Dict[str, Type[AutoSktime
     components = OrderedDict()
 
     for module_loader, module_name, ispkg in pkgutil.iter_modules([directory]):
-        full_module_name = '{}.{}'.format(package, module_name)
+        full_module_name = f'{package}.{module_name}'
         if full_module_name not in sys.modules and not ispkg:
             module = importlib.import_module(full_module_name)
 
@@ -202,7 +201,7 @@ class AutoSktimeChoice(AutoSktimeComponent, ABC):
         if include is not None:
             for incl in include:
                 if incl not in available_comp:
-                    raise ValueError('Trying to include unknown component: {}'.format(incl))
+                    raise ValueError(f'Trying to include unknown component: {incl}')
 
         components_dict = OrderedDict()
         for name, entry in available_comp.items():
@@ -251,7 +250,7 @@ class AutoSktimeChoice(AutoSktimeComponent, ABC):
             self.estimator = self.get_components()[choice](**new_params)
         except TypeError as ex:
             # Provide selected type as additional info in message
-            raise TypeError('{}.{}'.format(self.get_components()[choice], ex))
+            raise TypeError(f'{self.get_components()[choice]}.{ex}')
 
         # Copy tags from selected estimator
         tags = self.estimator.get_tags()

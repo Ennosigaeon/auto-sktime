@@ -68,13 +68,13 @@ class EnsembleSelection(AbstractEnsemble):
         if self.ensemble_size < 1:
             raise ValueError('Ensemble size cannot be less than one!')
         if self.task_type not in TASK_TYPES:
-            raise ValueError('Unknown task type {}.'.format(self.task_type))
+            raise ValueError(f'Unknown task type {self.task_type}.')
         if not isinstance(self.metric, BaseMetric):
             raise ValueError(
-                'The provided metric must be an instance of {}, nevertheless it is'
-                ' {}({})'.format(BaseMetric, self.metric, type(self.metric)))
+                f'The provided metric must be an instance of {BaseMetric}, nevertheless it is '
+                f'{self.metric}({type(self.metric)})')
         if self.mode not in ('fast', 'slow'):
-            raise ValueError('Unknown mode {}'.format(self.mode))
+            raise ValueError(f'Unknown mode {self.mode}')
 
         self._fit(predictions, labels)
         self._calculate_weights()

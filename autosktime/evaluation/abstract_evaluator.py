@@ -37,7 +37,7 @@ def _fit_and_suppress_warnings(
             file: Optional[TextIO] = None,
             line: Optional[str] = None,
     ) -> None:
-        logger.debug('{}:{}: {}:{}'.format(filename, lineno, str(category), message))
+        logger.debug(f'{filename}:{lineno}: {str(category)}:{message}')
 
     with warnings.catch_warnings():
         warnings.showwarning = send_warnings_to_log
@@ -71,7 +71,7 @@ class AbstractEvaluator:
             self.model: Optional[AutoSktimePredictor] = None
             self.predict_function = self._predict_forecast
         else:
-            raise ValueError('Unknown task_type {}'.format(self.task_type))
+            raise ValueError(f'Unknown task_type {self.task_type}')
 
         self.logger = logging.getLogger(__name__)
 
@@ -93,7 +93,7 @@ class AbstractEvaluator:
                 file: Optional[TextIO] = None,
                 line: Optional[str] = None,
         ) -> None:
-            self.logger.debug('{}:{}: {}:{}'.format(filename, lineno, str(category), message))
+            self.logger.debug(f'{filename}:{lineno}: {str(category)}:{message}')
 
         with warnings.catch_warnings():
             warnings.showwarning = send_warnings_to_log
@@ -123,7 +123,7 @@ class AbstractEvaluator:
                 else:
                     raise
             else:
-                raise ValueError("Unknown exception handling '{}' method".format(error))
+                raise ValueError(f"Unknown exception handling '{error}' method")
 
     def finish_up(
             self,

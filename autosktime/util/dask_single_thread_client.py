@@ -24,7 +24,7 @@ class DummyFuture(dask.distributed.Future):
         return True
 
     def __repr__(self) -> str:
-        return 'DummyFuture: {}'.format(self._result)
+        return f'DummyFuture: {self._result}'
 
     def __del__(self) -> None:
         pass

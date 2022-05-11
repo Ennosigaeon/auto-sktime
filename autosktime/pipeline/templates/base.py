@@ -60,7 +60,7 @@ class ConfigurableTransformedTargetForecaster(TransformedTargetForecaster, ABC):
         if include is not None and exclude is not None:
             for key in include.keys():
                 if key in exclude.keys():
-                    raise ValueError("Cannot specify include and exclude for same step '{}'.".format(key))
+                    raise ValueError(f"Cannot specify include and exclude for same step '{key}'.")
 
         supported_steps: Dict[str, AutoSktimeChoice] = {
             name: choice for name, choice in self.steps
@@ -72,22 +72,25 @@ class ConfigurableTransformedTargetForecaster(TransformedTargetForecaster, ABC):
                 continue
             for key in argument.keys():
                 if key not in supported_steps:
-                    raise ValueError("The provided key '{}' in the '{}' argument is not valid. The only supported keys "
-                                     "for this task are {}".format(key, arg, list(supported_steps.keys())))
+                    raise ValueError(
+                        f"The provided key '{key}' in the '{arg}' argument is not valid. "
+                        f"The only supported keys for this task are {list(supported_steps.keys())}")
 
                 candidate_components = argument[key]
                 if not (isinstance(candidate_components, list) and candidate_components):
-                    raise ValueError("The provided value of the key '{}' in the '{}' argument is not valid. The value "
-                                     "must be a non-empty list.".format(key, arg))
+                    raise ValueError(
+                        f"The provided value of the key '{key}' in the '{arg}' argument is not valid. "
+                        f"The value must be a non-empty list.")
 
                 available_components = list(
                     supported_steps[key].get_available_components(dataset_properties=self.dataset_properties).keys()
                 )
                 for component in candidate_components:
                     if component not in available_components:
-                        raise ValueError("The provided component '{}' for the key '{}' in the '{}' argument is not "
-                                         "valid. The supported components for the step '{}' for this task are {}"
-                                         .format(component, key, arg, key, available_components))
+                        raise ValueError(
+                            f"The provided component '{component}' for the key '{key}' in the '{arg}' argument is not "
+                            f"valid. The supported components for the step '{key}' for this task are "
+                            f"{available_components}")
 
     def set_hyperparameters(
             self,
@@ -100,9 +103,9 @@ class ConfigurableTransformedTargetForecaster(TransformedTargetForecaster, ABC):
             sub_configuration_space = node.get_hyperparameter_search_space(dataset_properties=self.dataset_properties)
             sub_config_dict = {}
             for param in configuration:
-                if param.startswith('{}:'.format(node_name)):
+                if param.startswith(f'{node_name}:'):
                     value = configuration[param]
-                    new_name = param.replace('{}:'.format(node_name), '', 1)
+                    new_name = param.replace(f'{node_name}:', '', 1)
                     sub_config_dict[new_name] = value
 
             sub_configuration = Configuration(sub_configuration_space, values=sub_config_dict)
@@ -110,9 +113,9 @@ class ConfigurableTransformedTargetForecaster(TransformedTargetForecaster, ABC):
             if init_params is not None:
                 sub_init_params_dict = {}
                 for param in init_params:
-                    if param.startswith('{}:'.format(node_name)):
+                    if param.startswith(f'{node_name}:'):
                         value = init_params[param]
-                        new_name = param.replace('{}:'.format(node_name), '', 1)
+                        new_name = param.replace(f'{node_name}:', '', 1)
                         sub_init_params_dict[new_name] = value
             else:
                 sub_init_params_dict = None

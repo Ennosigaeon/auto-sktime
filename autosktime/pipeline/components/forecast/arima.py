@@ -42,8 +42,8 @@ class ARIMAComponent(AutoSktimePredictor):
 
     def _fit(self, y, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
         if self.d >= y.shape[0]:
-            raise ValueError('Trainings data is too short ({}) for selected d ({}). Try to increase'
-                             'the trainings data or decrease d'.format(y.shape[0], self.d))
+            raise ValueError(f'Trainings data is too short ({y.shape[0]}) for selected d ({self.d}). '
+                             f'Try to increase the trainings data or decrease d')
 
         try:
             with_intercept = bool(self.with_intercept)
