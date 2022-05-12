@@ -4,7 +4,7 @@ from typing import Dict, Any, List, Tuple
 
 from ConfigSpace import Configuration, ConfigurationSpace
 from autosktime.data import DatasetProperties
-from autosktime.pipeline.components.base import AutoSktimeComponent, AutoSktimeChoice, AutoSktimePredictor
+from autosktime.pipeline.components.base import AutoSktimeComponent, AutoSktimeChoice
 from sktime.forecasting.compose import TransformedTargetForecaster
 
 

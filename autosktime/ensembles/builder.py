@@ -1,7 +1,6 @@
 import glob
 import logging.handlers
 import math
-import multiprocessing
 import numbers
 import os
 import pickle
@@ -106,7 +105,7 @@ class EnsembleBuilderManager(IncorporateRunResultCallback):
         self.random_state = random_state
 
         # Store something similar to SMAC's runhistory
-        self.history = []
+        self.history: List[Tuple[float, float, int]] = []
 
         # We only submit new ensembles when there is not an active ensemble job
         self.pending_future: Optional[Future] = None
@@ -139,13 +138,15 @@ class EnsembleBuilderManager(IncorporateRunResultCallback):
         logger = logging.getLogger('EnsembleBuilder')
 
         # Only submit new jobs if the previous ensemble job finished
-        if self.pending_future is not None:
-            if self.pending_future.done():
-                result = self.pending_future.result()
-                self.pending_future = None
-                if result:
-                    logger.debug(f'iteration={self.iteration} @ elapsed_time={time.time() - self.start_time}')
-        else:
+        if self.pending_future is not None and self.pending_future.done():
+            result = self.pending_future.result()
+            self.pending_future = None
+            if result:
+                logger.debug(f'iteration={self.iteration} @ elapsed_time={time.time() - self.start_time} has '
+                             f'result={result}')
+                self.history.append(result)
+
+        if self.pending_future is None:
             # Add the result of the run. On the next while iteration, no references to ensemble builder object, so it
             # should be garbage collected to save memory while waiting for resources. Also, notice how ensemble nbest is
             # returned, so we don't waste iterations testing if the deterministic predictions size can be fitted in
@@ -170,6 +171,7 @@ class EnsembleBuilderManager(IncorporateRunResultCallback):
                     random_state=self.random_state,
                     end_at=self.start_time + self.time_left_for_ensembles,
                     iteration=self.iteration,
+                    current_performance=np.inf if len(self.history) == 0 else self.history[-1][1]
                 )
 
                 self.iteration += 1
@@ -206,9 +208,10 @@ def _fit_and_return_ensemble(
         seed: int,
         end_at: float,
         iteration: int,
+        current_performance: float,
         random_state: Optional[Union[int, np.random.RandomState]] = None,
-) -> None:
-    EnsembleBuilder(
+) -> Tuple[float, float, int]:
+    return EnsembleBuilder(
         backend=backend,
         dataset_name=dataset_name,
         task_type=task_type,
@@ -217,6 +220,7 @@ def _fit_and_return_ensemble(
         ensemble_nbest=ensemble_nbest,
         max_models_on_disc=max_models_on_disc,
         seed=seed,
+        previous_performance=current_performance,
         random_state=random_state
     ).run(
         end_at=end_at,
@@ -253,6 +257,7 @@ class EnsembleBuilder:
             ensemble_nbest: Union[int, float] = 100,
             max_models_on_disc: Union[int, float] = None,
             seed: int = 1,
+            previous_performance=np.inf,
             random_state: Optional[Union[int, np.random.RandomState]] = None,
             use_pynisher: bool = False
     ):
@@ -317,7 +322,7 @@ class EnsembleBuilder:
                     f'This might impact the quality of the run. Exception={e} {traceback.format_exc()}'
                 )
 
-        self.validation_performance_ = np.inf
+        self.validation_performance_ = previous_performance
 
     def run(
             self,
@@ -325,7 +330,7 @@ class EnsembleBuilder:
             time_left: Optional[float] = None,
             end_at: Optional[float] = None,
             time_buffer: int = 5,
-    ) -> None:
+    ) -> Tuple[float, float, int]:
         if time_left is None and end_at is None:
             raise ValueError('Must provide either time_left or end_at.')
         elif time_left is not None and end_at is not None:
@@ -340,28 +345,32 @@ class EnsembleBuilder:
                 time_left = end_at - current_time
             wall_time_in_s = int(time_left - time_buffer)
 
-            context = multiprocessing.get_context()
             safe_ensemble_script = pynisher.enforce_limits(
                 wall_time_in_s=wall_time_in_s,
                 logger=self.logger,
-                context=context,
             )(self._run)
-            safe_ensemble_script(time_left, iteration)
+            safe_ensemble_script(iteration)
+
+            if safe_ensemble_script.exit_status == 0:
+                return safe_ensemble_script.result
+            else:
+                return time.time(), np.inf, self.ensemble_nbest
         else:
             try:
-                self._run(np.inf, iteration)
+                return self._run(iteration)
             except Exception as e:
                 self.logger.exception(e)
+                return time.time(), np.inf, self.ensemble_nbest
 
-    def _run(self, time_left: float, iteration: int) -> None:
+    def _run(self, iteration: int) -> Tuple[float, float, int]:
         # populates self.read_preds and self.read_losses
         if not self.compute_loss_per_model():
-            return
+            return time.time(), np.inf, self.ensemble_nbest
 
         # Only the models with the n_best predictions are candidates to be in the ensemble
         candidate_models = self.get_n_best_preds()
         if not candidate_models:  # no candidates yet
-            return
+            return time.time(), np.inf, self.ensemble_nbest
 
         # train ensemble
         ensemble = self.fit_ensemble(selected_keys=candidate_models)
@@ -369,6 +378,7 @@ class EnsembleBuilder:
         # Save the ensemble for later use in the main auto-sktime module!
         if ensemble is not None:
             self.backend.save_ensemble(ensemble, iteration, self.seed)
+            self.validation_performance_ = ensemble.train_loss_
 
         # Delete files of non-candidate models - can only be done after fitting the ensemble and saving it to disc, so
         # we do not accidentally delete models in the previous ensemble
@@ -383,6 +393,8 @@ class EnsembleBuilder:
         # computed during the construction of the ensemble
         with open(self.ensemble_memory_file, 'wb') as memory:
             pickle.dump((self.predictions, self.last_hash), memory)
+
+        return time.time(), self.validation_performance_, self.ensemble_nbest
 
     def compute_loss_per_model(self):
         self.logger.debug('Read ensemble data set predictions')

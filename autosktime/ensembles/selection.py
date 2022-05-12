@@ -7,11 +7,10 @@ from numpy.random import RandomState
 from sklearn.utils import check_random_state
 
 from autosktime.automl_common.common.ensemble_building.abstract_ensemble import AbstractEnsemble
+from autosktime.automl_common.common.utils.backend import PIPELINE_IDENTIFIER_TYPE
 from autosktime.constants import TASK_TYPES
 from autosktime.metrics import BaseMetric, calculate_loss
 from autosktime.pipeline.templates.base import BasePipeline
-
-Identifier = Tuple[int, int, float]
 
 
 class EnsembleSelection(AbstractEnsemble):
@@ -62,7 +61,7 @@ class EnsembleSelection(AbstractEnsemble):
             self,
             predictions: List[pd.Series],
             labels: np.ndarray,
-            identifiers: List[Identifier],
+            identifiers: List[PIPELINE_IDENTIFIER_TYPE],
     ) -> AbstractEnsemble:
         self.ensemble_size = int(self.ensemble_size)
         if self.ensemble_size < 1:
@@ -197,7 +196,7 @@ class EnsembleSelection(AbstractEnsemble):
 
     def get_models_with_weights(
             self,
-            models: Dict[Identifier, BasePipeline]
+            models: Dict[PIPELINE_IDENTIFIER_TYPE, BasePipeline]
     ) -> List[Tuple[float, BasePipeline]]:
         output = []
         for i, weight in enumerate(self.weights_):
@@ -210,7 +209,7 @@ class EnsembleSelection(AbstractEnsemble):
 
         return output
 
-    def get_selected_model_identifiers(self) -> List[Identifier]:
+    def get_selected_model_identifiers(self) -> List[PIPELINE_IDENTIFIER_TYPE]:
         output = []
 
         for i, weight in enumerate(self.weights_):
