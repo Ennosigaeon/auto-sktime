@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Dict, Type
 
 import numpy as np
 from sktime.forecasting.base import ForecastingHorizon
@@ -60,3 +60,9 @@ class SlidingWindowSplitter(SlidingWindowSplitter_):
     def get_cutoffs(self, y: Optional[ACCEPTED_Y_TYPES] = None) -> np.ndarray:
         self._init(y)
         return super().get_cutoffs(y)
+
+
+splitter_types: Dict[str, Type[BaseSplitter]] = {
+    'holdout': HoldoutSplitter,
+    'sliding-window': SlidingWindowSplitter
+}

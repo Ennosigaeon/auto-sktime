@@ -7,11 +7,10 @@ from numpy.random import RandomState
 from sklearn.utils import check_random_state
 
 from autosktime.automl_common.common.ensemble_building.abstract_ensemble import AbstractEnsemble
+from autosktime.automl_common.common.utils.backend import PIPELINE_IDENTIFIER_TYPE
 from autosktime.constants import TASK_TYPES
 from autosktime.metrics import BaseMetric, calculate_loss
 from autosktime.pipeline.templates.base import BasePipeline
-
-Identifier = Tuple[int, int, float]
 
 
 class EnsembleSelection(AbstractEnsemble):
@@ -62,19 +61,19 @@ class EnsembleSelection(AbstractEnsemble):
             self,
             predictions: List[pd.Series],
             labels: np.ndarray,
-            identifiers: List[Identifier],
+            identifiers: List[PIPELINE_IDENTIFIER_TYPE],
     ) -> AbstractEnsemble:
         self.ensemble_size = int(self.ensemble_size)
         if self.ensemble_size < 1:
             raise ValueError('Ensemble size cannot be less than one!')
         if self.task_type not in TASK_TYPES:
-            raise ValueError('Unknown task type {}.'.format(self.task_type))
+            raise ValueError(f'Unknown task type {self.task_type}.')
         if not isinstance(self.metric, BaseMetric):
             raise ValueError(
-                "The provided metric must be an instance of {}, nevertheless it is"
-                " {}({})".format(BaseMetric, self.metric, type(self.metric)))
+                f'The provided metric must be an instance of {BaseMetric}, nevertheless it is '
+                f'{self.metric}({type(self.metric)})')
         if self.mode not in ('fast', 'slow'):
-            raise ValueError('Unknown mode {}'.format(self.mode))
+            raise ValueError(f'Unknown mode {self.mode}')
 
         self._fit(predictions, labels)
         self._calculate_weights()
@@ -189,15 +188,15 @@ class EnsembleSelection(AbstractEnsemble):
     def __str__(self) -> str:
         trajectory_str = ' '.join([f'{id}: {perf:.5f}' for id, perf in enumerate(self.trajectory_)])
         identifiers_str = ' '.join([f'{id}' for idx, id in enumerate(self.identifiers_) if self.weights_[idx] > 0])
-        return ("Ensemble Selection:\n"
-                f"\tTrajectory: {trajectory_str}\n"
-                f"\tMembers: {self.indices_}\n"
-                f"\tWeights: {self.weights_}\n"
-                f"\tIdentifiers: {identifiers_str}\n")
+        return ('Ensemble Selection:\n'
+                f'\tTrajectory: {trajectory_str}\n'
+                f'\tMembers: {self.indices_}\n'
+                f'\tWeights: {self.weights_}\n'
+                f'\tIdentifiers: {identifiers_str}\n')
 
     def get_models_with_weights(
             self,
-            models: Dict[Identifier, BasePipeline]
+            models: Dict[PIPELINE_IDENTIFIER_TYPE, BasePipeline]
     ) -> List[Tuple[float, BasePipeline]]:
         output = []
         for i, weight in enumerate(self.weights_):
@@ -210,7 +209,7 @@ class EnsembleSelection(AbstractEnsemble):
 
         return output
 
-    def get_selected_model_identifiers(self) -> List[Identifier]:
+    def get_selected_model_identifiers(self) -> List[PIPELINE_IDENTIFIER_TYPE]:
         output = []
 
         for i, weight in enumerate(self.weights_):

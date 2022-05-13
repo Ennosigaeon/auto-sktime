@@ -3,7 +3,7 @@ from typing import Union
 import pandas as pd
 
 from ConfigSpace import ConfigurationSpace, UniformIntegerHyperparameter, CategoricalHyperparameter, \
-    Constant, InCondition, ForbiddenGreaterThan
+    Constant, InCondition, ForbiddenGreaterThanRelation
 from autosktime.constants import IGNORES_EXOGENOUS_X, HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, SUPPORTED_INDEX_TYPES
 from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import AutoSktimePredictor, COMPONENT_PROPERTIES
@@ -42,8 +42,8 @@ class ARIMAComponent(AutoSktimePredictor):
 
     def _fit(self, y, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
         if self.d >= y.shape[0]:
-            raise ValueError('Trainings data is too short ({}) for selected d ({}). Try to increase'
-                             'the trainings data or decrease d'.format(y.shape[0], self.d))
+            raise ValueError(f'Trainings data is too short ({y.shape[0]}) for selected d ({self.d}). '
+                             f'Try to increase the trainings data or decrease d')
 
         try:
             with_intercept = bool(self.with_intercept)
@@ -96,8 +96,8 @@ class ARIMAComponent(AutoSktimePredictor):
         D_depends_on_sp = InCondition(D, sp, [2, 4, 7, 12])
         Q_depends_on_sp = InCondition(Q, sp, [2, 4, 7, 12])
 
-        p_must_be_smaller_than_sp = ForbiddenGreaterThan(sp, p)
-        q_must_be_smaller_than_sp = ForbiddenGreaterThan(sp, q)
+        p_must_be_smaller_than_sp = ForbiddenGreaterThanRelation(sp, p)
+        q_must_be_smaller_than_sp = ForbiddenGreaterThanRelation(sp, q)
 
         maxiter = Constant('maxiter', 50)
         with_intercept = Constant('with_intercept', 'True')

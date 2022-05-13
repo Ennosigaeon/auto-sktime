@@ -24,7 +24,7 @@ class DummyFuture(dask.distributed.Future):
         return True
 
     def __repr__(self) -> str:
-        return "DummyFuture: {}".format(self._result)
+        return f'DummyFuture: {self._result}'
 
     def __del__(self) -> None:
         pass
@@ -39,15 +39,15 @@ class SingleThreadedClient(dask.distributed.Client):
     def __init__(self) -> None:
         # Raise a not implemented error if using a method from Client
         implemented_methods = {
-            "submit",
-            "close",
-            "shutdown",
-            "write_scheduler_file",
-            "_get_scheduler_info",
-            "nthreads",
+            'submit',
+            'close',
+            'shutdown',
+            'write_scheduler_file',
+            '_get_scheduler_info',
+            'nthreads',
         }
         method_list = {func for func in dir(dask.distributed.Client)
-                       if callable(getattr(dask.distributed.Client, func)) and not func.startswith("__")}
+                       if callable(getattr(dask.distributed.Client, func)) and not func.startswith('__')}
         for method in (method_list - implemented_methods):
             setattr(self, method, self._unsupported_method)
 
@@ -63,7 +63,7 @@ class SingleThreadedClient(dask.distributed.Client):
             workers: Any = None,
             resources: Any = None,
             retries: Any = None,
-            fifo_timeout: Any = "100 ms",
+            fifo_timeout: Any = '100 ms',
             allow_other_workers: Any = False,
             actor: Any = False,
             actors: Any = False,
@@ -90,17 +90,17 @@ class SingleThreadedClient(dask.distributed.Client):
 
     def _get_scheduler_info(self) -> typing.Dict:
         return {
-            "workers": ["127.0.0.1"],
-            "type": "Scheduler",
+            'workers': ['127.0.0.1'],
+            'type': 'Scheduler',
         }
 
     def nthreads(self, **kwargs) -> typing.Dict:
         return {
-            "127.0.0.1": 1,
+            '127.0.0.1': 1,
         }
 
     def __repr__(self) -> str:
-        return "SingleThreadedClient()"
+        return 'SingleThreadedClient()'
 
     def __del__(self) -> None:
         pass

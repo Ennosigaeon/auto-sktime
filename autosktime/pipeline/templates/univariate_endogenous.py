@@ -44,8 +44,8 @@ class UnivariateEndogenousPipeline(ConfigurableTransformedTargetForecaster):
             if f not in forecasters or n not in normalizers:
                 continue
             cs.add_forbidden_clause(ForbiddenAndConjunction(
-                ForbiddenEqualsClause(cs.get_hyperparameter("forecaster:__choice__"), f),
-                ForbiddenEqualsClause(cs.get_hyperparameter("normalizer:__choice__"), n))
+                ForbiddenEqualsClause(cs.get_hyperparameter('forecaster:__choice__'), f),
+                ForbiddenEqualsClause(cs.get_hyperparameter('normalizer:__choice__'), n))
             )
 
         return cs
@@ -99,9 +99,9 @@ class UnivariateEndogenousPipeline(ConfigurableTransformedTargetForecaster):
             default_dataset_properties.update(dataset_properties)
 
         steps.extend([
-            ("outlier", HampelFilterComponent(random_state=self.random_state)),
-            ("imputation", ImputerComponent(random_state=self.random_state)),
-            ("normalizer", NormalizerChoice(random_state=self.random_state)),
+            ('outlier', HampelFilterComponent(random_state=self.random_state)),
+            ('imputation', ImputerComponent(random_state=self.random_state)),
+            ('normalizer', NormalizerChoice(random_state=self.random_state)),
             ('forecaster', ForecasterChoice(random_state=self.random_state))
         ])
 

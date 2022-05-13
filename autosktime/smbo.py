@@ -1,16 +1,17 @@
 import copy
 import logging
-from typing import Optional
+from typing import Optional, Tuple, List
 
 from smac.callbacks import IncorporateRunResultCallback
 from smac.facade.smac_ac_facade import SMAC4AC
 from smac.intensification.simple_intensifier import SimpleIntensifier
+from smac.runhistory.runhistory import RunHistory
 from smac.runhistory.runhistory2epm import RunHistory2EPM4LogCost
 from smac.scenario.scenario import Scenario
+from smac.utils.io.traj_logging import TrajEntry
 
 from ConfigSpace import ConfigurationSpace
 from autosktime.automl_common.common.utils.backend import Backend
-from autosktime.data import AbstractDataManager
 from autosktime.data.splitter import BaseSplitter
 from autosktime.evaluation import ExecuteTaFunc, get_cost_of_crash
 from autosktime.metrics import BaseMetric
@@ -21,7 +22,7 @@ class AutoMLSMBO:
     def __init__(
             self,
             config_space: ConfigurationSpace,
-            datamanager: AbstractDataManager,
+            dataset_name: str,
             backend: Backend,
             total_walltime_limit: float,
             func_eval_time_limit: float,
@@ -33,7 +34,7 @@ class AutoMLSMBO:
             trials_callback: Optional[IncorporateRunResultCallback] = None
     ):
         # data related
-        self.datamanager = datamanager
+        self.dataset_name = dataset_name
         self.metric = metric
         self.backend = backend
 
@@ -55,7 +56,7 @@ class AutoMLSMBO:
 
         self.logger = logging.getLogger(__name__)
 
-    def optimize(self):
+    def optimize(self) -> Tuple[RunHistory, List[TrajEntry]]:
         self.config_space.seed(self.seed)
 
         smac = self._get_smac()
@@ -75,7 +76,7 @@ class AutoMLSMBO:
             'cs': self.config_space,
             'cutoff_time': self.func_eval_time_limit,
             'deterministic': 'true',
-            'instances': [self.datamanager.name],
+            'instances': [self.dataset_name],
             'memory_limit': self.memory_limit,
             'output-dir': self.backend.get_smac_output_directory(),
             'run_obj': 'quality',
