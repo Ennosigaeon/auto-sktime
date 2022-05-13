@@ -6,7 +6,7 @@ from smac.runhistory.runhistory import RunHistory
 
 from autosktime.automl_common.common.ensemble_building.abstract_ensemble import AbstractEnsemble
 from autosktime.automl_common.common.utils.backend import Backend, PIPELINE_IDENTIFIER_TYPE
-from autosktime.metrics import _BoundedMetricMixin
+from autosktime.metrics import BaseMetric, get_cost_of_crash
 from autosktime.pipeline.templates.base import BasePipeline
 
 
@@ -20,7 +20,7 @@ class SingleBest(AbstractEnsemble):
 
     def __init__(
             self,
-            metric: _BoundedMetricMixin,
+            metric: BaseMetric,
             run_history: RunHistory,
             seed: int,
             backend: Backend,
@@ -40,13 +40,12 @@ class SingleBest(AbstractEnsemble):
         This method parses the run history, to identify the best performing model.
         """
         best_model_identifier = None
-        best_model_score = self.metric.worst_possible_result
+        best_model_score = get_cost_of_crash(self.metric)
 
         for run_key in self.run_history.data.keys():
             run_value = self.run_history.data[run_key]
-            score = self.metric.optimum - run_value.cost
 
-            if score < best_model_score:
+            if run_value.cost < best_model_score:
                 # Make sure that the individual best model actually exists
                 model_dir = self.backend.get_numrun_directory(self.seed, run_key.config_id, run_key.budget)
                 model_file_name = self.backend.get_model_filename(self.seed, run_key.config_id, run_key.budget)
@@ -55,7 +54,7 @@ class SingleBest(AbstractEnsemble):
                     continue
 
                 best_model_identifier = (self.seed, run_value.additional_info['num_run'], run_key.budget)
-                best_model_score = score
+                best_model_score = run_value.cost
 
         if not best_model_identifier:
             raise ValueError(

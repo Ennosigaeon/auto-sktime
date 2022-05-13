@@ -12,7 +12,7 @@ from autosktime.automl_common.common.utils.backend import Backend
 from autosktime.constants import FORECAST_TASK
 from autosktime.data import AbstractDataManager
 from autosktime.evaluation import TaFuncResult
-from autosktime.metrics import BaseMetric, calculate_loss, _BoundedMetricMixin
+from autosktime.metrics import BaseMetric, calculate_loss, get_cost_of_crash
 from autosktime.pipeline.templates.univariate_endogenous import UnivariateEndogenousPipeline
 from sktime.forecasting.base import ForecastingHorizon
 
@@ -118,10 +118,7 @@ class AbstractEvaluator:
             if error == 'raise':
                 raise
             elif error == 'worst':
-                if isinstance(self.metric, _BoundedMetricMixin) or hasattr(self.metric, 'worst_possible_result'):
-                    return self.metric.worst_possible_result
-                else:
-                    raise
+                return get_cost_of_crash(self.metric)
             else:
                 raise ValueError(f"Unknown exception handling '{error}' method")
 

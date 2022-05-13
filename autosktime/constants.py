@@ -21,3 +21,5 @@ HANDLES_MULTIVARIATE = 'cap:handles-multivariate'
 HANDLES_CATEGORICAL = 'cap:handles-categorical'
 IGNORES_EXOGENOUS_X = 'ignores-exogenous-X'
 SUPPORTED_INDEX_TYPES = 'supported-index-types'
+
+MAXINT = 2 ** 31 - 1

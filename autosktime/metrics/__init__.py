@@ -3,21 +3,17 @@ from typing import Optional, Dict
 
 import numpy as np
 
-from autosktime.constants import FORECAST_TASK, UNIVARIATE_FORECAST, UNIVARIATE_EXOGENOUS_FORECAST
+from autosktime.constants import FORECAST_TASK, UNIVARIATE_FORECAST, UNIVARIATE_EXOGENOUS_FORECAST, MAXINT
 from sktime.forecasting.model_selection._split import ACCEPTED_Y_TYPES
 from sktime.performance_metrics.forecasting import (
     MeanAbsolutePercentageError as MeanAbsolutePercentageError_,
     MedianAbsolutePercentageError as MedianAbsolutePercentageError_
 )
 # noinspection PyProtectedMember
-from sktime.performance_metrics.forecasting._classes import _BaseForecastingErrorMetric
+from sktime.performance_metrics.forecasting._classes import _BaseForecastingErrorMetric, \
+    _PercentageForecastingErrorMetric
 
 BaseMetric = _BaseForecastingErrorMetric
-
-
-class _BoundedMetricMixin:
-    optimum: float
-    worst_possible_result: float
 
 
 def calculate_loss(
@@ -55,57 +51,50 @@ def calculate_loss(
         raise NotImplementedError('Scoring of non FORECAST_TASK not supported')
 
     if metric.greater_is_better:
-        if hasattr(metric, 'optimum'):
-            return metric.optimum - score
-        else:
-            raise ValueError(f'Metric {type(metric)} has to implement {_BoundedMetricMixin}')
+        return -1 * score
     else:
         return score
 
 
 def get_cost_of_crash(metric: BaseMetric) -> float:
-    if metric.greater_is_better and hasattr(metric, 'optimum') and hasattr(metric, 'worst_possible_result'):
-        return metric.optimum - metric.worst_possible_result
-    elif not metric.greater_is_better and hasattr(metric, 'worst_possible_result'):
-        return metric.worst_possible_result
+    if isinstance(metric, _PercentageForecastingErrorMetric):
+        return 1
     else:
-        raise ValueError(f'Metric {type(metric)} has to implement {_BoundedMetricMixin}')
+        return MAXINT
 
 
-class MeanAbsolutePercentageError(_BoundedMetricMixin, MeanAbsolutePercentageError_):
+class MeanAbsolutePercentageError(MeanAbsolutePercentageError_):
 
     def __init__(self):
         super().__init__()
-        self.optimum = 0.
-        self.worst_possible_result = 1.
 
     def __call__(
             self,
             y_true: ACCEPTED_Y_TYPES,
             y_pred: ACCEPTED_Y_TYPES,
-            horizon_weight: Optional[np.ndarray] = None
+            horizon_weight: Optional[np.ndarray] = None,
+            **kwargs
     ) -> float:
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', FutureWarning)
-            return super().__call__(y_true, y_pred, horizon_weight=horizon_weight)
+            return super().__call__(y_true, y_pred, horizon_weight=horizon_weight, **kwargs)
 
 
-class MedianAbsolutePercentageError(_BoundedMetricMixin, MedianAbsolutePercentageError_):
+class MedianAbsolutePercentageError(MedianAbsolutePercentageError_):
 
     def __init__(self):
         super().__init__()
-        self.optimum = 0.
-        self.worst_possible_result = 1.
 
     def __call__(
             self,
             y_true: ACCEPTED_Y_TYPES,
             y_pred: ACCEPTED_Y_TYPES,
-            horizon_weight: Optional[np.ndarray] = None
+            horizon_weight: Optional[np.ndarray] = None,
+            **kwargs
     ) -> float:
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', FutureWarning)
-            return super().__call__(y_true, y_pred, horizon_weight=horizon_weight)
+            return super().__call__(y_true, y_pred, horizon_weight=horizon_weight, **kwargs)
 
 
 default_metric_for_task: Dict[int, BaseMetric] = {

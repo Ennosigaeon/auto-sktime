@@ -25,7 +25,7 @@ from autosktime.data.splitter import BaseSplitter, splitter_types
 from autosktime.ensembles.builder import EnsembleBuilderManager
 from autosktime.ensembles.singlebest import SingleBest
 from autosktime.ensembles.util import PrefittedEnsembleForecaster, get_ensemble_targets
-from autosktime.metrics import default_metric_for_task, _BoundedMetricMixin, BaseMetric
+from autosktime.metrics import default_metric_for_task, BaseMetric
 from autosktime.pipeline.templates import util
 from autosktime.pipeline.templates.base import BasePipeline
 from autosktime.smbo import AutoMLSMBO
@@ -57,7 +57,7 @@ class AutoML(BaseForecaster):
                  n_jobs: int = 1,
                  dask_client: Optional[dask.distributed.Client] = None,
                  logging_config: Dict[str, Any] = None,
-                 metric: _BoundedMetricMixin = None,
+                 metric: BaseMetric = None,
                  ):
         super(AutoML, self).__init__()
         self.configuration_space: Optional[ConfigurationSpace] = None
@@ -391,9 +391,7 @@ class AutoML(BaseForecaster):
             return None
 
         # SingleBest contains the best model found by AutoML
-        # noinspection PyTypeChecker
         identifier, ensemble = SingleBest(
-            # TODO metric type does not fit
             metric=self._metric,
             run_history=self.runhistory_,
             seed=self._seed,
