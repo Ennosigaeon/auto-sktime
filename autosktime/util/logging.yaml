@@ -32,3 +32,6 @@ root:
 loggers:
   smac:
     level: INFO
+
+  matplotlib:
+    level: WARNING
