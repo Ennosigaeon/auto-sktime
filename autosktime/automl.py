@@ -41,8 +41,8 @@ class AutoML(BaseForecaster):
     }
 
     def __init__(self,
-                 time_left_for_this_task,
-                 per_run_time_limit,
+                 time_left_for_this_task: int,
+                 per_run_time_limit: int,
                  temporary_directory: Optional[str] = None,
                  delete_tmp_folder_after_terminate: bool = True,
                  ensemble_size: int = 1,

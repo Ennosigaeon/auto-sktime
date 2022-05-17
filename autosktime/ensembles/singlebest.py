@@ -2,6 +2,7 @@ import os
 from typing import List, Tuple, Union, Dict
 
 import numpy as np
+import pandas as pd
 from smac.runhistory.runhistory import RunHistory
 
 from autosktime.automl_common.common.ensemble_building.abstract_ensemble import AbstractEnsemble
@@ -30,12 +31,28 @@ class SingleBest(AbstractEnsemble):
         self.backend = backend
 
         # Add some default values -- at least 1 model in ensemble is assumed
+        self.ensemble_size = 1
+        self.run_history = run_history
+
         self.indices_ = [0]
         self.weights_ = [1.0]
-        self.run_history = run_history
-        self.identifiers_ = [self.get_incumbent()]
+        id, perf = self.get_incumbent()
+        self.identifiers_ = [id]
+        self.trajectory_ = [perf]
 
-    def get_incumbent(self) -> PIPELINE_IDENTIFIER_TYPE:
+    def fit(
+            self,
+            predictions: List[pd.Series],
+            labels: np.ndarray,
+            identifiers: List[PIPELINE_IDENTIFIER_TYPE],
+    ) -> AbstractEnsemble:
+        # Fit already in __init__performed
+        return self
+
+    def get_validation_performance(self) -> float:
+        return self.trajectory_[-1]
+
+    def get_incumbent(self) -> Tuple[PIPELINE_IDENTIFIER_TYPE, float]:
         """
         This method parses the run history, to identify the best performing model.
         """
@@ -62,7 +79,7 @@ class SingleBest(AbstractEnsemble):
                 'the log file for errors.'
             )
 
-        return best_model_identifier
+        return best_model_identifier, best_model_score
 
     def __str__(self) -> str:
         return 'Single Model Selection:\n\tMembers: %s' \
