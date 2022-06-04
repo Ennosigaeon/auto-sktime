@@ -1,6 +1,7 @@
 import os
+from collections import defaultdict
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, Union, List
 
 import numpy as np
 import pandas as pd
@@ -38,9 +39,20 @@ def _download_and_cache(filename: str, cache_dir: str):
     return filepath
 
 
-def load_timeseries(dataset_name: str, cache_dir: str = f'{Path.home()}/.cache/') -> Tuple[pd.Series, pd.Series]:
-    _download_and_cache(f'Train/{INPUT_MAPPINGS[dataset_name[0]]["file"]}-train.csv', cache_dir)
-    _download_and_cache(f'Test/{INPUT_MAPPINGS[dataset_name[0]]["file"]}-test.csv', cache_dir)
+def load_timeseries(
+        dataset_name: Union[str, List[str]],
+        cache_dir: str = f'{Path.home()}/.cache/'
+) -> Union[
+    Tuple[List[pd.Series], List[pd.Series]],
+    Tuple[pd.Series, pd.Series]
+]:
+    if isinstance(dataset_name, str):
+        files = {dataset_name[0]: [dataset_name]}
+    else:
+        files = defaultdict(list)
+        for name in dataset_name:
+            files[name[0]].append(name)
+
     m4info_filename = _download_and_cache('M4-info.csv', cache_dir)
     info = pd.read_csv(m4info_filename)
 
@@ -48,23 +60,42 @@ def load_timeseries(dataset_name: str, cache_dir: str = f'{Path.home()}/.cache/'
     train_directory = os.path.join(data_directory, 'Train')
     test_directory = os.path.join(data_directory, 'Test')
 
-    # freq = info[info['M4id'] == dataset_name]['Frequency'][0]
-    sp = info[info['M4id'] == dataset_name]['SP'].iloc[0][0]
-    start_date = info[info['M4id'] == dataset_name]['StartingDate'].iloc[0]
+    train_dfs = []
+    test_dfs = []
 
-    train_df = pd.read_csv(os.path.join(train_directory, f'{INPUT_MAPPINGS[dataset_name[0]]["file"]}-train.csv'))
-    train_df = train_df[train_df['V1'] == dataset_name].iloc[:, 1:].T
-    train_df = train_df.dropna()
-    train_df = train_df.squeeze()
-    train_df.index = pd.period_range(start=start_date, periods=len(train_df), freq=sp)
+    for id_, dataset_names in files.items():
+        file_name = INPUT_MAPPINGS[id_]["file"]
+        _download_and_cache(f'Train/{file_name}-train.csv', cache_dir)
+        _download_and_cache(f'Test/{file_name}-test.csv', cache_dir)
 
-    test_df = pd.read_csv(os.path.join(test_directory, f'{INPUT_MAPPINGS[dataset_name[0]]["file"]}-test.csv'))
-    test_df = test_df[test_df['V1'] == dataset_name].iloc[:, 1:].T
-    test_df = test_df.dropna()
-    test_df = test_df.squeeze()
-    test_df.index = pd.period_range(start=train_df.index[-1] + 1, periods=len(test_df), freq=sp)
+        # freq = info[info['M4id'] == dataset_name]['Frequency'][0]
+        infos = info[info['M4id'].isin(dataset_names)]
 
-    return train_df, test_df
+        train_df = pd.read_csv(os.path.join(train_directory, f'{file_name}-train.csv'))
+        train_df = train_df[train_df['V1'].isin(dataset_names)]
+        test_df = pd.read_csv(os.path.join(test_directory, f'{file_name}-test.csv'))
+        test_df = test_df[test_df['V1'].isin(dataset_names)]
+
+        for name in dataset_names:
+            sp = infos[infos['M4id'] == name]['SP'].iloc[0][0]
+            start_date = infos[infos['M4id'] == name]['StartingDate'].iloc[0]
+
+            train = train_df[train_df['V1'] == name].iloc[:, 1:].T
+            train = train.dropna().squeeze()
+            train.index = pd.period_range(start=start_date, periods=len(train), freq=sp)
+            train.name = name
+            train_dfs.append(train)
+
+            test = test_df[test_df['V1'] == name].iloc[:, 1:].T
+            test = test.dropna().squeeze()
+            test.index = pd.period_range(start=train.index[-1] + 1, periods=len(test), freq=sp)
+            test.name = name
+            test_dfs.append(test)
+
+    if isinstance(dataset_name, str):
+        return train_dfs[0], test_dfs[0]
+    else:
+        return train_dfs, test_dfs
 
 
 def _seasonality_test(past_ts_data: np.array, season_length: int) -> bool:
@@ -126,5 +157,3 @@ def naive_2(
     forecast = pd.Series(np.mean(naive_forecast) * multiplicative_seasonal_component, index=index)
 
     return forecast
-
-
