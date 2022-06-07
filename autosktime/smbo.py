@@ -29,6 +29,7 @@ class AutoMLSMBO:
             memory_limit: float,
             metric: BaseMetric,
             splitter: BaseSplitter,
+            use_pynisher: bool = True,
             seed: int = 1,
             ensemble_callback: Optional[IncorporateRunResultCallback] = None,
             trials_callback: Optional[IncorporateRunResultCallback] = None
@@ -43,6 +44,7 @@ class AutoMLSMBO:
 
         # Evaluation
         self.splitter = splitter
+        self.use_pynisher = use_pynisher
 
         # and a bunch of useful limits
         self.worst_possible_result = get_cost_of_crash(self.metric)
@@ -90,6 +92,7 @@ class AutoMLSMBO:
             'splitter': self.splitter,
             'metric': self.metric,
             'memory_limit': self.memory_limit,
+            'use_pynisher': self.use_pynisher,
         }
 
         smac = SMAC4AC(

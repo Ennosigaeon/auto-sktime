@@ -6,17 +6,21 @@ import platform
 import sys
 import tempfile
 import time
+import unittest.mock
 import uuid
-from typing import Any, Dict, Optional, List
+from typing import Any, Dict, Optional, List, Tuple, Union
 
 import dask
 import dask.distributed
 import numpy as np
 import pandas as pd
+from ConfigSpace import ConfigurationSpace, Configuration
+from ConfigSpace.read_and_write import json as cs_json
+from sktime.forecasting.base import BaseForecaster, ForecastingHorizon
+from smac.runhistory.runhistory import RunInfo, RunValue
+from smac.stats.stats import Stats
 from smac.tae import StatusType
 
-from ConfigSpace import ConfigurationSpace
-from ConfigSpace.read_and_write import json as cs_json
 from autosktime.automl_common.common.ensemble_building.abstract_ensemble import AbstractEnsemble
 from autosktime.automl_common.common.utils.backend import Backend, create
 from autosktime.data import UnivariateTimeSeriesDataManager, UnivariateExogenousTimeSeriesDataManager, \
@@ -25,6 +29,7 @@ from autosktime.data.splitter import BaseSplitter, splitter_types
 from autosktime.ensembles.builder import EnsembleBuilderManager
 from autosktime.ensembles.singlebest import SingleBest
 from autosktime.ensembles.util import PrefittedEnsembleForecaster, get_ensemble_targets
+from autosktime.evaluation import ExecuteTaFunc
 from autosktime.metrics import default_metric_for_task, BaseMetric
 from autosktime.pipeline.templates import util
 from autosktime.pipeline.templates.base import BasePipeline
@@ -32,7 +37,6 @@ from autosktime.smbo import AutoMLSMBO
 from autosktime.util.dask_single_thread_client import SingleThreadedClient
 from autosktime.util.logging_ import setup_logger
 from autosktime.util.stopwatch import StopWatch
-from sktime.forecasting.base import BaseForecaster, ForecastingHorizon
 
 
 class AutoML(BaseForecaster):
@@ -58,6 +62,7 @@ class AutoML(BaseForecaster):
                  dask_client: Optional[dask.distributed.Client] = None,
                  logging_config: Dict[str, Any] = None,
                  metric: BaseMetric = None,
+                 use_pynisher: bool = False
                  ):
         super(AutoML, self).__init__()
         self.configuration_space: Optional[ConfigurationSpace] = None
@@ -80,6 +85,7 @@ class AutoML(BaseForecaster):
         self.logging_config: Dict[str, Any] = logging_config
 
         self._metric = metric
+        self._use_pynisher = use_pynisher
 
         self._datamanager: Optional[AbstractDataManager] = None
         self._dataset_name: Optional[str] = None
@@ -188,7 +194,7 @@ class AutoML(BaseForecaster):
 
         # Prepare ensemble builder
         elapsed_time = self._stopwatch.wall_elapsed(self._dataset_name)
-        time_left_for_ensembles = max(0, self._time_for_task - elapsed_time)
+        time_left_for_ensembles = max(0., self._time_for_task - elapsed_time)
         proc_ensemble = None
         if time_left_for_ensembles <= 0 < self._ensemble_size:
             raise ValueError('Not starting ensemble builder because there is no time left. Try increasing the '
@@ -217,7 +223,7 @@ class AutoML(BaseForecaster):
         smac_task_name = 'runSMAC'
         self._stopwatch.start_task(smac_task_name)
         elapsed_time = self._stopwatch.wall_elapsed(self._dataset_name)
-        time_left_for_smac = max(0, self._time_for_task - elapsed_time)
+        time_left_for_smac = max(0., self._time_for_task - elapsed_time)
 
         if time_left_for_smac <= 0:
             self._logger.warning('Not starting SMAC because there is no time left.')
@@ -237,14 +243,6 @@ class AutoML(BaseForecaster):
                 self._logger.warning(f'Capping the per_run_time_limit to {per_run_time_limit} to have time for a least '
                                      f'2 models in each process.')
 
-            # Determine Resampling strategy
-            if isinstance(self._resampling_strategy, BaseSplitter):
-                splitter = self._resampling_strategy
-            elif self._resampling_strategy in splitter_types:
-                splitter = splitter_types[self._resampling_strategy](**self._resampling_strategy_arguments)
-            else:
-                raise ValueError(f'Unable to create {type(BaseSplitter)} from = {self._resampling_strategy}')
-
             _proc_smac = AutoMLSMBO(
                 config_space=self.configuration_space,
                 dataset_name=self._dataset_name,
@@ -253,7 +251,8 @@ class AutoML(BaseForecaster):
                 func_eval_time_limit=per_run_time_limit,
                 memory_limit=self._memory_limit,
                 metric=self._metric,
-                splitter=splitter,
+                splitter=self._determine_resampling(),
+                use_pynisher=self._use_pynisher,
                 seed=self._seed,
                 ensemble_callback=proc_ensemble,
             )
@@ -261,9 +260,9 @@ class AutoML(BaseForecaster):
             try:
                 self.runhistory_, self.trajectory_ = _proc_smac.optimize()
                 traj_file = os.path.join(self._backend.get_smac_output_directory_for_run(self._seed), 'trajectory.json')
-                with open(traj_file, 'w') as fh:
+                with open(traj_file, 'w') as f:
                     json.dump([list(entry[:2]) + [entry[2].get_dictionary()] + list(entry[3:])
-                               for entry in self.trajectory_], fh)
+                               for entry in self.trajectory_], f)
             except Exception as e:
                 self._logger.exception(e)
                 raise
@@ -289,6 +288,7 @@ class AutoML(BaseForecaster):
         self._load_models()
         self._logger.info('Finished loading models...')
 
+        self.num_run = len(self.runhistory_.data)
         self._fit_cleanup()
 
         return self
@@ -299,6 +299,7 @@ class AutoML(BaseForecaster):
             output_directory=None,
             prefix='auto-sktime',
             delete_tmp_folder_after_terminate=self._delete_tmp_folder_after_terminate,
+            delete_output_folder_after_terminate=self._delete_tmp_folder_after_terminate
         )
 
     def _create_dask_client(self):
@@ -325,6 +326,16 @@ class AutoML(BaseForecaster):
         else:
             self._dask_client = SingleThreadedClient()
 
+    def _determine_resampling(self) -> BaseSplitter:
+        # Determine Resampling strategy
+        if isinstance(self._resampling_strategy, BaseSplitter):
+            splitter = self._resampling_strategy
+        elif self._resampling_strategy in splitter_types:
+            splitter = splitter_types[self._resampling_strategy](**self._resampling_strategy_arguments)
+        else:
+            raise ValueError(f'Unable to create {type(BaseSplitter)} from = {self._resampling_strategy}')
+        return splitter
+
     def _fit_cleanup(self):
         if (
                 hasattr(self, '_is_dask_client_internally_created')
@@ -344,6 +355,58 @@ class AutoML(BaseForecaster):
         if self._delete_tmp_folder_after_terminate:
             self._backend.context.delete_directories(force=False)
         return
+
+    def fit_config(
+            self,
+            config: Union[Configuration, Dict[str, Union[str, float, int]]],
+            stats: Optional[Stats] = None
+    ) -> Tuple[Optional[BasePipeline], RunInfo, RunValue]:
+        self.num_run += 1
+        if isinstance(config, dict):
+            config = Configuration(self.configuration_space, config)
+        config.config_id = self.num_run
+
+        if stats is None:
+            scenario_mock = unittest.mock.Mock()
+            scenario_mock.wallclock_limit = self._time_for_task
+            stats = Stats(scenario_mock)
+
+        # Fit a pipeline, which will be stored on disk which we can later load via the backend
+        ta = ExecuteTaFunc(
+            backend=self._backend,
+            seed=self._seed,
+            splitter=self._determine_resampling(),
+            metric=self._metric,
+            stats=stats,
+            memory_limit=self._memory_limit,
+            use_pynisher=self._use_pynisher
+        )
+
+        run_info, run_value = ta.run_wrapper(
+            RunInfo(
+                config=config,
+                instance=None,
+                instance_specific='',
+                seed=self._seed,
+                cutoff=self._per_run_time_limit,
+                capped=False,
+            )
+        )
+
+        if run_value.status == StatusType.SUCCESS:
+            if self._resampling_strategy in ('sliding-window'):
+                load_function = self._backend.load_cv_model_by_seed_and_id_and_budget
+            else:
+                load_function = self._backend.load_model_by_seed_and_id_and_budget
+            pipeline = load_function(
+                seed=self._seed,
+                idx=run_info.config.config_id,
+                budget=run_info.budget,
+            )
+        else:
+            pipeline = None
+
+        return pipeline, run_info, run_value
 
     def _predict(self, fh: ForecastingHorizon = None, X: pd.DataFrame = None):
         if self.models_ is None or len(self.models_) == 0 or self.ensemble_ is None:

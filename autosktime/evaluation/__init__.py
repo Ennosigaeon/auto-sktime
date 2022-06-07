@@ -58,7 +58,7 @@ class ExecuteTaFunc(AbstractTAFunc):
             stats: Stats,
             memory_limit: Optional[int] = None,
             budget_type: Optional[str] = None,
-            use_pynisher: bool = False,
+            use_pynisher: bool = True,
             ta: Optional[Callable] = None,
             **kwargs
     ):
