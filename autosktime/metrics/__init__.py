@@ -150,3 +150,10 @@ default_metric_for_task: Dict[int, BaseMetric] = {
     UNIVARIATE_FORECAST: MeanAbsolutePercentageError(),
     UNIVARIATE_EXOGENOUS_FORECAST: MeanAbsolutePercentageError(),
 }
+
+all_metrics = {
+    'mape': MeanAbsolutePercentageError(),
+    'mdape': MedianAbsolutePercentageError(),
+    'mase': MeanAbsoluteScaledError(),
+    'owa': OverallWeightedAverage(),
+}
