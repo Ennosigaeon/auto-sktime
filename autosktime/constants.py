@@ -10,11 +10,7 @@ TASK_TYPES_TO_STRING = {
     UNIVARIATE_FORECAST: 'forecast.univariate.endogenous',
     UNIVARIATE_EXOGENOUS_FORECAST: 'forecast.univariate.exogenous'
 }
-
-STRING_TO_TASK_TYPES = {
-    'forecast.univariate.endogenous': UNIVARIATE_FORECAST,
-    'forecast.univariate.exogenous': UNIVARIATE_EXOGENOUS_FORECAST
-}
+STRING_TO_TASK_TYPES = {value: key for key, value in TASK_TYPES_TO_STRING.items()}
 
 HANDLES_UNIVARIATE = 'cap:handles-univariate'
 HANDLES_MULTIVARIATE = 'cap:handles-multivariate'

@@ -16,50 +16,13 @@ class KNearestDataSets:
         self.logger = logger
         self.metric = metric
 
-        self.best_configuration_per_dataset_: Dict[str, Union[int, None]] = dict()
-
     # noinspection PyAttributeOutsideInit
-    def fit(self, X: pd.DataFrame, runs: pd.DataFrame):
+    def fit(self, X: pd.DataFrame):
         dt = np.zeros((1, 1))
         self.metric_callable_ = _resolve_metric_to_factory(self.metric, dt, dt, _METRIC_INFOS)
 
-        self._prepare_payload(runs)
-
         self.n_data_sets_ = X.shape[1]
         self.timeseries_ = [(np.atleast_2d(X[name].dropna()), name) for name in X]
-
-    def _prepare_payload(self, runs: pd.DataFrame):
-        # for each dataset, sort the runs according to their result
-        for dataset_name in runs:
-            if not np.isfinite(runs[dataset_name]).any():
-                self.best_configuration_per_dataset_[dataset_name] = None
-            else:
-                configuration_idx = runs[dataset_name].index[np.nanargmin(runs[dataset_name].values)]
-                self.best_configuration_per_dataset_[dataset_name] = configuration_idx
-
-    def k_best_suggestions(self, x: pd.Series, k: int = 1) -> List[Tuple[str, float, int]]:
-        if k < -1 or k == 0:
-            raise ValueError('Number of neighbors k cannot be zero or negative.')
-        nearest_datasets, distances, idx = self.kneighbors(x, self.n_data_sets_)
-
-        kbest: List[Tuple[str, float, int]] = []
-
-        added_configurations = set()
-        for dataset_name, distance in zip(nearest_datasets, distances):
-            best_configuration = self.best_configuration_per_dataset_[dataset_name]
-
-            if best_configuration is None:
-                self.logger.info(f'Found no best configuration for instance {dataset_name}')
-                continue
-
-            kbest.append((dataset_name, distance, best_configuration))
-
-            if k != -1 and len(kbest) >= k:
-                break
-
-        if k == -1:
-            k = len(kbest)
-        return kbest[:k]
 
     def kneighbors(self, x: pd.Series, k: int = 1) -> Tuple[List[str], List[float], List[int]]:
         if k < -1 or k == 0:

@@ -6,8 +6,9 @@ import pandas as pd
 from smac.tae import StatusType
 
 from autosktime.automl import AutoML
+from autosktime.constants import UNIVARIATE_FORECAST, TASK_TYPES_TO_STRING
 from autosktime.data.benchmark.m4 import load_timeseries
-from autosktime.metrics import calculate_loss, all_metrics
+from autosktime.metrics import calculate_loss, STRING_TO_METRIC
 
 
 def main():
@@ -27,7 +28,7 @@ def main():
     seed = args.seed
     metric = args.metric
     # TODO task is hard-coded
-    task = 'univariate'
+    task = UNIVARIATE_FORECAST
 
     y_train, y_test = load_timeseries(task_id)
 
@@ -37,7 +38,7 @@ def main():
     automl = AutoML(
         time_left_for_this_task=time_limit,
         per_run_time_limit=per_run_time_limit,
-        metric=all_metrics[metric],
+        metric=STRING_TO_METRIC[metric],
         ensemble_size=0,
         ensemble_nbest=0,
         seed=seed,
@@ -84,10 +85,14 @@ def main():
 
     print('*' * 80)
     print('Starting to copy results to configuration directory', flush=True)
-    configuration_output_dir = os.path.join(working_directory, 'configuration', f'{task}_{metric}')
+    configuration_output_dir = os.path.join(working_directory, 'meta', f'{TASK_TYPES_TO_STRING[task]}_{metric}')
     os.makedirs(configuration_output_dir, exist_ok=True)
-    pd.DataFrame(validated_configurations).to_csv(os.path.join(configuration_output_dir, f'{task_id}.csv'), index=False)
-    pd.concat([y_train, y_test], axis=1).to_pickle(os.path.join(configuration_output_dir, f'{task_id}.npy.gz'))
+    pd.DataFrame(validated_configurations) \
+        .sort_values(by=['test_score']) \
+        .to_csv(os.path.join(configuration_output_dir, f'{task_id}.csv'), index=False)
+    pd.concat([y_train, y_test], axis=0) \
+        .reset_index(drop=True) \
+        .to_pickle(os.path.join(configuration_output_dir, f'{task_id}.npy.gz'))
     print('*' * 80)
     print('Finished copying the configuration directory')
 

@@ -53,7 +53,7 @@ class BoxCoxComponent(AutoSktimeTransformer):
         # TODO lower_bound and upper_bound select boundaries for lambda estimation. Maybe provide lambda directly
 
         lower_bound = UniformFloatHyperparameter('lower_bound', lower=-5, upper=2, default_value=-2)
-        upper_bound = UniformIntegerHyperparameter('upper_bound', lower=-2, upper=5, default_value=2)
+        upper_bound = UniformFloatHyperparameter('upper_bound', lower=-2, upper=5, default_value=2)
         lower_bound_smaller_than_upper_bound = ForbiddenGreaterThanRelation(lower_bound, upper_bound)
 
         method = CategoricalHyperparameter('method', choices=['pearsonr', 'mle', 'guerrero'],
