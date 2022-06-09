@@ -24,7 +24,7 @@ class KNearestDataSets:
         self.n_data_sets_ = X.shape[1]
         self.timeseries_ = [(np.atleast_2d(X[name].dropna()), name) for name in X]
 
-    def kneighbors(self, x: pd.Series, k: int = 1) -> Tuple[List[str], List[float], List[int]]:
+    def kneighbors(self, x: pd.Series, k: int = 1) -> Tuple[List[str], List[float]]:
         if k < -1 or k == 0:
             raise ValueError('Number of neighbors k cannot be zero or negative.')
         elif k == -1:
@@ -39,4 +39,4 @@ class KNearestDataSets:
             names[i] = name
 
         idx = np.argsort(distances)[:k]
-        return names[idx], distances[idx], idx
+        return names[idx], distances[idx]

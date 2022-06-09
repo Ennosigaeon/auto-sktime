@@ -16,68 +16,61 @@ class MetaBaseTest(unittest.TestCase):
         self.base = MetaBase(util.get_configuration_space(properties), UNIVARIATE_FORECAST, 'mape', base_dir='./files/')
 
     def test_load_datasets(self):
-        self.assertEqual(self.base._timeseries.columns.to_list(), ['Y1', 'Y2', 'Y3'])
-        self.assertEqual(self.base._timeseries.shape, (37, 3))
+        self.assertEqual(['Y1', 'Y2', 'Y3'], self.base._timeseries.columns.to_list())
+        self.assertEqual((37, 3), self.base._timeseries.shape)
 
     def test_get_configuration(self):
         actual = self.base.get_configuration('Y1', 0)
-        self.assertEqual(actual.get_dictionary(), {
-            'forecaster:__choice__': 'naive', 'forecaster:naive:sp': 7.0,
-            'forecaster:naive:strategy': 'last',
-            'imputation:method': 'bfill', 'normalizer:__choice__': 'scaled_logit',
-            'normalizer:scaled_logit:lower_bound': 0.1669434000354257,
-            'normalizer:scaled_logit:upper_bound': 1.4780700820643673,
-            'outlier:n_sigma': 4.373124452515206, 'outlier:window_length': 14
-        })
+        expected = [{
+            'forecaster:__choice__': 'theta',
+            'forecaster:theta:deseasonalize': True,
+            'forecaster:theta:sp': 1.0,
+            'imputation:method': 'random',
+            'normalizer:__choice__': 'log',
+            'outlier:n_sigma': 2.3176485168449408,
+            'outlier:window_length': 17
+        }, {
+            'forecaster:__choice__': 'theta',
+            'forecaster:theta:deseasonalize': False,
+            'forecaster:theta:sp': 7.0,
+            'imputation:method': 'ffill',
+            'normalizer:__choice__': 'noop',
+            'outlier:n_sigma': 2.376676502499649,
+            'outlier:window_length': 11
+        }]
+
+        self.assertEqual(expected[0], actual.get_dictionary())
+
+        actual = self.base.get_configuration('Y1', 1)
+        self.assertEqual(expected[1], actual.get_dictionary())
+
+        actual = self.base.get_configuration('Y1', 0.12)
+        self.assertEqual(expected, [a.get_dictionary() for a in actual])
 
     def test_suggest_best_configs(self):
         y = load_airline()
-        actual = self.base.suggest_configs(y, 3)
+        actual = self.base.suggest_configs(y, 2)
 
         expected = [
             {
-                'forecaster:__choice__': 'naive',
-                'forecaster:naive:sp': 7.0,
-                'forecaster:naive:strategy': 'last',
-                'imputation:method': 'bfill',
-                'normalizer:__choice__': 'scaled_logit',
-                'normalizer:scaled_logit:lower_bound': 0.1669434000354257,
-                'normalizer:scaled_logit:upper_bound': 1.4780700820643673,
-                'outlier:n_sigma': 4.373124452515206,
-                'outlier:window_length': 14,
-            },
-            {
-                'forecaster:__choice__': 'bats',
-                'forecaster:bats:sp': 7.0,
-                'forecaster:bats:use_arma_errors': True,
-                'forecaster:bats:use_box_cox': False,
-                'forecaster:bats:use_damped_trend': True,
-                'forecaster:bats:use_trend': True,
-                'imputation:method': 'nearest',
-                'normalizer:__choice__': 'box_cox',
-                'normalizer:box_cox:lower_bound': -1.7664640121167117,
-                'normalizer:box_cox:method': 'mle',
-                'normalizer:box_cox:sp': 2.0,
-                'normalizer:box_cox:upper_bound': -1.0,
-                'outlier:n_sigma': 4.435139345734089,
-                'outlier:window_length': 4,
-            },
-            {
-                'forecaster:__choice__': 'ets',
-                'forecaster:ets:damped_trend': True,
-                'forecaster:ets:error': 'mul',
-                'forecaster:ets:seasonal': 'mul',
-                'forecaster:ets:sp': 4.0,
-                'forecaster:ets:trend': 'add',
+                'forecaster:__choice__': 'theta',
+                'forecaster:theta:deseasonalize': True,
+                'forecaster:theta:sp': 1.0,
                 'imputation:method': 'random',
-                'normalizer:__choice__': 'box_cox',
-                'normalizer:box_cox:lower_bound': -1.1855787081349818,
-                'normalizer:box_cox:method': 'mle',
-                'normalizer:box_cox:sp': 12.0,
-                'normalizer:box_cox:upper_bound': 2.0,
-                'outlier:n_sigma': 2.5301957481757715,
-                'outlier:window_length': 8,
-            }
-        ]
+                'normalizer:__choice__': 'log',
+                'outlier:n_sigma': 2.3176485168449408,
+                'outlier:window_length': 17
+            }, {
+                'forecaster:__choice__': 'tbats',
+                'forecaster:tbats:sp': 4.0,
+                'forecaster:tbats:use_arma_errors': True,
+                'forecaster:tbats:use_box_cox': False,
+                'forecaster:tbats:use_damped_trend': False,
+                'forecaster:tbats:use_trend': True,
+                'imputation:method': 'bfill',
+                'normalizer:__choice__': 'log',
+                'outlier:n_sigma': 3.689896803394823,
+                'outlier:window_length': 11
+            }]
 
-        self.assertEqual([a.get_dictionary() for a in actual], expected)
+        self.assertEqual(expected, [a.get_dictionary() for a in actual])

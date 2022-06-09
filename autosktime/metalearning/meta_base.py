@@ -1,9 +1,8 @@
-import glob
 import logging
 import math
 import os.path
 import pathlib
-from typing import List, SupportsFloat, Union, Optional
+from typing import List, SupportsFloat, Union, Optional, Tuple
 
 import pandas as pd
 from ConfigSpace import ConfigurationSpace
@@ -37,21 +36,16 @@ class MetaBase:
         self.logger = logger
 
         self._kND: Optional[KNearestDataSets] = None
-        self._timeseries: pd.DataFrame = self._load_instances()
+        self._timeseries, self._configs = self._load_instances()
 
-    def _load_instances(self) -> pd.DataFrame:
-        # TODO store only combined results on disk?
-        data_files = glob.glob(
-            os.path.join(self.base_dir, f'{TASK_TYPES_TO_STRING[self.task]}_{self.metric}', '*.npy.gz')
+    def _load_instances(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
+        timeseries = pd.read_pickle(
+            os.path.join(self.base_dir, f'{TASK_TYPES_TO_STRING[self.task]}_{self.metric}', 'timeseries.npy.gz')
         )
-
-        data = {}
-        for file in data_files:
-            name = pathlib.Path(file).name.split('.')[0]
-            series = pd.read_pickle(file)
-            data[name] = series
-
-        return pd.DataFrame(data)
+        configs = pd.read_csv(
+            os.path.join(self.base_dir, f'{TASK_TYPES_TO_STRING[self.task]}_{self.metric}', 'configurations.csv')
+        )
+        return timeseries, configs
 
     def suggest_configs(
             self,
@@ -59,14 +53,13 @@ class MetaBase:
             num_initial_configurations: int,
             exclude_double_configurations: bool = True
     ) -> List[Configuration]:
-        """Return a list of the best hyperparameters of neighboring datasets"""
-        neighbors = self._get_neighbors(y)
+        neighbors, _ = self._get_neighbors(y)
 
         added_configurations = set()
         configurations = []
         for neighbor in neighbors:
             try:
-                config = self.get_configuration(neighbor)
+                config = self.get_configuration(neighbor, best=0)
                 if not exclude_double_configurations or config not in added_configurations:
                     added_configurations.add(config)
                     configurations.append(config)
@@ -76,27 +69,33 @@ class MetaBase:
 
         return configurations[:num_initial_configurations]
 
-    def _get_neighbors(self, y: pd.Series) -> List[str]:
+    def _get_neighbors(self, y: pd.Series) -> Tuple[List[str], List[float]]:
         if self._kND is None:
             self._kND = KNearestDataSets(metric=self.distance_measure, logger=self.logger)
             self._kND.fit(self._timeseries)
 
-        names, distances, idx = self._kND.kneighbors(y, k=-1)
-        return names
+        names, distances = self._kND.kneighbors(y, k=-1)
+        return names, distances
 
     def get_configuration(
             self,
             dataset: str,
-            index: Union[int, float] = 0
+            best: Union[int, float]
     ) -> Union[Configuration, List[Configuration]]:
-        file = os.path.join(self.base_dir, f'{TASK_TYPES_TO_STRING[self.task]}_{self.metric}', f'{dataset}.csv')
-        df = pd.read_csv(file)
+        dataset_configs = self._configs.loc[
+            self._configs['dataset'] == dataset,
+            self._configs.columns.difference(['dataset', 'id', 'train_score', 'test_score'])
+        ]
 
-        if isinstance(index, float):
-            raise ValueError('fractional index not supported yet')
+        def to_config(row: pd.Series):
+            return Configuration(self.configuration_space,
+                                 {key: value for key, value in row.to_dict().items()
+                                  if not isinstance(value, SupportsFloat) or not math.isnan(value)}
+                                 )
 
-        config_dict = df.loc[index, df.columns.difference(['id', 'train_score', 'test_score'])].to_dict()
-        config_dict = {key: value for key, value in config_dict.items()
-                       if not isinstance(value, SupportsFloat) or not math.isnan(value)}
-
-        return Configuration(self.configuration_space, config_dict)
+        if isinstance(best, int):
+            return to_config(dataset_configs.iloc[best, :])
+        else:
+            index = range(int(best * dataset_configs.shape[0]))
+            configs = [to_config(row) for _, row in dataset_configs.iloc[index, :].iterrows()]
+            return configs

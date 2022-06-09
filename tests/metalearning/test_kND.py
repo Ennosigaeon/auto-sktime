@@ -24,21 +24,21 @@ class kNDTest(unittest.TestCase):
             'lynx': self.lynx.reset_index(drop=True)
         }))
 
-        neighbor, _, _ = kND.kneighbors(self.airline, 1)
+        neighbor, _ = kND.kneighbors(self.airline, 1)
         self.assertEqual(['shampoo_sales'], neighbor)
-        neighbor, distance, _ = kND.kneighbors(self.airline, 1)
+        neighbor, distance = kND.kneighbors(self.airline, 1)
         self.assertEqual(['shampoo_sales'], neighbor)
         np.testing.assert_array_almost_equal([146303.195], distance)
 
-        neighbors, _, _ = kND.kneighbors(self.airline, 2)
+        neighbors, _ = kND.kneighbors(self.airline, 2)
         np.testing.assert_array_equal(['shampoo_sales', 'lynx'], neighbors)
-        neighbors, distance, _ = kND.kneighbors(self.airline, 2)
+        neighbors, distance = kND.kneighbors(self.airline, 2)
         np.testing.assert_array_equal(['shampoo_sales', 'lynx'], neighbors)
         np.testing.assert_array_almost_equal([146303.195, 115793162.625], distance)
 
-        neighbors, _, _ = kND.kneighbors(self.airline, -1)
+        neighbors, _ = kND.kneighbors(self.airline, -1)
         np.testing.assert_array_equal(['shampoo_sales', 'lynx'], neighbors)
-        neighbors, distance, _ = kND.kneighbors(self.airline, -1)
+        neighbors, distance = kND.kneighbors(self.airline, -1)
         np.testing.assert_array_equal(['shampoo_sales', 'lynx'], neighbors)
         np.testing.assert_array_almost_equal([146303.195, 115793162.625], distance)
 
@@ -54,13 +54,11 @@ class kNDTest(unittest.TestCase):
         kND.fit(pd.DataFrame({ts: y for ts, y in zip(time_series, ys)}))
 
         x, _ = load_timeseries('Y100')
-        names, distances, idx = kND.kneighbors(x, 1)
+        names, distances = kND.kneighbors(x, 1)
         np.testing.assert_array_equal(['Y100'], names)
         np.testing.assert_array_equal([0.0], distances)
-        np.testing.assert_array_equal([99], idx)
 
         x, _ = load_timeseries('Y1001')
-        names, distances, idx = kND.kneighbors(x, 2)
+        names, distances = kND.kneighbors(x, 2)
         np.testing.assert_array_equal(['Y105', 'Y931'], names)
         np.testing.assert_array_equal([624054.5248466857, 653325.0], distances)
-        np.testing.assert_array_equal([104, 930], idx)
