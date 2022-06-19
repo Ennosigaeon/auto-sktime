@@ -1,3 +1,5 @@
+import os
+import pathlib
 import unittest
 
 import pandas as pd
@@ -6,6 +8,7 @@ from sktime.datasets import load_airline
 from autosktime.constants import UNIVARIATE_FORECAST
 from autosktime.data import DatasetProperties
 from autosktime.metalearning.meta_base import MetaBase
+from autosktime.metalearning.prior import Prior
 from autosktime.pipeline.templates import util
 
 
@@ -13,14 +16,15 @@ class MetaBaseTest(unittest.TestCase):
 
     def setUp(self) -> None:
         properties = DatasetProperties(index_type=pd.RangeIndex)
-        self.base = MetaBase(util.get_configuration_space(properties), UNIVARIATE_FORECAST, 'mape', base_dir='./files/')
+        base_dir = os.path.join(pathlib.Path(__file__).parent.resolve(), 'files')
+        self.base = MetaBase(util.get_configuration_space(properties), UNIVARIATE_FORECAST, 'mape', base_dir=base_dir)
 
     def test_load_datasets(self):
         self.assertEqual(['Y1', 'Y2', 'Y3'], self.base._timeseries.columns.to_list())
         self.assertEqual((37, 3), self.base._timeseries.shape)
 
     def test_get_configuration(self):
-        actual = self.base.get_configuration('Y1', 0)
+        actual = self.base._get_configuration('Y1', 0)
         expected = [{
             'forecaster:__choice__': 'theta',
             'forecaster:theta:deseasonalize': True,
@@ -41,11 +45,14 @@ class MetaBaseTest(unittest.TestCase):
 
         self.assertEqual(expected[0], actual.get_dictionary())
 
-        actual = self.base.get_configuration('Y1', 1)
+        actual = self.base._get_configuration('Y1', 1)
         self.assertEqual(expected[1], actual.get_dictionary())
 
-        actual = self.base.get_configuration('Y1', 0.12)
-        self.assertEqual(expected, [a.get_dictionary() for a in actual])
+    def test_suggest_univariate_prior(self):
+        y = load_airline()
+        actual = self.base.suggest_univariate_prior(y, 2)
+        self.assertEqual(43, len(actual))
+        self.assertEqual([True] * len(actual), [isinstance(v, Prior) for v in actual.values()])
 
     def test_suggest_best_configs(self):
         y = load_airline()

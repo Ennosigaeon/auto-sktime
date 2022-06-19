@@ -14,7 +14,7 @@ from autosktime.metalearning.prior import UniformPrior, NormalPrior, KdePrior
 class PriorTest(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.values = np.linspace(0, 1, 100)
+        self.values = np.atleast_2d(np.linspace(0, 1, 100)).T
 
         self.uniform_float = UniformFloatHyperparameter('uniform_float', lower=-1, upper=2)
         self.normal_float = NormalFloatHyperparameter('normal_float', mu=1, sigma=0.1)
@@ -30,31 +30,31 @@ class PriorTest(unittest.TestCase):
 
     def test_uniform_prior(self):
         prior1 = UniformPrior(self.uniform_float).calculate(self.values)
-        assert_almost_equal(prior1, np.ones(self.values.shape) * 1 / 3)
+        assert_almost_equal(prior1, np.ones_like(self.values))
 
         prior2 = UniformPrior(self.normal_float).calculate(self.values)
-        assert_almost_equal(prior2, np.ones(self.values.shape))
+        assert_almost_equal(prior2, np.ones_like(self.values))
 
         prior3 = UniformPrior(self.beta_float).calculate(self.values)
-        assert_almost_equal(prior3, np.ones(self.values.shape))
+        assert_almost_equal(prior3, np.ones_like(self.values))
 
         prior4 = UniformPrior(self.uniform_integer).calculate(self.values)
-        assert_almost_equal(prior4, np.ones(self.values.shape) * 1 / 3)
+        assert_almost_equal(prior4, np.ones_like(self.values))
 
         prior5 = UniformPrior(self.normal_integer).calculate(self.values)
-        assert_almost_equal(prior5, np.ones(self.values.shape))
+        assert_almost_equal(prior5, np.ones_like(self.values))
 
         prior6 = UniformPrior(self.beta_integer).calculate(self.values)
-        assert_almost_equal(prior6, np.ones(self.values.shape))
+        assert_almost_equal(prior6, np.ones_like(self.values))
 
         prior7 = UniformPrior(self.constant).calculate(self.values)
-        assert_almost_equal(prior7, np.ones(self.values.shape))
+        assert_almost_equal(prior7, np.ones_like(self.values))
 
         prior8 = UniformPrior(self.categorical).calculate(self.values)
-        assert_almost_equal(prior8, np.ones(self.values.shape) * 1 / 3)
+        assert_almost_equal(prior8, np.ones_like(self.values))
 
         prior9 = UniformPrior(self.ordinal).calculate(self.values)
-        assert_almost_equal(prior9, np.ones(self.values.shape) * 1 / 3)
+        assert_almost_equal(prior9, np.ones_like(self.values))
 
     def test_normal_prior(self):
         prior1 = NormalPrior(self.uniform_float, mu=0, sigma=1).calculate(self.values)
@@ -82,7 +82,8 @@ class PriorTest(unittest.TestCase):
         self.assertRaises(ValueError, NormalPrior(self.ordinal, mu=0, sigma=1).calculate, self.values)
 
     def test_kde_prior(self):
-        kde_result = [0.27194, 0.29163, 0.31409, 0.33798, 0.36166, 0.38325, 0.40073, 0.41217, 0.41590, 0.41077]
+        kde_result = np.array([[0.27194], [0.29163], [0.31409], [0.33798], [0.36166], [0.38325], [0.40073],
+                               [0.41217], [0.41590], [0.41077]])
 
         prior1 = KdePrior(self.uniform_float, pd.Series([-1, -1, 0, 0.5, 1, 1, 1])).calculate(self.values[::10])
         assert_almost_equal(prior1, kde_result, decimal=5)
@@ -105,21 +106,21 @@ class PriorTest(unittest.TestCase):
         prior7 = KdePrior(self.constant, pd.Series(['value', 'value', 'value'])).calculate(self.values)
         assert_almost_equal(prior7, np.ones(self.values.shape))
 
-        prior8 = KdePrior(self.categorical, pd.Series(['red', 'red', 'blue'])).calculate(np.array([0, 1, 2, 2]))
-        assert_almost_equal(prior8, [2 / 3, 0, 1 / 3, 1 / 3])
+        prior8 = KdePrior(self.categorical, pd.Series([0, 0, 2])).calculate(np.array([[0], [1], [2], [2]]))
+        assert_almost_equal(prior8, [[2 / 3], [0], [1 / 3], [1 / 3]])
 
-        prior9 = KdePrior(self.ordinal, pd.Series(['10', '10', '30'])).calculate(np.array([0, 1, 2, 2]))
-        assert_almost_equal(prior9, [2 / 3, 0, 1 / 3, 1 / 3])
+        prior9 = KdePrior(self.ordinal, pd.Series([0, 0, 2])).calculate(np.array([[0], [1], [2], [2]]))
+        assert_almost_equal(prior9, [[2 / 3], [0], [1 / 3], [1 / 3]])
 
     def test_kde_prior_weights(self):
         prior1 = KdePrior(self.uniform_float,
                           pd.Series([-1, -1, 0, 0.5, 1, 1, 1]),
                           weights=pd.Series([0.5, 0.5, 1, 1, 1 / 3, 1 / 3, 1 / 3]),
-                          bw=0.1).calculate(np.array([-1, -0.5, 0., 0.5, 1.]))
-        assert_almost_equal(prior1, [0.99735, 0, 0.99735, 0.99735, 0.99735], decimal=5)
+                          bw=0.1).calculate(np.array([[-1], [-0.5], [0.], [0.5], [1.]]))
+        assert_almost_equal(prior1, [[0.99735], [0], [0.99735], [0.99735], [0.99735]], decimal=5)
 
         prior2 = KdePrior(self.categorical,
-                          pd.Series(['red', 'red', 'blue']),
+                          pd.Series([0, 0, 2]),
                           weights=pd.Series([0.5, 0.5, 1]),
-                          bw=0.1).calculate(np.array([0, 1, 2]))
-        assert_almost_equal(prior2, [1, 0, 1], decimal=5)
+                          bw=0.1).calculate(np.array([[0], [1], [2]]))
+        assert_almost_equal(prior2, [[1], [0], [1]], decimal=5)

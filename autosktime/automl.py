@@ -58,6 +58,9 @@ class AutoML(BaseForecaster):
                  exclude: Optional[Dict[str, List[str]]] = None,
                  resampling_strategy: str = 'holdout',
                  resampling_strategy_arguments: Dict[str, Any] = None,
+                 metadata_directory: str = None,
+                 num_metalearning_configs: int = -1,
+                 hp_priors: bool = True,
                  n_jobs: int = 1,
                  dask_client: Optional[dask.distributed.Client] = None,
                  logging_config: Dict[str, Any] = None,
@@ -79,6 +82,9 @@ class AutoML(BaseForecaster):
         self._exclude = exclude
         self._resampling_strategy = resampling_strategy if resampling_strategy else 'holdout'
         self._resampling_strategy_arguments = resampling_strategy_arguments if resampling_strategy_arguments is not None else {}
+        self._metadata_directory = metadata_directory
+        self._num_metalearning_configs = num_metalearning_configs
+        self._hp_priors = hp_priors
         self._n_jobs: int = n_jobs
         self._dask_client: Optional[dask.distributed.Client] = dask_client
 
@@ -245,7 +251,7 @@ class AutoML(BaseForecaster):
 
             _proc_smac = AutoMLSMBO(
                 config_space=self.configuration_space,
-                dataset_name=self._dataset_name,
+                datamanager=self._datamanager,
                 backend=self._backend,
                 total_walltime_limit=time_left_for_smac,
                 func_eval_time_limit=per_run_time_limit,
@@ -254,6 +260,9 @@ class AutoML(BaseForecaster):
                 splitter=self._determine_resampling(),
                 use_pynisher=self._use_pynisher,
                 seed=self._seed,
+                metadata_directory=self._metadata_directory,
+                num_metalearning_configs=self._num_metalearning_configs,
+                hp_priors=self._hp_priors,
                 ensemble_callback=proc_ensemble,
             )
 

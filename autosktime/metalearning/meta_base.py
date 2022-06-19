@@ -2,14 +2,16 @@ import logging
 import math
 import os.path
 import pathlib
-from typing import List, SupportsFloat, Union, Optional, Tuple
+from typing import List, SupportsFloat, Optional, Tuple, Dict
 
+import numpy as np
 import pandas as pd
-from ConfigSpace import ConfigurationSpace
 from ConfigSpace.configuration_space import Configuration
 
+from ConfigSpace import ConfigurationSpace
 from autosktime.constants import TASK_TYPES_TO_STRING
 from autosktime.metalearning.kND import KNearestDataSets
+from autosktime.metalearning.prior import Prior, KdePrior, UniformPrior
 
 
 class MetaBase:
@@ -59,7 +61,7 @@ class MetaBase:
         configurations = []
         for neighbor in neighbors:
             try:
-                config = self.get_configuration(neighbor, best=0)
+                config = self._get_configuration(neighbor, index=0)
                 if not exclude_double_configurations or config not in added_configurations:
                     added_configurations.add(config)
                     configurations.append(config)
@@ -69,33 +71,70 @@ class MetaBase:
 
         return configurations[:num_initial_configurations]
 
-    def _get_neighbors(self, y: pd.Series) -> Tuple[List[str], List[float]]:
+    def suggest_univariate_prior(self, y: pd.Series, num_datasets: int, cutoff: float = 0.2) -> Dict[str, Prior]:
+        neighbors, distance = self._get_neighbors(y, num_datasets)
+
+        configs = []
+        for neighbor, distance in zip(neighbors, distance):
+            df = self._get_configuration_array(neighbor, cutoff)
+            df['weights'] = distance
+            configs.append(df)
+        df = pd.concat(configs)
+
+        # Normalize weights
+        df['weights'] = 1 - df['weights'] / np.linalg.norm(df['weights'])
+        df['weights'] /= df['weights'].sum()
+
+        priors = {}
+        for hp_name in df:
+            if hp_name == 'weights':
+                continue
+            hp = self.configuration_space.get_hyperparameter(hp_name)
+
+            observations = df[hp_name]
+            filled_values = (~pd.isna(observations)).sum()
+            if filled_values < 2:
+                prior = UniformPrior(hp)
+            else:
+                try:
+                    prior = KdePrior(hp, observations, weights=df['weights'])
+                except RuntimeError as ex:
+                    self.logger.warning(f'Failed to fit KdePrior: `{ex}`. Using UniformPrior as fallback')
+                    prior = UniformPrior(hp)
+
+            priors[hp_name] = prior
+        return priors
+
+    def _get_neighbors(self, y: pd.Series, k: int = -1) -> Tuple[List[str], List[float]]:
         if self._kND is None:
             self._kND = KNearestDataSets(metric=self.distance_measure, logger=self.logger)
             self._kND.fit(self._timeseries)
 
-        names, distances = self._kND.kneighbors(y, k=-1)
+        names, distances = self._kND.kneighbors(y, k=k)
         return names, distances
 
-    def get_configuration(
-            self,
-            dataset: str,
-            best: Union[int, float]
-    ) -> Union[Configuration, List[Configuration]]:
+    def _get_configuration_array(self, dataset: str, cutoff: float) -> pd.DataFrame:
+        hp_names = self._configs.columns.difference(['dataset', 'id', 'train_score', 'test_score'])
+        dataset_configs = self._configs.loc[
+            self._configs['dataset'] == dataset,
+            hp_names
+        ]
+
+        index = range(int(cutoff * dataset_configs.shape[0]))
+
+        configs = dataset_configs.iloc[index, :] \
+            .apply(lambda row: dict_to_config(row, self.configuration_space).get_array(), axis=1)
+        return pd.DataFrame(configs.values.tolist(), columns=hp_names)
+
+    def _get_configuration(self, dataset: str, index: int) -> Configuration:
         dataset_configs = self._configs.loc[
             self._configs['dataset'] == dataset,
             self._configs.columns.difference(['dataset', 'id', 'train_score', 'test_score'])
         ]
+        return dict_to_config(dataset_configs.iloc[index, :], self.configuration_space)
 
-        def to_config(row: pd.Series):
-            return Configuration(self.configuration_space,
-                                 {key: value for key, value in row.to_dict().items()
-                                  if not isinstance(value, SupportsFloat) or not math.isnan(value)}
-                                 )
 
-        if isinstance(best, int):
-            return to_config(dataset_configs.iloc[best, :])
-        else:
-            index = range(int(best * dataset_configs.shape[0]))
-            configs = [to_config(row) for _, row in dataset_configs.iloc[index, :].iterrows()]
-            return configs
+def dict_to_config(row: pd.Series, cs: ConfigurationSpace) -> Configuration:
+    config_dict = {key: value for key, value in row.to_dict().items()
+                   if not isinstance(value, SupportsFloat) or not math.isnan(value)}
+    return Configuration(cs, config_dict)

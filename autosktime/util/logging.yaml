@@ -35,3 +35,6 @@ loggers:
 
   matplotlib:
     level: WARNING
+
+  numba:
+    level: WARNING

@@ -46,6 +46,8 @@ def run_auto_sktime():
         ensemble_nbest=0,
         seed=seed,
         memory_limit=3072,
+        hp_priors=False,
+        num_metalearning_configs=-1,
         # resampling_strategy='sliding-window',
         # resampling_strategy_arguments={'folds': 2 if is_test else 5},
         delete_tmp_folder_after_terminate=False,
@@ -82,7 +84,7 @@ def run_auto_sktime():
             'id': key.config_id,
             'train_score': float(train_performance),
             'test_score': float(test_performance),
-            **run_history.ids_config[key.config_id].get_dictionary()
+            'values': run_history.ids_config[key.config_id].get_array()
         })
         print(f'Finished validating configuration {i + 1}/{len(run_history.data)}')
     print('Finished to validate configurations')
