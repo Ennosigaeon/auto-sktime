@@ -3,11 +3,13 @@ from typing import List, Tuple, Union, Dict
 
 import numpy as np
 import pandas as pd
+from sktime.performance_metrics.forecasting._classes import BaseForecastingErrorMetric
+
 from smac.runhistory.runhistory import RunHistory
 
 from autosktime.automl_common.common.ensemble_building.abstract_ensemble import AbstractEnsemble
 from autosktime.automl_common.common.utils.backend import Backend, PIPELINE_IDENTIFIER_TYPE
-from autosktime.metrics import BaseMetric, get_cost_of_crash
+from autosktime.metrics import get_cost_of_crash
 from autosktime.pipeline.templates.base import BasePipeline
 
 
@@ -21,7 +23,7 @@ class SingleBest(AbstractEnsemble):
 
     def __init__(
             self,
-            metric: BaseMetric,
+            metric: BaseForecastingErrorMetric,
             run_history: RunHistory,
             seed: int,
             backend: Backend,

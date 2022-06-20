@@ -5,6 +5,8 @@ import warnings
 from typing import Optional, Union, Type, TextIO
 
 import pandas as pd
+from sktime.performance_metrics.forecasting._classes import BaseForecastingErrorMetric
+
 from smac.tae import StatusType
 
 from ConfigSpace import Configuration
@@ -12,7 +14,7 @@ from autosktime.automl_common.common.utils.backend import Backend
 from autosktime.constants import FORECAST_TASK
 from autosktime.data import AbstractDataManager
 from autosktime.evaluation import TaFuncResult
-from autosktime.metrics import BaseMetric, calculate_loss, get_cost_of_crash
+from autosktime.metrics import calculate_loss, get_cost_of_crash
 from autosktime.pipeline.templates.univariate_endogenous import UnivariateEndogenousPipeline
 from sktime.forecasting.base import ForecastingHorizon
 
@@ -50,7 +52,7 @@ class AbstractEvaluator:
     def __init__(
             self,
             backend: Backend,
-            metric: BaseMetric,
+            metric: BaseForecastingErrorMetric,
             configuration: Configuration,
             seed: int = 1,
             num_run: int = 0,
@@ -83,7 +85,8 @@ class AbstractEvaluator:
             self,
             fh: ForecastingHorizon,
             X: Optional[pd.DataFrame],
-            model: AutoSktimePredictor
+            model: AutoSktimePredictor,
+            name: str
     ) -> pd.Series:
         def send_warnings_to_log(
                 message: Union[Warning, str],
@@ -97,7 +100,9 @@ class AbstractEvaluator:
 
         with warnings.catch_warnings():
             warnings.showwarning = send_warnings_to_log
-            return model.predict(fh, X=X)
+            y_pred = model.predict(fh, X=X)
+            y_pred.name = name
+            return y_pred
 
     @abc.abstractmethod
     def fit_predict_and_loss(self) -> None:
@@ -150,7 +155,7 @@ class AbstractEvaluator:
             budget=self.budget,
             model=self.model,  # TODO type does not match
             cv_model=self.models if hasattr(self, 'models') else None,
-            test_predictions=y_pred.values,
+            test_predictions=y_pred,
             valid_predictions=None,
             ensemble_predictions=y_ens
         )

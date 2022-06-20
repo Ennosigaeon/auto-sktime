@@ -14,15 +14,18 @@ import dask
 import dask.distributed
 import numpy as np
 import pandas as pd
+from sktime.performance_metrics.forecasting._classes import BaseForecastingErrorMetric
+
 from ConfigSpace import ConfigurationSpace, Configuration
 from ConfigSpace.read_and_write import json as cs_json
 from sktime.forecasting.base import BaseForecaster, ForecastingHorizon
+
+from autosktime.util.backend import create, Backend
 from smac.runhistory.runhistory import RunInfo, RunValue
 from smac.stats.stats import Stats
 from smac.tae import StatusType
 
 from autosktime.automl_common.common.ensemble_building.abstract_ensemble import AbstractEnsemble
-from autosktime.automl_common.common.utils.backend import Backend, create
 from autosktime.data import UnivariateTimeSeriesDataManager, UnivariateExogenousTimeSeriesDataManager, \
     AbstractDataManager
 from autosktime.data.splitter import BaseSplitter, splitter_types
@@ -30,7 +33,7 @@ from autosktime.ensembles.builder import EnsembleBuilderManager
 from autosktime.ensembles.singlebest import SingleBest
 from autosktime.ensembles.util import PrefittedEnsembleForecaster, get_ensemble_targets
 from autosktime.evaluation import ExecuteTaFunc
-from autosktime.metrics import default_metric_for_task, BaseMetric
+from autosktime.metrics import default_metric_for_task
 from autosktime.pipeline.templates import util
 from autosktime.pipeline.templates.base import BasePipeline
 from autosktime.smbo import AutoMLSMBO
@@ -64,7 +67,7 @@ class AutoML(BaseForecaster):
                  n_jobs: int = 1,
                  dask_client: Optional[dask.distributed.Client] = None,
                  logging_config: Dict[str, Any] = None,
-                 metric: BaseMetric = None,
+                 metric: BaseForecastingErrorMetric = None,
                  use_pynisher: bool = False
                  ):
         super(AutoML, self).__init__()
@@ -179,6 +182,7 @@ class AutoML(BaseForecaster):
             self._datamanager = UnivariateExogenousTimeSeriesDataManager(y, X, self._dataset_name)
         self._backend.save_datamanager(self._datamanager)
         time_for_load_data = self._stopwatch.wall_elapsed(self._dataset_name)
+        self.name_ = y.name
 
         time_left = max(0., self._time_for_task - time_for_load_data)
         self._logger.debug(f'Remaining time after reading {self._dataset_name} {time_left:5.2f} sec')
@@ -192,8 +196,8 @@ class AutoML(BaseForecaster):
             self._metric = default_metric_for_task[self._task]
         if self._metric is None:
             raise ValueError('No metric given.')
-        if not isinstance(self._metric, BaseMetric):
-            raise ValueError(f'Metric must be instance of {type(BaseMetric)}')
+        if not isinstance(self._metric, BaseForecastingErrorMetric):
+            raise ValueError(f'Metric must be instance of {type(BaseForecastingErrorMetric)}')
 
         # Create a search space
         self.configuration_space = self._create_search_space()
@@ -223,7 +227,7 @@ class AutoML(BaseForecaster):
                 random_state=self._seed
             )
             y_ens, _ = get_ensemble_targets(self._datamanager, ensemble_size=0.2)
-            self._backend.save_targets_ensemble(y_ens.values)
+            self._backend.save_targets_ensemble(y_ens)
 
         # Run SMAC
         smac_task_name = 'runSMAC'
@@ -427,6 +431,7 @@ class AutoML(BaseForecaster):
             raise ValueError('Predict can only be called if ensemble_size != 0')
 
         predictions = self.ensemble_.predict(fh=fh, X=X)
+        predictions.name = self.name_
         return predictions
 
     def _load_models(self) -> None:

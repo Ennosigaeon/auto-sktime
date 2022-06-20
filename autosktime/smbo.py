@@ -3,8 +3,10 @@ import logging
 import os
 from typing import Optional, Tuple, List, Dict
 
-import autosktime
 import pandas as pd
+from sktime.performance_metrics.forecasting._classes import BaseForecastingErrorMetric
+
+import autosktime
 from ConfigSpace import ConfigurationSpace, Configuration
 from autosktime.automl_common.common.utils.backend import Backend
 from autosktime.data import AbstractDataManager
@@ -34,7 +36,7 @@ class AutoMLSMBO:
             total_walltime_limit: float,
             func_eval_time_limit: float,
             memory_limit: float,
-            metric: BaseMetric,
+            metric: BaseForecastingErrorMetric,
             splitter: BaseSplitter,
             use_pynisher: bool = True,
             seed: int = 1,

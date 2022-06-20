@@ -17,6 +17,8 @@ import pandas as pd
 import pynisher
 from distributed import Future
 from pandas.core.util.hashing import hash_pandas_object
+from sktime.performance_metrics.forecasting._classes import BaseForecastingErrorMetric
+
 from smac.callbacks import IncorporateRunResultCallback
 from smac.optimizer.smbo import SMBO
 from smac.runhistory.runhistory import RunInfo, RunValue
@@ -27,7 +29,7 @@ from autosktime.automl_common.common.utils.backend import Backend
 from autosktime.data import AbstractDataManager
 from autosktime.ensembles.selection import EnsembleSelection
 from autosktime.ensembles.util import get_ensemble_train, PrefittedEnsembleForecaster
-from autosktime.metrics import calculate_loss, BaseMetric
+from autosktime.metrics import calculate_loss
 from autosktime.util.dask_single_thread_client import SingleThreadedClient
 from sktime.forecasting.compose import EnsembleForecaster
 
@@ -46,7 +48,7 @@ class EnsembleBuilderManager(IncorporateRunResultCallback):
             backend: Backend,
             dataset_name: str,
             task: int,
-            metric: BaseMetric,
+            metric: BaseForecastingErrorMetric,
             ensemble_size: int,
             ensemble_nbest: Union[int, float],
             max_models_on_disc: Union[int, float] = None,
@@ -201,7 +203,7 @@ def _fit_and_return_ensemble(
         backend: Backend,
         dataset_name: str,
         task_type: int,
-        metric: BaseMetric,
+        metric: BaseForecastingErrorMetric,
         ensemble_size: int,
         ensemble_nbest: int,
         max_models_on_disc: Union[int, float],
@@ -252,7 +254,7 @@ class EnsembleBuilder:
             backend: Backend,
             dataset_name: str,
             task_type: int,
-            metric: BaseMetric,
+            metric: BaseForecastingErrorMetric,
             ensemble_size: int = 10,
             ensemble_nbest: Union[int, float] = 100,
             max_models_on_disc: Union[int, float] = None,

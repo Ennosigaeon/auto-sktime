@@ -2,16 +2,17 @@ from typing import Optional, Tuple, List, NamedTuple
 
 import numpy as np
 import pandas as pd
+from sktime.performance_metrics.forecasting._classes import BaseForecastingErrorMetric
+
+from autosktime.util.backend import Backend
 from smac.tae import StatusType
 
 from ConfigSpace import Configuration
-from autosktime.automl_common.common.utils.backend import Backend
 from autosktime.data.splitter import BaseSplitter
 from autosktime.ensembles.util import get_ensemble_targets
 from autosktime.evaluation import TaFuncResult
 # noinspection PyProtectedMember
 from autosktime.evaluation.abstract_evaluator import AbstractEvaluator, _fit_and_suppress_warnings
-from autosktime.metrics import BaseMetric
 from autosktime.pipeline.components.base import AutoSktimeComponent, AutoSktimePredictor
 from sktime.forecasting.base import ForecastingHorizon
 
@@ -32,7 +33,7 @@ class TrainEvaluator(AbstractEvaluator):
     def __init__(
             self,
             backend: Backend,
-            metric: BaseMetric,
+            metric: BaseForecastingErrorMetric,
             configuration: Configuration,
             splitter: BaseSplitter,
             seed: int = 1,
@@ -136,8 +137,10 @@ class TrainEvaluator(AbstractEvaluator):
         self.models[fold] = model
         self.indices[fold] = (y_train.index, y_test.index)
 
-        train_pred = self.predict_function(ForecastingHorizon(y_train.index, is_relative=False), X_train, model)
-        test_pred = self.predict_function(ForecastingHorizon(y_test.index, is_relative=False), X_test, model)
+        train_pred = self.predict_function(ForecastingHorizon(y_train.index, is_relative=False), X_train, model,
+                                           y_train.name)
+        test_pred = self.predict_function(ForecastingHorizon(y_test.index, is_relative=False), X_test, model,
+                                          y_test.name)
 
         return train_pred, test_pred
 
@@ -158,7 +161,8 @@ class TrainEvaluator(AbstractEvaluator):
         self.model = model
 
         y_test, X_test = get_ensemble_targets(self.datamanager, ensemble_size)
-        test_pred = self.predict_function(ForecastingHorizon(y_test.index, is_relative=False), X_test, model)
+        test_pred = self.predict_function(ForecastingHorizon(y_test.index, is_relative=False), X_test, model,
+                                          str(y_test.name))
 
         return model, test_pred
 
@@ -166,7 +170,7 @@ class TrainEvaluator(AbstractEvaluator):
 def evaluate(
         config: Configuration,
         backend: Backend,
-        metric: BaseMetric,
+        metric: BaseForecastingErrorMetric,
         seed: int,
         num_run: int,
         splitter: BaseSplitter,
