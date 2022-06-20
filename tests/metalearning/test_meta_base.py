@@ -8,8 +8,8 @@ from sktime.datasets import load_airline
 from autosktime.constants import UNIVARIATE_FORECAST
 from autosktime.data import DatasetProperties
 from autosktime.metalearning.meta_base import MetaBase
-from autosktime.metalearning.prior import Prior
 from autosktime.pipeline.templates import util
+from autosktime.smac.prior import Prior
 
 
 class MetaBaseTest(unittest.TestCase):

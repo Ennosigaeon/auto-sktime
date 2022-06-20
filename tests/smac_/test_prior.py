@@ -8,7 +8,7 @@ from numpy.testing import assert_almost_equal
 from scipy.stats import truncnorm, norm
 
 from ConfigSpace import UniformFloatHyperparameter, UniformIntegerHyperparameter, Constant
-from autosktime.metalearning.prior import UniformPrior, NormalPrior, KdePrior
+from autosktime.smac.prior import UniformPrior, NormalPrior, KdePrior
 
 
 class PriorTest(unittest.TestCase):

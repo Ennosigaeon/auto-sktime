@@ -11,7 +11,7 @@ from ConfigSpace.configuration_space import Configuration
 from ConfigSpace import ConfigurationSpace
 from autosktime.constants import TASK_TYPES_TO_STRING
 from autosktime.metalearning.kND import KNearestDataSets
-from autosktime.metalearning.prior import Prior, KdePrior, UniformPrior
+from autosktime.smac.prior import Prior, KdePrior, UniformPrior
 
 
 class MetaBase:
