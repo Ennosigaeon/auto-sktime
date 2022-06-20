@@ -8,6 +8,7 @@ from autosktime.pipeline.components.forecast import ForecasterChoice
 from autosktime.pipeline.components.normalizer import NormalizerChoice
 from autosktime.pipeline.components.preprocessing.impute import ImputerComponent
 from autosktime.pipeline.components.preprocessing.outlier import HampelFilterComponent
+from autosktime.pipeline.components.preprocessing.shift import ShiftTransformerComponent
 from autosktime.pipeline.templates.base import ConfigurableTransformedTargetForecaster
 
 
@@ -99,6 +100,7 @@ class UnivariateEndogenousPipeline(ConfigurableTransformedTargetForecaster):
             default_dataset_properties.update(dataset_properties)
 
         steps.extend([
+            ('shift', ShiftTransformerComponent(random_state=self.random_state)),
             ('outlier', HampelFilterComponent(random_state=self.random_state)),
             ('imputation', ImputerComponent(random_state=self.random_state)),
             ('normalizer', NormalizerChoice(random_state=self.random_state)),
