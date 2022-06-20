@@ -2,9 +2,6 @@ import warnings
 from typing import Optional, Dict
 
 import numpy as np
-
-from autosktime.constants import FORECAST_TASK, UNIVARIATE_FORECAST, UNIVARIATE_EXOGENOUS_FORECAST, MAXINT
-from autosktime.data.benchmark.m4 import naive_2
 from sktime.forecasting.model_selection._split import ACCEPTED_Y_TYPES
 from sktime.performance_metrics.forecasting import (
     MeanAbsolutePercentageError as MeanAbsolutePercentageError_,
@@ -12,17 +9,17 @@ from sktime.performance_metrics.forecasting import (
     MeanAbsoluteScaledError as MeanAbsoluteScaledError_
 )
 # noinspection PyProtectedMember
-from sktime.performance_metrics.forecasting._classes import _BaseForecastingErrorMetric, \
-    _PercentageForecastingErrorMetric
+from sktime.performance_metrics.forecasting._classes import _BaseForecastingErrorMetric, BaseForecastingErrorMetric
 
-BaseMetric = _BaseForecastingErrorMetric
+from autosktime.constants import FORECAST_TASK, UNIVARIATE_FORECAST, UNIVARIATE_EXOGENOUS_FORECAST, MAXINT
+from autosktime.data.benchmark.m4 import naive_2
 
 
 def calculate_loss(
         solution: ACCEPTED_Y_TYPES,
         prediction: ACCEPTED_Y_TYPES,
         task_type: int,
-        metric: BaseMetric,
+        metric: BaseForecastingErrorMetric,
 ) -> float:
     """
     Returns a loss (a magnitude that allows casting the
@@ -52,23 +49,26 @@ def calculate_loss(
     else:
         raise NotImplementedError('Scoring of non FORECAST_TASK not supported')
 
-    if metric.greater_is_better:
-        return -1 * score
-    else:
+    if metric.get_tag("lower_is_better"):
         return score
-
-
-def get_cost_of_crash(metric: BaseMetric) -> float:
-    if isinstance(metric, _PercentageForecastingErrorMetric):
-        return 1
     else:
+        return -1 * score
+
+
+def get_cost_of_crash(metric: BaseForecastingErrorMetric) -> float:
+    if hasattr(metric, 'worst_score'):
+        return metric.worst_score
+    elif metric.get_tag("lower_is_better"):
         return MAXINT
+    else:
+        return 0
 
 
 class MeanAbsolutePercentageError(MeanAbsolutePercentageError_):
 
-    def __init__(self):
-        super().__init__(symmetric=True)
+    def __init__(self, symmetric: bool = True):
+        super().__init__(symmetric=symmetric)
+        self.worst_score = 1
 
     def __call__(
             self,
@@ -83,9 +83,6 @@ class MeanAbsolutePercentageError(MeanAbsolutePercentageError_):
 
 
 class MedianAbsolutePercentageError(MedianAbsolutePercentageError_):
-
-    def __init__(self):
-        super().__init__()
 
     def __call__(
             self,
@@ -146,7 +143,15 @@ def overall_weighted_average(
            ) / 2
 
 
-default_metric_for_task: Dict[int, BaseMetric] = {
+default_metric_for_task: Dict[int, BaseForecastingErrorMetric] = {
     UNIVARIATE_FORECAST: MeanAbsolutePercentageError(),
     UNIVARIATE_EXOGENOUS_FORECAST: MeanAbsolutePercentageError(),
 }
+
+STRING_TO_METRIC = {
+    'mape': MeanAbsolutePercentageError(),
+    'mdape': MedianAbsolutePercentageError(),
+    'mase': MeanAbsoluteScaledError(),
+    'owa': OverallWeightedAverage(),
+}
+METRIC_TO_STRING = {type(value): key for key, value in STRING_TO_METRIC.items()}

@@ -7,6 +7,8 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union, NamedTuple
 
 import numpy as np
 import pynisher
+from sktime.performance_metrics.forecasting._classes import BaseForecastingErrorMetric
+
 from smac.runhistory.runhistory import RunInfo, RunValue
 from smac.stats.stats import Stats
 from smac.tae import StatusType
@@ -15,7 +17,7 @@ from smac.tae.execute_func import AbstractTAFunc
 from ConfigSpace import Configuration
 from autosktime.automl_common.common.utils.backend import Backend
 from autosktime.data.splitter import BaseSplitter
-from autosktime.metrics import BaseMetric, get_cost_of_crash
+from autosktime.metrics import get_cost_of_crash
 
 TaFuncResult = NamedTuple('TaFuncResult', [
     ('loss', float),
@@ -54,11 +56,11 @@ class ExecuteTaFunc(AbstractTAFunc):
             backend: Backend,
             seed: int,
             splitter: BaseSplitter,
-            metric: BaseMetric,
+            metric: BaseForecastingErrorMetric,
             stats: Stats,
             memory_limit: Optional[int] = None,
             budget_type: Optional[str] = None,
-            use_pynisher: bool = False,
+            use_pynisher: bool = True,
             ta: Optional[Callable] = None,
             **kwargs
     ):

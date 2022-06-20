@@ -5,11 +5,12 @@ import numpy as np
 import pandas as pd
 from numpy.random import RandomState
 from sklearn.utils import check_random_state
+from sktime.performance_metrics.forecasting._classes import BaseForecastingErrorMetric
 
 from autosktime.automl_common.common.ensemble_building.abstract_ensemble import AbstractEnsemble
 from autosktime.automl_common.common.utils.backend import PIPELINE_IDENTIFIER_TYPE
 from autosktime.constants import TASK_TYPES
-from autosktime.metrics import BaseMetric, calculate_loss
+from autosktime.metrics import calculate_loss
 from autosktime.pipeline.templates.base import BasePipeline
 
 
@@ -19,7 +20,7 @@ class EnsembleSelection(AbstractEnsemble):
             self,
             ensemble_size: int,
             task_type: int,
-            metric: BaseMetric,
+            metric: BaseForecastingErrorMetric,
             mode: str = 'fast',
             random_state: Optional[Union[int, np.random.RandomState]] = None,
     ) -> None:
@@ -68,9 +69,9 @@ class EnsembleSelection(AbstractEnsemble):
             raise ValueError('Ensemble size cannot be less than one!')
         if self.task_type not in TASK_TYPES:
             raise ValueError(f'Unknown task type {self.task_type}.')
-        if not isinstance(self.metric, BaseMetric):
+        if not isinstance(self.metric, BaseForecastingErrorMetric):
             raise ValueError(
-                f'The provided metric must be an instance of {BaseMetric}, nevertheless it is '
+                f'The provided metric must be an instance of {BaseForecastingErrorMetric}, nevertheless it is '
                 f'{self.metric}({type(self.metric)})')
         if self.mode not in ('fast', 'slow'):
             raise ValueError(f'Unknown mode {self.mode}')
@@ -95,7 +96,7 @@ class EnsembleSelection(AbstractEnsemble):
 
         return self
 
-    def _fast(self, predictions: List[pd.Series], labels: np.ndarray) -> Tuple[np.ndarray, np.ndarray, float]:
+    def _fast(self, predictions: List[pd.Series], labels: pd.Series) -> Tuple[np.ndarray, np.ndarray, float]:
         """Fast version of Rich Caruana's ensemble selection method."""
         ensemble_size = len(predictions)
         ensemble: List[pd.Series] = []
@@ -124,7 +125,7 @@ class EnsembleSelection(AbstractEnsemble):
 
                 losses[j] = calculate_loss(
                     solution=labels,
-                    prediction=fant_ensemble_prediction,
+                    prediction=pd.Series(fant_ensemble_prediction, name=labels.name, index=labels.index),
                     task_type=self.task_type,
                     metric=self.metric
                 )

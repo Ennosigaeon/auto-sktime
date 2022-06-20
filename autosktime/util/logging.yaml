@@ -27,11 +27,14 @@ handlers:
 
 root:
   level: DEBUG
-  handlers: [ console ]
+  handlers: [ console, file_handler ]
 
 loggers:
   smac:
     level: INFO
 
   matplotlib:
+    level: WARNING
+
+  numba:
     level: WARNING
