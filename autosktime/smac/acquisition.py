@@ -3,7 +3,7 @@ from typing import Any, Dict
 import numpy as np
 from ConfigSpace.hyperparameters import FloatHyperparameter
 
-from autosktime.metalearning.prior import Prior
+from autosktime.smac.prior import Prior
 from smac.epm.base_epm import AbstractEPM
 from smac.optimizer.acquisition import AbstractAcquisitionFunction, PriorAcquisitionFunction as AcqFunc
 

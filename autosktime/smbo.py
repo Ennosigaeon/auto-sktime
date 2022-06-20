@@ -13,12 +13,11 @@ from autosktime.data import AbstractDataManager
 from autosktime.data.splitter import BaseSplitter
 from autosktime.evaluation import ExecuteTaFunc, get_cost_of_crash
 from autosktime.metalearning.meta_base import MetaBase
-from autosktime.metrics import METRIC_TO_STRING, BaseMetric
-from autosktime.smac.acquisition import PriorAcquisitionFunction
+from autosktime.metrics import METRIC_TO_STRING
 from autosktime.smac.prior import Prior
-from autosktime.smac.smac_ac_facade import SMAC4AC
 
 from smac.callbacks import IncorporateRunResultCallback
+from smac.facade.smac_ac_facade import SMAC4AC
 from smac.intensification.simple_intensifier import SimpleIntensifier
 from smac.runhistory.runhistory import RunHistory
 from smac.runhistory.runhistory2epm import RunHistory2EPM4LogCost
@@ -129,7 +128,6 @@ class AutoMLSMBO:
             intensifier=SimpleIntensifier,
             initial_configurations=initial_configurations,
             user_priors=self.hp_priors,
-            user_prior_instance=PriorAcquisitionFunction,
             user_prior_kwargs={
                 'decay_beta': 10,
                 'priors': priors
