@@ -2,19 +2,19 @@ from typing import Optional, Tuple, List, NamedTuple
 
 import numpy as np
 import pandas as pd
-from sktime.performance_metrics.forecasting._classes import BaseForecastingErrorMetric
-
-from autosktime.util.backend import Backend
-from smac.tae import StatusType
-
 from ConfigSpace import Configuration
+from autosktime.constants import SUPPORTED_Y_TYPES
 from autosktime.data.splitter import BaseSplitter
 from autosktime.ensembles.util import get_ensemble_targets
 from autosktime.evaluation import TaFuncResult
 # noinspection PyProtectedMember
 from autosktime.evaluation.abstract_evaluator import AbstractEvaluator, _fit_and_suppress_warnings
 from autosktime.pipeline.components.base import AutoSktimeComponent, AutoSktimePredictor
-from sktime.forecasting.base import ForecastingHorizon
+from autosktime.util.backend import Backend
+# noinspection PyProtectedMember
+from sktime.performance_metrics.forecasting._classes import BaseForecastingErrorMetric
+
+from smac.tae import StatusType
 
 EvalResult = NamedTuple('EvalResult', [
     ('y_pred', pd.Series),
@@ -81,7 +81,7 @@ class TrainEvaluator(AbstractEvaluator):
             # Compute train loss of this fold and store it. train_loss could
             # either be a scalar or a dict of scalars with metrics as keys.
             train_losses[i] = self._loss(
-                y[train_split],
+                y.iloc[train_split],
                 train_pred,
                 error='worst'
             )
@@ -89,7 +89,7 @@ class TrainEvaluator(AbstractEvaluator):
 
             # Compute validation loss of this fold and store it.
             test_loss[i] = self._loss(
-                y[test_split],
+                y.iloc[test_split],
                 test_pred,
                 error='raise'
             )
@@ -118,7 +118,7 @@ class TrainEvaluator(AbstractEvaluator):
             fold: int,
             train: np.ndarray,
             test: np.ndarray
-    ) -> Tuple[pd.Series, pd.Series]:
+    ) -> Tuple[SUPPORTED_Y_TYPES, SUPPORTED_Y_TYPES]:
         y = self.datamanager.y
         y_train = y.iloc[train]
         y_test = y.iloc[test]
@@ -137,10 +137,8 @@ class TrainEvaluator(AbstractEvaluator):
         self.models[fold] = model
         self.indices[fold] = (y_train.index, y_test.index)
 
-        train_pred = self.predict_function(ForecastingHorizon(y_train.index, is_relative=False), X_train, model,
-                                           y_train.name)
-        test_pred = self.predict_function(ForecastingHorizon(y_test.index, is_relative=False), X_test, model,
-                                          y_test.name)
+        train_pred = self.predict_function(y_train, X_train, model)
+        test_pred = self.predict_function(y_test, X_test, model)
 
         return train_pred, test_pred
 
@@ -149,10 +147,10 @@ class TrainEvaluator(AbstractEvaluator):
             fold: int,
             train: np.ndarray,
             test: np.ndarray,
-    ) -> Tuple[pd.Series, pd.Series]:
+    ) -> Tuple[SUPPORTED_Y_TYPES, SUPPORTED_Y_TYPES]:
         raise NotImplementedError('Budgets not supported yet')
 
-    def _fit_and_predict_final_model(self, ensemble_size: float = 0.2) -> Tuple[AutoSktimePredictor, pd.Series]:
+    def _fit_and_predict_final_model(self, ensemble_size: float = 0.2) -> Tuple[AutoSktimePredictor, SUPPORTED_Y_TYPES]:
         y = self.datamanager.y
         X = self.datamanager.X
 
@@ -161,8 +159,7 @@ class TrainEvaluator(AbstractEvaluator):
         self.model = model
 
         y_test, X_test = get_ensemble_targets(self.datamanager, ensemble_size)
-        test_pred = self.predict_function(ForecastingHorizon(y_test.index, is_relative=False), X_test, model,
-                                          str(y_test.name))
+        test_pred = self.predict_function(y_test, X_test, model)
 
         return model, test_pred
 

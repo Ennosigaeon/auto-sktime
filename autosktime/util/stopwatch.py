@@ -7,9 +7,13 @@ import pandas as pd
 
 @dataclass
 class TimingTask:
-    name: str
-    start: float = time.time()
-    end: float = 0.0
+
+    def __init__(self, name: str, start: float = None):
+        if start is None:
+            start = time.time()
+        self.name = name
+        self.start = start
+        self.end = 0.0
 
     @property
     def wall_dur(self) -> float:
@@ -20,7 +24,6 @@ class StopWatch:
 
     def __init__(self) -> None:
         self._tasks = OrderedDict()
-        self._tasks['stopwatch_time'] = TimingTask('stopwatch_time')
 
     def start_task(self, name: str) -> None:
         if name not in self._tasks:

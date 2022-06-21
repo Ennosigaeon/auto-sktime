@@ -14,18 +14,13 @@ import dask
 import dask.distributed
 import numpy as np
 import pandas as pd
+from sktime.forecasting.base import BaseForecaster, ForecastingHorizon
 from sktime.performance_metrics.forecasting._classes import BaseForecastingErrorMetric
 
 from ConfigSpace import ConfigurationSpace, Configuration
 from ConfigSpace.read_and_write import json as cs_json
-from sktime.forecasting.base import BaseForecaster, ForecastingHorizon
-
-from autosktime.util.backend import create, Backend
-from smac.runhistory.runhistory import RunInfo, RunValue
-from smac.stats.stats import Stats
-from smac.tae import StatusType
-
 from autosktime.automl_common.common.ensemble_building.abstract_ensemble import AbstractEnsemble
+from autosktime.constants import SUPPORTED_Y_TYPES
 from autosktime.data import UnivariateTimeSeriesDataManager, UnivariateExogenousTimeSeriesDataManager, \
     AbstractDataManager
 from autosktime.data.splitter import BaseSplitter, splitter_types
@@ -34,15 +29,20 @@ from autosktime.ensembles.singlebest import SingleBest
 from autosktime.ensembles.util import PrefittedEnsembleForecaster, get_ensemble_targets
 from autosktime.evaluation import ExecuteTaFunc
 from autosktime.metrics import default_metric_for_task
+from autosktime.pipeline.components.util import NotVectorizedMixin
 from autosktime.pipeline.templates import util
 from autosktime.pipeline.templates.base import BasePipeline
 from autosktime.smbo import AutoMLSMBO
+from autosktime.util.backend import create, Backend
 from autosktime.util.dask_single_thread_client import SingleThreadedClient
 from autosktime.util.logging_ import setup_logger
 from autosktime.util.stopwatch import StopWatch
+from smac.runhistory.runhistory import RunInfo, RunValue
+from smac.stats.stats import Stats
+from smac.tae import StatusType
 
 
-class AutoML(BaseForecaster):
+class AutoML(NotVectorizedMixin, BaseForecaster):
     _tags = {
         'requires-fh-in-fit': False
     }
@@ -136,7 +136,7 @@ class AutoML(BaseForecaster):
 
     def fit(
             self,
-            y: pd.Series,
+            y: SUPPORTED_Y_TYPES,
             X: pd.DataFrame = None,
             fh: ForecastingHorizon = None,
             task: Optional[int] = None,
@@ -147,9 +147,11 @@ class AutoML(BaseForecaster):
         self._dataset_name = dataset_name
         self._task = task
 
+        # TODO assert at most two levels of indices
+
         super().fit(y, X, fh)
 
-    def _fit(self, y: pd.Series, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
+    def _fit(self, y: SUPPORTED_Y_TYPES, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
         # Create the backend
         self._backend = self._create_backend()
         self._backend.save_start_time(str(self._seed))
@@ -177,12 +179,12 @@ class AutoML(BaseForecaster):
         # Prepare training data
         self._stopwatch.start_task(self._dataset_name)
         if X is None:
+            # TODO what about panel data?
             self._datamanager = UnivariateTimeSeriesDataManager(y, self._dataset_name)
         else:
             self._datamanager = UnivariateExogenousTimeSeriesDataManager(y, X, self._dataset_name)
         self._backend.save_datamanager(self._datamanager)
         time_for_load_data = self._stopwatch.wall_elapsed(self._dataset_name)
-        self.name_ = y.name
 
         time_left = max(0., self._time_for_task - time_for_load_data)
         self._logger.debug(f'Remaining time after reading {self._dataset_name} {time_left:5.2f} sec')
@@ -431,7 +433,6 @@ class AutoML(BaseForecaster):
             raise ValueError('Predict can only be called if ensemble_size != 0')
 
         predictions = self.ensemble_.predict(fh=fh, X=X)
-        predictions.name = self.name_
         return predictions
 
     def _load_models(self) -> None:
@@ -468,15 +469,15 @@ class AutoML(BaseForecaster):
             return None
 
         # SingleBest contains the best model found by AutoML
-        identifier, ensemble = SingleBest(
+        ensemble = SingleBest(
             metric=self._metric,
             run_history=self.runhistory_,
             seed=self._seed,
             backend=self._backend
         )
         self._logger.warning(
-            f'No valid ensemble was created. Please check the log file for errors. Default to the best individual '
-            f'estimator:{identifier}'
+            'No valid ensemble was created. Please check the log file for errors. Default to the best individual '
+            'estimator'
         )
         return ensemble
 

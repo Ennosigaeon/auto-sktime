@@ -4,16 +4,14 @@ from typing import Optional
 
 import numpy as np
 import pandas as pd
-
 from autosktime.automl_common.common.utils.backend import Backend as Backend_, BackendContext
+from autosktime.constants import SUPPORTED_Y_TYPES
 
 
 class Backend(Backend_):
 
-    def save_targets_ensemble(self, targets: pd.Series) -> str:
+    def save_targets_ensemble(self, targets: SUPPORTED_Y_TYPES) -> str:
         self._make_internals_directory()
-        if not isinstance(targets, pd.Series):
-            raise ValueError(f'Targets must be of type pd.Series, but is {type(targets)}')
 
         filepath = self._get_targets_ensemble_filename()
 
@@ -37,7 +35,7 @@ class Backend(Backend_):
 
         return filepath
 
-    def load_targets_ensemble(self) -> pd.Series:
+    def load_targets_ensemble(self) -> SUPPORTED_Y_TYPES:
         filepath = self._get_targets_ensemble_filename()
 
         with open(filepath, "rb") as fh:

@@ -124,8 +124,8 @@ class EnsembleSelection(AbstractEnsemble):
                 np.multiply(fant_ensemble_prediction, (1. / float(s + 1)), out=fant_ensemble_prediction)
 
                 losses[j] = calculate_loss(
-                    solution=labels,
-                    prediction=pd.Series(fant_ensemble_prediction, name=labels.name, index=labels.index),
+                    solution=labels.values,
+                    prediction=fant_ensemble_prediction,
                     task_type=self.task_type,
                     metric=self.metric
                 )

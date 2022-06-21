@@ -1,12 +1,12 @@
 import shutil
 
-from matplotlib import pyplot as plt
-
 from autosktime.automl import AutoML
 from autosktime.metrics import calculate_loss
+from autosktime.util import resolve_index
+from autosktime.util.plotting import plot_series
+from matplotlib import pyplot as plt
 from sktime.datasets import load_airline
 from sktime.forecasting.model_selection import temporal_train_test_split
-from sktime.utils.plotting import plot_series
 
 try:
     shutil.rmtree('tmp')
@@ -29,9 +29,9 @@ automl = AutoML(
 
 automl.fit(y_train, dataset_name='airline')
 
-y_pred = automl.predict(y_test.index)
+y_pred = automl.predict(resolve_index(y_test.index))
 
 print('Ensemble', calculate_loss(y_test, y_pred, automl._task, automl._metric))
 
-fig, ax = plot_series(y_train, y_test, y_pred, labels=['y_train', 'y_test', 'y_pred'])
+plot_series(y_train, y_test, y_pred)
 plt.show()

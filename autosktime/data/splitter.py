@@ -1,6 +1,7 @@
 from typing import Optional, Dict, Type
 
 import numpy as np
+import pandas as pd
 from sktime.forecasting.base import ForecastingHorizon
 from sktime.forecasting.model_selection import (
     SingleWindowSplitter as SingleWindowSplitter_,
@@ -20,16 +21,12 @@ class HoldoutSplitter(SingleWindowSplitter_):
         self.fh_ = fh
         self._is_init = False
 
-    def _init(self, y: ACCEPTED_Y_TYPES):
-        if not self._is_init:
-            n_timepoints = y.shape[0]
-            test_size = np.floor(n_timepoints * self.fh_) + 1
-            self.fh = ForecastingHorizon(np.arange(1, test_size, dtype=int))
-            self._is_init = True
+    def _split(self, y: pd.Index) -> SPLIT_GENERATOR_TYPE:
+        n_timepoints = y.shape[0]
+        test_size = np.floor(n_timepoints * self.fh_) + 1
+        self.fh = ForecastingHorizon(np.arange(1, test_size, dtype=int))
 
-    def split(self, y: ACCEPTED_Y_TYPES) -> SPLIT_GENERATOR_TYPE:
-        self._init(y)
-        return super().split(y)
+        return super()._split(y)
 
 
 class SlidingWindowSplitter(SlidingWindowSplitter_):
@@ -53,9 +50,9 @@ class SlidingWindowSplitter(SlidingWindowSplitter_):
 
             self._is_init = True
 
-    def split(self, y: ACCEPTED_Y_TYPES) -> SPLIT_GENERATOR_TYPE:
+    def _split(self, y: pd.Index) -> SPLIT_GENERATOR_TYPE:
         self._init(y)
-        return super().split(y)
+        return super()._split(y)
 
     def get_cutoffs(self, y: Optional[ACCEPTED_Y_TYPES] = None) -> np.ndarray:
         self._init(y)

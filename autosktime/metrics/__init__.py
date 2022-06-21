@@ -2,7 +2,6 @@ import warnings
 from typing import Optional, Dict
 
 import numpy as np
-from sktime.forecasting.model_selection._split import ACCEPTED_Y_TYPES
 from sktime.performance_metrics.forecasting import (
     MeanAbsolutePercentageError as MeanAbsolutePercentageError_,
     MedianAbsolutePercentageError as MedianAbsolutePercentageError_,
@@ -11,13 +10,14 @@ from sktime.performance_metrics.forecasting import (
 # noinspection PyProtectedMember
 from sktime.performance_metrics.forecasting._classes import _BaseForecastingErrorMetric, BaseForecastingErrorMetric
 
-from autosktime.constants import FORECAST_TASK, UNIVARIATE_FORECAST, UNIVARIATE_EXOGENOUS_FORECAST, MAXINT
+from autosktime.constants import FORECAST_TASK, UNIVARIATE_FORECAST, UNIVARIATE_EXOGENOUS_FORECAST, MAXINT, \
+    SUPPORTED_Y_TYPES
 from autosktime.data.benchmark.m4 import naive_2
 
 
 def calculate_loss(
-        solution: ACCEPTED_Y_TYPES,
-        prediction: ACCEPTED_Y_TYPES,
+        solution: SUPPORTED_Y_TYPES,
+        prediction: SUPPORTED_Y_TYPES,
         task_type: int,
         metric: BaseForecastingErrorMetric,
 ) -> float:
@@ -72,8 +72,8 @@ class MeanAbsolutePercentageError(MeanAbsolutePercentageError_):
 
     def __call__(
             self,
-            y_true: ACCEPTED_Y_TYPES,
-            y_pred: ACCEPTED_Y_TYPES,
+            y_true: SUPPORTED_Y_TYPES,
+            y_pred: SUPPORTED_Y_TYPES,
             horizon_weight: Optional[np.ndarray] = None,
             **kwargs
     ) -> float:
@@ -86,8 +86,8 @@ class MedianAbsolutePercentageError(MedianAbsolutePercentageError_):
 
     def __call__(
             self,
-            y_true: ACCEPTED_Y_TYPES,
-            y_pred: ACCEPTED_Y_TYPES,
+            y_true: SUPPORTED_Y_TYPES,
+            y_pred: SUPPORTED_Y_TYPES,
             horizon_weight: Optional[np.ndarray] = None,
             **kwargs
     ) -> float:
@@ -100,8 +100,8 @@ class MeanAbsoluteScaledError(MeanAbsoluteScaledError_):
 
     def __call__(
             self,
-            y_true: ACCEPTED_Y_TYPES,
-            y_pred: ACCEPTED_Y_TYPES,
+            y_true: SUPPORTED_Y_TYPES,
+            y_pred: SUPPORTED_Y_TYPES,
             horizon_weight: Optional[np.ndarray] = None,
             **kwargs
     ) -> float:
@@ -123,10 +123,10 @@ class OverallWeightedAverage(_BaseForecastingErrorMetric):
 
 
 def overall_weighted_average(
-        y_true: ACCEPTED_Y_TYPES,
-        y_pred: ACCEPTED_Y_TYPES,
+        y_true: SUPPORTED_Y_TYPES,
+        y_pred: SUPPORTED_Y_TYPES,
         horizon_weight: Optional[np.ndarray] = None,
-        y_train: ACCEPTED_Y_TYPES = None,
+        y_train: SUPPORTED_Y_TYPES = None,
         **kwargs
 ) -> float:
     if y_train is None:

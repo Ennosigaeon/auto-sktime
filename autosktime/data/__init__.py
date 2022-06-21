@@ -9,10 +9,13 @@ from autosktime.constants import UNIVARIATE_ENDOGENOUS_FORECAST, UNIVARIATE_EXOG
 
 class DatasetProperties(MutableMapping):
 
-    def __init__(self, index_type: Type[pd.Index] = None, **kwargs):
+    def __init__(self, index_type: pd.Index = None, **kwargs):
+        if isinstance(index_type, pd.MultiIndex):
+            index_type = index_type.levels[-1]
+
         self._data = dict(
             kwargs,
-            index_type=index_type,
+            index_type=type(index_type),
         )
 
     @property
@@ -50,7 +53,7 @@ class AbstractDataManager:
             'task': task
         }
         self._name = dataset_name
-        self.dataset_properties = DatasetProperties(type(y.index))
+        self.dataset_properties = DatasetProperties(y.index)
 
     @property
     def name(self) -> str:

@@ -7,11 +7,12 @@ from typing import Optional, Union, Type, TextIO
 import pandas as pd
 from sktime.performance_metrics.forecasting._classes import BaseForecastingErrorMetric
 
+from autosktime.util import get_name, resolve_index
 from smac.tae import StatusType
 
 from ConfigSpace import Configuration
 from autosktime.automl_common.common.utils.backend import Backend
-from autosktime.constants import FORECAST_TASK
+from autosktime.constants import FORECAST_TASK, SUPPORTED_Y_TYPES
 from autosktime.data import AbstractDataManager
 from autosktime.evaluation import TaFuncResult
 from autosktime.metrics import calculate_loss, get_cost_of_crash
@@ -28,7 +29,7 @@ from autosktime.pipeline.components.base import AutoSktimeComponent, AutoSktimeP
 def _fit_and_suppress_warnings(
         logger: logging.Logger,
         model: AutoSktimeComponent,
-        y: pd.Series,
+        y: SUPPORTED_Y_TYPES,
         X: Optional[pd.DataFrame]
 ) -> AutoSktimeComponent:
     def send_warnings_to_log(
@@ -43,6 +44,7 @@ def _fit_and_suppress_warnings(
 
     with warnings.catch_warnings():
         warnings.showwarning = send_warnings_to_log
+        # noinspection PyUnresolvedReferences
         model.fit(y, X=X)
 
     return model
@@ -83,11 +85,10 @@ class AbstractEvaluator:
 
     def _predict_forecast(
             self,
-            fh: ForecastingHorizon,
+            y: SUPPORTED_Y_TYPES,
             X: Optional[pd.DataFrame],
-            model: AutoSktimePredictor,
-            name: str
-    ) -> pd.Series:
+            model: AutoSktimePredictor
+    ) -> SUPPORTED_Y_TYPES:
         def send_warnings_to_log(
                 message: Union[Warning, str],
                 category: Type[Warning],
@@ -100,8 +101,14 @@ class AbstractEvaluator:
 
         with warnings.catch_warnings():
             warnings.showwarning = send_warnings_to_log
+
+            fh = ForecastingHorizon(resolve_index(y.index), is_relative=False)
+            name = get_name(y)
+
             y_pred = model.predict(fh, X=X)
             y_pred.name = name
+
+            assert y_pred.shape == y.shape, 'Shape of predictions does not match input data. This should never happen'
             return y_pred
 
     @abc.abstractmethod
@@ -116,7 +123,7 @@ class AbstractEvaluator:
             config=self.configuration,
             dataset_properties=self.datamanager.dataset_properties)
 
-    def _loss(self, y_true: pd.Series, y_hat: pd.Series, error: str = 'raise') -> float:
+    def _loss(self, y_true: SUPPORTED_Y_TYPES, y_hat: SUPPORTED_Y_TYPES, error: str = 'raise') -> float:
         try:
             return calculate_loss(y_true, y_hat, self.task_type, self.metric)
         except ValueError:
@@ -131,8 +138,8 @@ class AbstractEvaluator:
             self,
             loss: float,
             train_loss: float,
-            y_pred: pd.Series,
-            y_ens: pd.Series,
+            y_pred: SUPPORTED_Y_TYPES,
+            y_ens: SUPPORTED_Y_TYPES,
             status: StatusType,
     ) -> TaFuncResult:
         self.file_output(y_pred, y_ens)
@@ -147,7 +154,7 @@ class AbstractEvaluator:
 
         return TaFuncResult(loss=loss, additional_run_info=additional_run_info, status=status)
 
-    def file_output(self, y_pred: pd.Series, y_ens: pd.Series) -> None:
+    def file_output(self, y_pred: SUPPORTED_Y_TYPES, y_ens: SUPPORTED_Y_TYPES) -> None:
         # noinspection PyTypeChecker
         self.backend.save_numrun_to_dir(
             seed=self.seed,

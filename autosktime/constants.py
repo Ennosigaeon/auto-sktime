@@ -1,3 +1,8 @@
+from typing import Union
+
+import numpy as np
+import pandas as pd
+
 UNIVARIATE_FORECAST = 1
 UNIVARIATE_ENDOGENOUS_FORECAST = UNIVARIATE_FORECAST
 UNIVARIATE_EXOGENOUS_FORECAST = 2
@@ -19,3 +24,5 @@ IGNORES_EXOGENOUS_X = 'ignores-exogenous-X'
 SUPPORTED_INDEX_TYPES = 'supported-index-types'
 
 MAXINT = 2 ** 31 - 1
+
+SUPPORTED_Y_TYPES = Union[pd.Series, pd.DataFrame, np.ndarray]
