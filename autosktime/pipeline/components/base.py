@@ -12,6 +12,7 @@ import pandas as pd
 from ConfigSpace import Configuration, ConfigurationSpace, CategoricalHyperparameter
 from autosktime.constants import SUPPORTED_INDEX_TYPES
 from autosktime.data import DatasetProperties
+from sklearn.base import RegressorMixin
 from sktime.base import BaseEstimator
 from sktime.forecasting.base import ForecastingHorizon, BaseForecaster
 from sktime.transformations.base import BaseTransformer
@@ -69,9 +70,12 @@ class AutoSktimeComponent(BaseEstimator):
         """Raises an exception is missing dependencies are not installed"""
         pass
 
-    def get_tags(self):
-        estimator = self.estimator if self.estimator is not None else self._estimator_class()
-        tags = estimator.get_tags()
+    def get_tags(self) -> Dict:
+        try:
+            estimator = self.estimator if self.estimator is not None else self._estimator_class()
+            tags = estimator.get_tags()
+        except TypeError:
+            tags = {}
         tags.update(self._tags)
         return tags
 
@@ -297,3 +301,15 @@ class AutoSktimeChoice(AutoSktimeComponent, ABC):
         self.configuration_space = cs
         self.dataset_properties = dataset_properties
         return cs
+
+
+class AutoSktimeRegressionAlgorithm(AutoSktimeComponent):
+
+    _estimator_class: Type[RegressorMixin] = None
+    estimator: RegressorMixin = None
+
+    def predict(self, X: pd.DataFrame) -> pd.Series:
+        if self.estimator is None:
+            raise NotImplementedError
+        # noinspection PyUnresolvedReferences
+        return self.estimator.predict(X)
