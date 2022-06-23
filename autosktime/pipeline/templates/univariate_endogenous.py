@@ -1,9 +1,12 @@
 from itertools import product
-from typing import List, Tuple, Dict
+from typing import List, Tuple
+
+import pandas as pd
 
 from ConfigSpace import ConfigurationSpace, ForbiddenAndConjunction, ForbiddenEqualsClause
+from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, IGNORES_EXOGENOUS_X, SUPPORTED_INDEX_TYPES
 from autosktime.data import DatasetProperties
-from autosktime.pipeline.components.base import AutoSktimeComponent, AutoSktimeChoice
+from autosktime.pipeline.components.base import AutoSktimeComponent, COMPONENT_PROPERTIES
 from autosktime.pipeline.components.forecast import ForecasterChoice
 from autosktime.pipeline.components.normalizer import NormalizerChoice
 from autosktime.pipeline.components.preprocessing.impute import ImputerComponent
@@ -40,10 +43,6 @@ class UnivariateEndogenousPipeline(ConfigurableTransformedTargetForecaster):
     def _get_pipeline_steps(self, dataset_properties: DatasetProperties) -> List[Tuple[str, AutoSktimeComponent]]:
         steps = []
 
-        default_dataset_properties = {'target_type': 'classification'}
-        if dataset_properties is not None and isinstance(dataset_properties, dict):
-            default_dataset_properties.update(dataset_properties)
-
         steps.extend([
             ('shift', ShiftTransformerComponent(random_state=self.random_state)),
             ('outlier', HampelFilterComponent(random_state=self.random_state)),
@@ -53,3 +52,12 @@ class UnivariateEndogenousPipeline(ConfigurableTransformedTargetForecaster):
         ])
 
         return steps
+
+    @staticmethod
+    def get_properties(dataset_properties: DatasetProperties = None) -> COMPONENT_PROPERTIES:
+        return {
+            HANDLES_UNIVARIATE: True,
+            HANDLES_MULTIVARIATE: False,
+            IGNORES_EXOGENOUS_X: False,
+            SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.DatetimeIndex, pd.PeriodIndex]
+        }

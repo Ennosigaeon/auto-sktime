@@ -63,7 +63,7 @@ class AutoML(NotVectorizedMixin, BaseForecaster):
                  resampling_strategy_arguments: Dict[str, Any] = None,
                  metadata_directory: str = None,
                  num_metalearning_configs: int = -1,
-                 hp_priors: bool = True,
+                 hp_priors: bool = False,
                  n_jobs: int = 1,
                  dask_client: Optional[dask.distributed.Client] = None,
                  logging_config: Dict[str, Any] = None,

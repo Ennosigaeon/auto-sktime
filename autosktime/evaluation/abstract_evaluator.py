@@ -5,10 +5,8 @@ import warnings
 from typing import Optional, Union, Type, TextIO
 
 import pandas as pd
+from sktime.forecasting.base import ForecastingHorizon
 from sktime.performance_metrics.forecasting._classes import BaseForecastingErrorMetric
-
-from autosktime.util import get_name, resolve_index
-from smac.tae import StatusType
 
 from ConfigSpace import Configuration
 from autosktime.automl_common.common.utils.backend import Backend
@@ -16,8 +14,9 @@ from autosktime.constants import FORECAST_TASK, SUPPORTED_Y_TYPES
 from autosktime.data import AbstractDataManager
 from autosktime.evaluation import TaFuncResult
 from autosktime.metrics import calculate_loss, get_cost_of_crash
-from autosktime.pipeline.templates.univariate_endogenous import UnivariateEndogenousPipeline
-from sktime.forecasting.base import ForecastingHorizon
+from autosktime.pipeline.templates import RegressionPipeline
+from autosktime.util import get_name, resolve_index
+from smac.tae import StatusType
 
 __all__ = [
     'AbstractEvaluator'
@@ -30,7 +29,8 @@ def _fit_and_suppress_warnings(
         logger: logging.Logger,
         model: AutoSktimeComponent,
         y: SUPPORTED_Y_TYPES,
-        X: Optional[pd.DataFrame]
+        X: Optional[pd.DataFrame] = None,
+        fh: Optional[ForecastingHorizon] = None
 ) -> AutoSktimeComponent:
     def send_warnings_to_log(
             message: Union[Warning, str],
@@ -45,7 +45,7 @@ def _fit_and_suppress_warnings(
     with warnings.catch_warnings():
         warnings.showwarning = send_warnings_to_log
         # noinspection PyUnresolvedReferences
-        model.fit(y, X=X)
+        model.fit(y, X=X, fh=fh)
 
     return model
 
@@ -118,10 +118,12 @@ class AbstractEvaluator:
         raise NotImplementedError()
 
     def _get_model(self) -> AutoSktimePredictor:
-        # TODO not configurable
-        return UnivariateEndogenousPipeline(
-            config=self.configuration,
-            dataset_properties=self.datamanager.dataset_properties)
+        # TODO include and exclude missing
+        return RegressionPipeline(config=self.configuration, dataset_properties=self.datamanager.dataset_properties)
+
+        # return UnivariateEndogenousPipeline(
+        #     config=self.configuration,
+        #     dataset_properties=self.datamanager.dataset_properties)
 
     def _loss(self, y_true: SUPPORTED_Y_TYPES, y_hat: SUPPORTED_Y_TYPES, error: str = 'raise') -> float:
         try:

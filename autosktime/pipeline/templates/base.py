@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List, Tuple, Union
 
 from sktime.forecasting.compose import TransformedTargetForecaster
 
@@ -87,9 +87,11 @@ class ConfigurablePipeline(ABC):
 
     def set_hyperparameters(
             self,
-            configuration: Configuration,
+            configuration: Union[Configuration, Dict[str, Any]],
             init_params: Dict[str, Any] = None
     ):
+        if isinstance(configuration, dict):
+            configuration = Configuration(self.config_space, configuration)
         self.config = configuration
 
         for node_idx, (node_name, node) in enumerate(self.steps):
@@ -178,19 +180,18 @@ class ConfigurablePipeline(ABC):
         raise NotImplementedError()
 
 
-class ConfigurableTransformedTargetForecaster(TransformedTargetForecaster, ConfigurablePipeline, ABC):
+class ConfigurableTransformedTargetForecaster(TransformedTargetForecaster, ConfigurablePipeline, AutoSktimeComponent, ABC):
 
     def __init__(
             self,
             config: Configuration = None,
-            steps: List[Tuple[str, AutoSktimeComponent]] = None,
             dataset_properties: DatasetProperties = None,
             include: Dict[str, List[str]] = None,
             exclude: Dict[str, List[str]] = None,
             random_state=None,
             init_params: Dict[str, Any] = None
     ):
-        self._init(config, steps, dataset_properties, include, exclude, random_state, init_params)
+        self._init(config, dataset_properties, include, exclude, random_state, init_params)
         super().__init__(self.steps)
 
     def _transform(self, X, y=None):

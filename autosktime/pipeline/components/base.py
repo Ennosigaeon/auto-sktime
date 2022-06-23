@@ -229,10 +229,14 @@ class AutoSktimeChoice(AutoSktimeComponent, ABC):
 
         return components_dict
 
-    def set_hyperparameters(self, configuration: Configuration, init_params: Dict[str, Any] = None):
+    def set_hyperparameters(
+            self,
+            configuration: Union[Configuration, Dict[str, Any]],
+            init_params: Dict[str, Any] = None
+    ):
         new_params = {}
 
-        params = configuration.get_dictionary()
+        params = configuration.get_dictionary() if isinstance(configuration, Configuration) else configuration
         choice = params['__choice__']
 
         for param, value in params.items():
@@ -318,6 +322,10 @@ class AutoSktimeRegressionAlgorithm(AutoSktimeComponent, ABC):
 class AutoSktimePreprocessingAlgorithm(TransformerMixin, AutoSktimeComponent, ABC):
     _estimator_class: Type[TransformerMixin] = None
     estimator: TransformerMixin = None
+
+    def __init__(self, random_state=None):
+        super().__init__()
+        self.random_state = random_state
 
     def fit(self, X: pd.DataFrame, y: pd.Series):
         if self.estimator is None:
