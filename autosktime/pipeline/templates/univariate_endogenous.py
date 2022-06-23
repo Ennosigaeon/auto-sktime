@@ -14,83 +14,28 @@ from autosktime.pipeline.templates.base import ConfigurableTransformedTargetFore
 
 class UnivariateEndogenousPipeline(ConfigurableTransformedTargetForecaster):
 
-    def _get_hyperparameter_search_space(
-            self,
-            include: Dict[str, List[str]] = None,
-            exclude: Dict[str, List[str]] = None,
-            dataset_properties: DatasetProperties = None
-    ):
-        """Create the hyperparameter configuration space.
+    def get_hyperparameter_search_space(self, dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
+        if not hasattr(self, 'config_space') or self.config_space is None:
+            if dataset_properties is None:
+                dataset_properties = self.dataset_properties
 
-        Parameters
-        ----------
-        include : dict (optional, default=None)
+            cs = self._get_hyperparameter_search_space(include=self.include, exclude=self.exclude,
+                                                       dataset_properties=dataset_properties)
 
-        Returns
-        -------
-        cs : ConfigSpace.configuration_space.Configuration
-            The configuration space describing the SimpleRegressionClassifier.
-        """
-        if dataset_properties is None or not isinstance(dataset_properties, DatasetProperties):
-            dataset_properties = DatasetProperties()
-        self.dataset_properties = dataset_properties
+            forecasters = cs.get_hyperparameter('forecaster:__choice__').choices
+            normalizers = cs.get_hyperparameter('normalizer:__choice__').choices
 
-        cs = self._get_base_search_space(include=include, exclude=exclude, dataset_properties=dataset_properties)
-        self.configuration_space = cs
-
-        forecasters = cs.get_hyperparameter('forecaster:__choice__').choices
-        normalizers = cs.get_hyperparameter('normalizer:__choice__').choices
-
-        for f, n in product(['ets', 'theta', 'exp_smoothing'], ['scaled_logit']):
-            if f not in forecasters or n not in normalizers:
-                continue
-            cs.add_forbidden_clause(ForbiddenAndConjunction(
-                ForbiddenEqualsClause(cs.get_hyperparameter('forecaster:__choice__'), f),
-                ForbiddenEqualsClause(cs.get_hyperparameter('normalizer:__choice__'), n))
-            )
-
-        return cs
-
-    def _get_base_search_space(
-            self,
-            include: Dict[str, List[str]],
-            exclude: Dict[str, List[str]],
-            dataset_properties: DatasetProperties,
-    ) -> ConfigurationSpace:
-        if include is None:
-            if self.include is None:
-                include = {}
-            else:
-                include = self.include
-
-        if exclude is None:
-            if self.exclude is None:
-                exclude = {}
-            else:
-                exclude = self.exclude
-
-        self._validate_include_exclude_params(include, exclude)
-
-        pipeline = self.steps
-        cs = ConfigurationSpace()
-
-        for node_idx, (node_name, node) in enumerate(pipeline):
-            # If the node is a choice, we have to figure out which of its choices are actually legal choices
-            if isinstance(node, AutoSktimeChoice):
-                sub_cs = node.get_hyperparameter_search_space(
-                    dataset_properties,
-                    include=include.get(node_name), exclude=exclude.get(node_name)
-                )
-                cs.add_configuration_space(node_name, sub_cs)
-
-            # if the node isn't a choice we can add it immediately
-            else:
-                cs.add_configuration_space(
-                    node_name,
-                    node.get_hyperparameter_search_space(dataset_properties),
+            for f, n in product(['ets', 'theta', 'exp_smoothing'], ['scaled_logit']):
+                if f not in forecasters or n not in normalizers:
+                    continue
+                cs.add_forbidden_clause(ForbiddenAndConjunction(
+                    ForbiddenEqualsClause(cs.get_hyperparameter('forecaster:__choice__'), f),
+                    ForbiddenEqualsClause(cs.get_hyperparameter('normalizer:__choice__'), n))
                 )
 
-        return cs
+            self.config_space = cs
+
+        return self.config_space
 
     def _get_pipeline_steps(self, dataset_properties: DatasetProperties) -> List[Tuple[str, AutoSktimeComponent]]:
         steps = []

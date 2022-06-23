@@ -1,19 +1,18 @@
-import abc
 from abc import ABC
 from typing import Dict, Any, List, Tuple
+
+from sktime.forecasting.compose import TransformedTargetForecaster
 
 from ConfigSpace import Configuration, ConfigurationSpace
 from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import AutoSktimeComponent, AutoSktimeChoice
-from sktime.forecasting.compose import TransformedTargetForecaster
 
 
-class ConfigurableTransformedTargetForecaster(TransformedTargetForecaster, ABC):
+class ConfigurablePipeline(ABC):
 
-    def __init__(
+    def _init(
             self,
             config: Configuration = None,
-            steps: List[Tuple[str, AutoSktimeComponent]] = None,
             dataset_properties: DatasetProperties = None,
             include: Dict[str, List[str]] = None,
             exclude: Dict[str, List[str]] = None,
@@ -23,13 +22,10 @@ class ConfigurableTransformedTargetForecaster(TransformedTargetForecaster, ABC):
         self.init_params = init_params if init_params is not None else {}
         self.include = include if include is not None else {}
         self.exclude = exclude if exclude is not None else {}
-        self.dataset_properties = dataset_properties if dataset_properties is not None else DatasetProperties()
+        self.dataset_properties = dataset_properties
         self.random_state = random_state
 
-        if steps is None:
-            self.steps = self._get_pipeline_steps(dataset_properties=dataset_properties)
-        else:
-            self.steps = steps
+        self.steps = self._get_pipeline_steps(dataset_properties=dataset_properties)
 
         self._validate_include_exclude_params(self.include, self.exclude)
 
@@ -51,9 +47,6 @@ class ConfigurableTransformedTargetForecaster(TransformedTargetForecaster, ABC):
             self.config = config
 
         self.set_hyperparameters(self.config, init_params=init_params)
-
-        super().__init__(steps=self.steps)
-
         self._additional_run_info = {}
 
     def _validate_include_exclude_params(self, include: Dict[str, List[str]], exclude: Dict[str, List[str]]) -> None:
@@ -96,7 +89,7 @@ class ConfigurableTransformedTargetForecaster(TransformedTargetForecaster, ABC):
             self,
             configuration: Configuration,
             init_params: Dict[str, Any] = None
-    ) -> 'ConfigurableTransformedTargetForecaster':
+    ):
         self.config = configuration
 
         for node_idx, (node_name, node) in enumerate(self.steps):
@@ -140,17 +133,65 @@ class ConfigurableTransformedTargetForecaster(TransformedTargetForecaster, ABC):
                 dataset_properties=dataset_properties)
         return self.config_space
 
-    @abc.abstractmethod
     def _get_hyperparameter_search_space(
             self,
-            include: Dict[str, List[str]] = None,
-            exclude: Dict[str, List[str]] = None,
-            dataset_properties: DatasetProperties = None
+            include: Dict[str, List[str]],
+            exclude: Dict[str, List[str]],
+            dataset_properties: DatasetProperties = None,
     ) -> ConfigurationSpace:
-        raise NotImplementedError()
+        if include is None:
+            if self.include is None:
+                include = {}
+            else:
+                include = self.include
+
+        if exclude is None:
+            if self.exclude is None:
+                exclude = {}
+            else:
+                exclude = self.exclude
+
+        self._validate_include_exclude_params(include, exclude)
+
+        pipeline = self.steps
+        cs = ConfigurationSpace()
+
+        for node_idx, (node_name, node) in enumerate(pipeline):
+            # If the node is a choice, we have to figure out which of its choices are actually legal choices
+            if isinstance(node, AutoSktimeChoice):
+                sub_cs = node.get_hyperparameter_search_space(
+                    dataset_properties,
+                    include=include.get(node_name), exclude=exclude.get(node_name)
+                )
+                cs.add_configuration_space(node_name, sub_cs)
+
+            # if the node isn't a choice we can add it immediately
+            else:
+                cs.add_configuration_space(
+                    node_name,
+                    node.get_hyperparameter_search_space(dataset_properties),
+                )
+
+        return cs
 
     def _get_pipeline_steps(self, dataset_properties: DatasetProperties) -> List[Tuple[str, AutoSktimeComponent]]:
         raise NotImplementedError()
+
+
+class ConfigurableTransformedTargetForecaster(TransformedTargetForecaster, ConfigurablePipeline, ABC):
+
+    def __init__(
+            self,
+            config: Configuration = None,
+            steps: List[Tuple[str, AutoSktimeComponent]] = None,
+            dataset_properties: DatasetProperties = None,
+            include: Dict[str, List[str]] = None,
+            exclude: Dict[str, List[str]] = None,
+            random_state=None,
+            init_params: Dict[str, Any] = None
+    ):
+        self._init(config, steps, dataset_properties, include, exclude, random_state, init_params)
+        super().__init__(self.steps)
 
     def _transform(self, X, y=None):
         # Only implemented for type checker, not actually used

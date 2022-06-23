@@ -8,14 +8,15 @@ from collections import OrderedDict
 from typing import Dict, Type, List, Any, Union
 
 import pandas as pd
+from sklearn.base import RegressorMixin, TransformerMixin
+from sklearn.exceptions import NotFittedError
+from sktime.base import BaseEstimator
+from sktime.forecasting.base import ForecastingHorizon, BaseForecaster
+from sktime.transformations.base import BaseTransformer
 
 from ConfigSpace import Configuration, ConfigurationSpace, CategoricalHyperparameter
 from autosktime.constants import SUPPORTED_INDEX_TYPES
 from autosktime.data import DatasetProperties
-from sklearn.base import RegressorMixin
-from sktime.base import BaseEstimator
-from sktime.forecasting.base import ForecastingHorizon, BaseForecaster
-from sktime.transformations.base import BaseTransformer
 
 COMPONENT_PROPERTIES = Any
 
@@ -74,7 +75,7 @@ class AutoSktimeComponent(BaseEstimator):
         try:
             estimator = self.estimator if self.estimator is not None else self._estimator_class()
             tags = estimator.get_tags()
-        except TypeError:
+        except (TypeError, AttributeError):
             tags = {}
         tags.update(self._tags)
         return tags
@@ -298,13 +299,12 @@ class AutoSktimeChoice(AutoSktimeComponent, ABC):
             parent_hyperparameter = {'parent': estimator, 'value': comp_name}
             cs.add_configuration_space(comp_name, comp_cs, parent_hyperparameter=parent_hyperparameter)
 
-        self.configuration_space = cs
+        self.config_space = cs
         self.dataset_properties = dataset_properties
         return cs
 
 
-class AutoSktimeRegressionAlgorithm(AutoSktimeComponent):
-
+class AutoSktimeRegressionAlgorithm(AutoSktimeComponent, ABC):
     _estimator_class: Type[RegressorMixin] = None
     estimator: RegressorMixin = None
 
@@ -313,3 +313,30 @@ class AutoSktimeRegressionAlgorithm(AutoSktimeComponent):
             raise NotImplementedError
         # noinspection PyUnresolvedReferences
         return self.estimator.predict(X)
+
+
+class AutoSktimePreprocessingAlgorithm(TransformerMixin, AutoSktimeComponent, ABC):
+    _estimator_class: Type[TransformerMixin] = None
+    estimator: TransformerMixin = None
+
+    def fit(self, X: pd.DataFrame, y: pd.Series):
+        if self.estimator is None:
+            raise NotFittedError()
+
+        # noinspection PyUnresolvedReferences
+        self.estimator.fit(X, y)
+
+        return self
+
+    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
+        if self.estimator is None:
+            raise NotFittedError()
+
+        # noinspection PyUnresolvedReferences
+        transformed_X = self.estimator.transform(X)
+
+        return transformed_X
+
+    @staticmethod
+    def get_hyperparameter_search_space(dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
+        return ConfigurationSpace()

@@ -7,6 +7,7 @@ from ConfigSpace import ConfigurationSpace, CategoricalHyperparameter, Forbidden
     ForbiddenEqualsClause, InCondition
 from autosktime.constants import IGNORES_EXOGENOUS_X, HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, SUPPORTED_INDEX_TYPES
 from autosktime.pipeline.components.base import AutoSktimePredictor, COMPONENT_PROPERTIES
+from autosktime.util.common import check_none
 
 
 class ETSComponent(AutoSktimePredictor):
@@ -32,8 +33,8 @@ class ETSComponent(AutoSktimePredictor):
         self.random_state = random_state
 
     def _fit(self, y, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
-        trend = None if self.trend == 'None' else self.trend
-        seasonal = None if self.seasonal == 'None' else self.seasonal
+        trend = None if check_none(self.trend) else self.trend
+        seasonal = None if check_none(self.seasonal) else self.seasonal
 
         self.estimator = self._estimator_class(
             sp=self.sp,
