@@ -19,11 +19,7 @@ class UnivariateEndogenousPipeline(ConfigurableTransformedTargetForecaster):
 
     def get_hyperparameter_search_space(self, dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
         if not hasattr(self, 'config_space') or self.config_space is None:
-            if dataset_properties is None:
-                dataset_properties = self.dataset_properties
-
-            cs = self._get_hyperparameter_search_space(include=self.include, exclude=self.exclude,
-                                                       dataset_properties=dataset_properties)
+            cs = self._get_hyperparameter_search_space()
 
             forecasters = cs.get_hyperparameter('forecaster:__choice__').choices
             normalizers = cs.get_hyperparameter('normalizer:__choice__').choices
@@ -40,17 +36,14 @@ class UnivariateEndogenousPipeline(ConfigurableTransformedTargetForecaster):
 
         return self.config_space
 
-    def _get_pipeline_steps(self, dataset_properties: DatasetProperties) -> List[Tuple[str, AutoSktimeComponent]]:
-        steps = []
-
-        steps.extend([
+    def _get_pipeline_steps(self) -> List[Tuple[str, AutoSktimeComponent]]:
+        steps = [
             ('shift', ShiftTransformerComponent(random_state=self.random_state)),
             ('outlier', HampelFilterComponent(random_state=self.random_state)),
             ('imputation', ImputerComponent(random_state=self.random_state)),
             ('normalizer', NormalizerChoice(random_state=self.random_state)),
             ('forecaster', ForecasterChoice(random_state=self.random_state))
-        ])
-
+        ]
         return steps
 
     @staticmethod

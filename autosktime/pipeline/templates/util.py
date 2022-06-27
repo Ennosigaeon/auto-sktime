@@ -4,7 +4,7 @@ import numpy as np
 
 from ConfigSpace import ConfigurationSpace
 from autosktime.data import DatasetProperties
-from autosktime.pipeline.templates import RegressionPipeline
+from autosktime.pipeline.templates import TemplateChoice
 
 
 def get_configuration_space(
@@ -13,16 +13,8 @@ def get_configuration_space(
         exclude: Optional[Dict[str, List[str]]] = None,
         random_state: Optional[Union[int, np.random.RandomState]] = None
 ) -> ConfigurationSpace:
-    return RegressionPipeline(
+    return TemplateChoice(random_state=random_state).get_hyperparameter_search_space(
         dataset_properties=dataset_properties,
         include=include,
-        exclude=exclude,
-        random_state=random_state
-    ).get_hyperparameter_search_space()
-
-    # return UnivariateEndogenousPipeline(
-    #     dataset_properties=dataset_properties,
-    #     include=include,
-    #     exclude=exclude,
-    #     random_state=random_state
-    # ).get_hyperparameter_search_space()
+        exclude=exclude
+    )

@@ -17,6 +17,7 @@ from sktime.transformations.base import BaseTransformer
 from ConfigSpace import Configuration, ConfigurationSpace, CategoricalHyperparameter
 from autosktime.constants import SUPPORTED_INDEX_TYPES
 from autosktime.data import DatasetProperties
+from autosktime.pipeline.components.util import sub_configuration
 
 COMPONENT_PROPERTIES = Any
 
@@ -234,23 +235,8 @@ class AutoSktimeChoice(AutoSktimeComponent, ABC):
             configuration: Union[Configuration, Dict[str, Any]],
             init_params: Dict[str, Any] = None
     ):
-        new_params = {}
-
         params = configuration.get_dictionary() if isinstance(configuration, Configuration) else configuration
-        choice = params['__choice__']
-
-        for param, value in params.items():
-            if param == '__choice__':
-                continue
-
-            param = param.replace(choice, '').replace(':', '')
-            new_params[param] = value
-
-        if init_params is not None:
-            for param, value in init_params.items():
-                param = param.replace(choice, '').replace(':', '')
-                new_params[param] = value
-
+        choice, new_params = sub_configuration(params, init_params)
         new_params['random_state'] = self.random_state
 
         self.new_params = new_params

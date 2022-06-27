@@ -25,14 +25,14 @@ class ConfigurablePipeline(ABC):
         self.dataset_properties = dataset_properties
         self.random_state = random_state
 
-        self.steps = self._get_pipeline_steps(dataset_properties=dataset_properties)
+        self.steps = self._get_pipeline_steps()
 
         self._validate_include_exclude_params(self.include, self.exclude)
 
-        self.config_space = self.get_hyperparameter_search_space(self.dataset_properties)
+        self.config_space = self.get_hyperparameter_search_space()
 
         if config is None:
-            self.config = self.config_space.get_default_configuration()
+            config = self.config_space.get_default_configuration()
         else:
             if isinstance(config, dict):
                 config = Configuration(self.config_space, config)
@@ -44,9 +44,8 @@ class ConfigurablePipeline(ABC):
                 )
                 raise ValueError('Configuration passed does not come from the same configuration space. Differences '
                                  'are: {}'.format('\n'.join(diff)))
-            self.config = config
 
-        self.set_hyperparameters(self.config, init_params=init_params)
+        self.set_hyperparameters(config, init_params=init_params)
         self._additional_run_info = {}
 
     def _validate_include_exclude_params(self, include: Dict[str, List[str]], exclude: Dict[str, List[str]]) -> None:
@@ -130,31 +129,10 @@ class ConfigurablePipeline(ABC):
         cs : ConfigSpace.configuration_space.Configuration
         """
         if not hasattr(self, 'config_space') or self.config_space is None:
-            self.config_space = self._get_hyperparameter_search_space(
-                include=self.include, exclude=self.exclude,
-                dataset_properties=dataset_properties)
+            self.config_space = self._get_hyperparameter_search_space()
         return self.config_space
 
-    def _get_hyperparameter_search_space(
-            self,
-            include: Dict[str, List[str]],
-            exclude: Dict[str, List[str]],
-            dataset_properties: DatasetProperties = None,
-    ) -> ConfigurationSpace:
-        if include is None:
-            if self.include is None:
-                include = {}
-            else:
-                include = self.include
-
-        if exclude is None:
-            if self.exclude is None:
-                exclude = {}
-            else:
-                exclude = self.exclude
-
-        self._validate_include_exclude_params(include, exclude)
-
+    def _get_hyperparameter_search_space(self) -> ConfigurationSpace:
         pipeline = self.steps
         cs = ConfigurationSpace()
 
@@ -162,8 +140,8 @@ class ConfigurablePipeline(ABC):
             # If the node is a choice, we have to figure out which of its choices are actually legal choices
             if isinstance(node, AutoSktimeChoice):
                 sub_cs = node.get_hyperparameter_search_space(
-                    dataset_properties,
-                    include=include.get(node_name), exclude=exclude.get(node_name)
+                    self.dataset_properties,
+                    include=self.include.get(node_name), exclude=self.exclude.get(node_name)
                 )
                 cs.add_configuration_space(node_name, sub_cs)
 
@@ -171,20 +149,21 @@ class ConfigurablePipeline(ABC):
             else:
                 cs.add_configuration_space(
                     node_name,
-                    node.get_hyperparameter_search_space(dataset_properties),
+                    node.get_hyperparameter_search_space(self.dataset_properties),
                 )
 
         return cs
 
-    def _get_pipeline_steps(self, dataset_properties: DatasetProperties) -> List[Tuple[str, AutoSktimeComponent]]:
+    def _get_pipeline_steps(self) -> List[Tuple[str, AutoSktimeComponent]]:
         raise NotImplementedError()
 
 
-class ConfigurableTransformedTargetForecaster(TransformedTargetForecaster, ConfigurablePipeline, AutoSktimeComponent, ABC):
+class ConfigurableTransformedTargetForecaster(TransformedTargetForecaster, ConfigurablePipeline, AutoSktimeComponent,
+                                              ABC):
 
     def __init__(
             self,
-            config: Configuration = None,
+            config: Union[Configuration, Dict[str, Any]] = None,
             dataset_properties: DatasetProperties = None,
             include: Dict[str, List[str]] = None,
             exclude: Dict[str, List[str]] = None,

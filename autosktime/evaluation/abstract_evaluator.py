@@ -14,7 +14,7 @@ from autosktime.constants import FORECAST_TASK, SUPPORTED_Y_TYPES
 from autosktime.data import AbstractDataManager
 from autosktime.evaluation import TaFuncResult
 from autosktime.metrics import calculate_loss, get_cost_of_crash
-from autosktime.pipeline.templates import RegressionPipeline
+from autosktime.pipeline.templates import TemplateChoice
 from autosktime.util import get_name, resolve_index
 from smac.tae import StatusType
 
@@ -118,12 +118,7 @@ class AbstractEvaluator:
         raise NotImplementedError()
 
     def _get_model(self) -> AutoSktimePredictor:
-        # TODO include and exclude missing
-        return RegressionPipeline(config=self.configuration, dataset_properties=self.datamanager.dataset_properties)
-
-        # return UnivariateEndogenousPipeline(
-        #     config=self.configuration,
-        #     dataset_properties=self.datamanager.dataset_properties)
+        return TemplateChoice(config=self.configuration)
 
     def _loss(self, y_true: SUPPORTED_Y_TYPES, y_hat: SUPPORTED_Y_TYPES, error: str = 'raise') -> float:
         try:

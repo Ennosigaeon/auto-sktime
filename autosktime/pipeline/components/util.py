@@ -1,3 +1,5 @@
+from typing import Any, Dict, Tuple
+
 from sktime.datatypes import check_is_scitype
 
 
@@ -28,3 +30,22 @@ class NotVectorizedMixin:
             self._y_mtype_last_seen = y_metadata["mtype"]
 
         return X, y
+
+
+def sub_configuration(params: Dict[str, Any], init_params: Dict[str, Any]) -> Tuple[str, Dict[str, any]]:
+    new_params = {}
+    choice = params['__choice__']
+
+    for param, value in params.items():
+        if param == '__choice__':
+            continue
+
+        param = param.replace(f'{choice}:', '', 1)
+        new_params[param] = value
+
+    if init_params is not None:
+        for param, value in init_params.items():
+            param = param.replace(f'{choice}:', '', 1)
+            new_params[param] = value
+
+    return choice, new_params
