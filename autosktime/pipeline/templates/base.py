@@ -1,19 +1,18 @@
-import abc
 from abc import ABC
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List, Tuple, Union
+
+from sktime.forecasting.compose import TransformedTargetForecaster
 
 from ConfigSpace import Configuration, ConfigurationSpace
 from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import AutoSktimeComponent, AutoSktimeChoice
-from sktime.forecasting.compose import TransformedTargetForecaster
 
 
-class ConfigurableTransformedTargetForecaster(TransformedTargetForecaster, ABC):
+class ConfigurablePipeline(ABC):
 
-    def __init__(
+    def _init(
             self,
             config: Configuration = None,
-            steps: List[Tuple[str, AutoSktimeComponent]] = None,
             dataset_properties: DatasetProperties = None,
             include: Dict[str, List[str]] = None,
             exclude: Dict[str, List[str]] = None,
@@ -23,20 +22,17 @@ class ConfigurableTransformedTargetForecaster(TransformedTargetForecaster, ABC):
         self.init_params = init_params if init_params is not None else {}
         self.include = include if include is not None else {}
         self.exclude = exclude if exclude is not None else {}
-        self.dataset_properties = dataset_properties if dataset_properties is not None else DatasetProperties()
+        self.dataset_properties = dataset_properties
         self.random_state = random_state
 
-        if steps is None:
-            self.steps = self._get_pipeline_steps(dataset_properties=dataset_properties)
-        else:
-            self.steps = steps
+        self.steps = self._get_pipeline_steps()
 
         self._validate_include_exclude_params(self.include, self.exclude)
 
-        self.config_space = self.get_hyperparameter_search_space(self.dataset_properties)
+        self.config_space = self.get_hyperparameter_search_space()
 
         if config is None:
-            self.config = self.config_space.get_default_configuration()
+            config = self.config_space.get_default_configuration()
         else:
             if isinstance(config, dict):
                 config = Configuration(self.config_space, config)
@@ -48,12 +44,8 @@ class ConfigurableTransformedTargetForecaster(TransformedTargetForecaster, ABC):
                 )
                 raise ValueError('Configuration passed does not come from the same configuration space. Differences '
                                  'are: {}'.format('\n'.join(diff)))
-            self.config = config
 
-        self.set_hyperparameters(self.config, init_params=init_params)
-
-        super().__init__(steps=self.steps)
-
+        self.set_hyperparameters(config, init_params=init_params)
         self._additional_run_info = {}
 
     def _validate_include_exclude_params(self, include: Dict[str, List[str]], exclude: Dict[str, List[str]]) -> None:
@@ -94,9 +86,11 @@ class ConfigurableTransformedTargetForecaster(TransformedTargetForecaster, ABC):
 
     def set_hyperparameters(
             self,
-            configuration: Configuration,
+            configuration: Union[Configuration, Dict[str, Any]],
             init_params: Dict[str, Any] = None
-    ) -> 'ConfigurableTransformedTargetForecaster':
+    ):
+        if isinstance(configuration, dict):
+            configuration = Configuration(self.config_space, configuration)
         self.config = configuration
 
         for node_idx, (node_name, node) in enumerate(self.steps):
@@ -135,22 +129,49 @@ class ConfigurableTransformedTargetForecaster(TransformedTargetForecaster, ABC):
         cs : ConfigSpace.configuration_space.Configuration
         """
         if not hasattr(self, 'config_space') or self.config_space is None:
-            self.config_space = self._get_hyperparameter_search_space(
-                include=self.include, exclude=self.exclude,
-                dataset_properties=dataset_properties)
+            self.config_space = self._get_hyperparameter_search_space()
         return self.config_space
 
-    @abc.abstractmethod
-    def _get_hyperparameter_search_space(
-            self,
-            include: Dict[str, List[str]] = None,
-            exclude: Dict[str, List[str]] = None,
-            dataset_properties: DatasetProperties = None
-    ) -> ConfigurationSpace:
+    def _get_hyperparameter_search_space(self) -> ConfigurationSpace:
+        pipeline = self.steps
+        cs = ConfigurationSpace()
+
+        for node_idx, (node_name, node) in enumerate(pipeline):
+            # If the node is a choice, we have to figure out which of its choices are actually legal choices
+            if isinstance(node, AutoSktimeChoice):
+                sub_cs = node.get_hyperparameter_search_space(
+                    self.dataset_properties,
+                    include=self.include.get(node_name), exclude=self.exclude.get(node_name)
+                )
+                cs.add_configuration_space(node_name, sub_cs)
+
+            # if the node isn't a choice we can add it immediately
+            else:
+                cs.add_configuration_space(
+                    node_name,
+                    node.get_hyperparameter_search_space(self.dataset_properties),
+                )
+
+        return cs
+
+    def _get_pipeline_steps(self) -> List[Tuple[str, AutoSktimeComponent]]:
         raise NotImplementedError()
 
-    def _get_pipeline_steps(self, dataset_properties: DatasetProperties) -> List[Tuple[str, AutoSktimeComponent]]:
-        raise NotImplementedError()
+
+class ConfigurableTransformedTargetForecaster(TransformedTargetForecaster, ConfigurablePipeline, AutoSktimeComponent,
+                                              ABC):
+
+    def __init__(
+            self,
+            config: Union[Configuration, Dict[str, Any]] = None,
+            dataset_properties: DatasetProperties = None,
+            include: Dict[str, List[str]] = None,
+            exclude: Dict[str, List[str]] = None,
+            random_state=None,
+            init_params: Dict[str, Any] = None
+    ):
+        self._init(config, dataset_properties, include, exclude, random_state, init_params)
+        super().__init__(self.steps)
 
     def _transform(self, X, y=None):
         # Only implemented for type checker, not actually used

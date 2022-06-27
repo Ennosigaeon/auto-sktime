@@ -2,6 +2,8 @@ from typing import Optional, Tuple, List, NamedTuple
 
 import numpy as np
 import pandas as pd
+from sktime.forecasting.base import ForecastingHorizon
+
 from ConfigSpace import Configuration
 from autosktime.constants import SUPPORTED_Y_TYPES
 from autosktime.data.splitter import BaseSplitter
@@ -132,7 +134,7 @@ class TrainEvaluator(AbstractEvaluator):
             X_test = X.iloc[test, :]
 
         model = self._get_model()
-        _fit_and_suppress_warnings(self.logger, model, y_train, X_train)
+        _fit_and_suppress_warnings(self.logger, model, y_train, X_train, fh=None)
 
         self.models[fold] = model
         self.indices[fold] = (y_train.index, y_test.index)
@@ -150,12 +152,16 @@ class TrainEvaluator(AbstractEvaluator):
     ) -> Tuple[SUPPORTED_Y_TYPES, SUPPORTED_Y_TYPES]:
         raise NotImplementedError('Budgets not supported yet')
 
-    def _fit_and_predict_final_model(self, ensemble_size: float = 0.2) -> Tuple[AutoSktimePredictor, SUPPORTED_Y_TYPES]:
+    def _fit_and_predict_final_model(
+            self,
+            ensemble_size: float = 0.2,
+            fh: ForecastingHorizon = None
+    ) -> Tuple[AutoSktimePredictor, SUPPORTED_Y_TYPES]:
         y = self.datamanager.y
         X = self.datamanager.X
 
         model = self._get_model()
-        _fit_and_suppress_warnings(self.logger, model, y, X)
+        _fit_and_suppress_warnings(self.logger, model, y, X, fh)
         self.model = model
 
         y_test, X_test = get_ensemble_targets(self.datamanager, ensemble_size)

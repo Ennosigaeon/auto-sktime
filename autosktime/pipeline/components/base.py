@@ -8,13 +8,16 @@ from collections import OrderedDict
 from typing import Dict, Type, List, Any, Union
 
 import pandas as pd
+from sklearn.base import RegressorMixin, TransformerMixin
+from sklearn.exceptions import NotFittedError
+from sktime.base import BaseEstimator
+from sktime.forecasting.base import ForecastingHorizon, BaseForecaster
+from sktime.transformations.base import BaseTransformer
 
 from ConfigSpace import Configuration, ConfigurationSpace, CategoricalHyperparameter
 from autosktime.constants import SUPPORTED_INDEX_TYPES
 from autosktime.data import DatasetProperties
-from sktime.base import BaseEstimator
-from sktime.forecasting.base import ForecastingHorizon, BaseForecaster
-from sktime.transformations.base import BaseTransformer
+from autosktime.pipeline.components.util import sub_configuration
 
 COMPONENT_PROPERTIES = Any
 
@@ -69,9 +72,12 @@ class AutoSktimeComponent(BaseEstimator):
         """Raises an exception is missing dependencies are not installed"""
         pass
 
-    def get_tags(self):
-        estimator = self.estimator if self.estimator is not None else self._estimator_class()
-        tags = estimator.get_tags()
+    def get_tags(self) -> Dict:
+        try:
+            estimator = self.estimator if self.estimator is not None else self._estimator_class()
+            tags = estimator.get_tags()
+        except (TypeError, AttributeError):
+            tags = {}
         tags.update(self._tags)
         return tags
 
@@ -224,24 +230,13 @@ class AutoSktimeChoice(AutoSktimeComponent, ABC):
 
         return components_dict
 
-    def set_hyperparameters(self, configuration: Configuration, init_params: Dict[str, Any] = None):
-        new_params = {}
-
-        params = configuration.get_dictionary()
-        choice = params['__choice__']
-
-        for param, value in params.items():
-            if param == '__choice__':
-                continue
-
-            param = param.replace(choice, '').replace(':', '')
-            new_params[param] = value
-
-        if init_params is not None:
-            for param, value in init_params.items():
-                param = param.replace(choice, '').replace(':', '')
-                new_params[param] = value
-
+    def set_hyperparameters(
+            self,
+            configuration: Union[Configuration, Dict[str, Any]],
+            init_params: Dict[str, Any] = None
+    ):
+        params = configuration.get_dictionary() if isinstance(configuration, Configuration) else configuration
+        choice, new_params = sub_configuration(params, init_params)
         new_params['random_state'] = self.random_state
 
         self.new_params = new_params
@@ -294,6 +289,48 @@ class AutoSktimeChoice(AutoSktimeComponent, ABC):
             parent_hyperparameter = {'parent': estimator, 'value': comp_name}
             cs.add_configuration_space(comp_name, comp_cs, parent_hyperparameter=parent_hyperparameter)
 
-        self.configuration_space = cs
+        self.config_space = cs
         self.dataset_properties = dataset_properties
         return cs
+
+
+class AutoSktimeRegressionAlgorithm(AutoSktimeComponent, ABC):
+    _estimator_class: Type[RegressorMixin] = None
+    estimator: RegressorMixin = None
+
+    def predict(self, X: pd.DataFrame) -> pd.Series:
+        if self.estimator is None:
+            raise NotImplementedError
+        # noinspection PyUnresolvedReferences
+        return self.estimator.predict(X)
+
+
+class AutoSktimePreprocessingAlgorithm(TransformerMixin, AutoSktimeComponent, ABC):
+    _estimator_class: Type[TransformerMixin] = None
+    estimator: TransformerMixin = None
+
+    def __init__(self, random_state=None):
+        super().__init__()
+        self.random_state = random_state
+
+    def fit(self, X: pd.DataFrame, y: pd.Series):
+        if self.estimator is None:
+            raise NotFittedError()
+
+        # noinspection PyUnresolvedReferences
+        self.estimator.fit(X, y)
+
+        return self
+
+    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
+        if self.estimator is None:
+            raise NotFittedError()
+
+        # noinspection PyUnresolvedReferences
+        transformed_X = self.estimator.transform(X)
+
+        return transformed_X
+
+    @staticmethod
+    def get_hyperparameter_search_space(dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
+        return ConfigurationSpace()

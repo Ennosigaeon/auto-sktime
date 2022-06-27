@@ -1,6 +1,6 @@
 import abc
 from collections.abc import MutableMapping
-from typing import Any, Dict, Optional, Union, Type, Iterator
+from typing import Any, Dict, Optional, Union, Iterator
 
 import pandas as pd
 
