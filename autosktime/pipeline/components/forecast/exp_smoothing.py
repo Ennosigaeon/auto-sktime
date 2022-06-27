@@ -5,7 +5,8 @@ from sktime.forecasting.base import ForecastingHorizon
 
 from ConfigSpace import ConfigurationSpace, CategoricalHyperparameter, ForbiddenInClause, ForbiddenAndConjunction, \
     ForbiddenEqualsClause, InCondition
-from autosktime.constants import IGNORES_EXOGENOUS_X, HANDLES_UNIVARIATE,  HANDLES_MULTIVARIATE,    SUPPORTED_INDEX_TYPES
+from autosktime.constants import IGNORES_EXOGENOUS_X, HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, SUPPORTED_INDEX_TYPES, \
+    HANDLES_PANEL
 from autosktime.pipeline.components.base import AutoSktimePredictor, COMPONENT_PROPERTIES
 
 
@@ -46,7 +47,8 @@ class ExponentialSmoothingComponent(AutoSktimePredictor):
     def get_properties(dataset_properties: DatasetProperties = None) -> COMPONENT_PROPERTIES:
         return {
             HANDLES_UNIVARIATE: True,
-            HANDLES_MULTIVARIATE: False,
+            HANDLES_MULTIVARIATE: True,
+            HANDLES_PANEL: True,
             IGNORES_EXOGENOUS_X: True,
             SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.DatetimeIndex, pd.PeriodIndex]
         }

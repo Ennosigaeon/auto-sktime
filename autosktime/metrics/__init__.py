@@ -11,7 +11,7 @@ from sktime.performance_metrics.forecasting import (
 from sktime.performance_metrics.forecasting._classes import _BaseForecastingErrorMetric, BaseForecastingErrorMetric
 
 from autosktime.constants import FORECAST_TASK, UNIVARIATE_FORECAST, UNIVARIATE_EXOGENOUS_FORECAST, MAXINT, \
-    SUPPORTED_Y_TYPES
+    SUPPORTED_Y_TYPES, MULTIVARIATE_FORECAST, MULTIVARIATE_EXOGENOUS_FORECAST, PANEL_FORECAST, PANEL_EXOGENOUS_FORECAST
 from autosktime.data.benchmark.m4 import naive_2
 
 
@@ -146,6 +146,10 @@ def overall_weighted_average(
 default_metric_for_task: Dict[int, BaseForecastingErrorMetric] = {
     UNIVARIATE_FORECAST: MeanAbsolutePercentageError(),
     UNIVARIATE_EXOGENOUS_FORECAST: MeanAbsolutePercentageError(),
+    MULTIVARIATE_FORECAST: MeanAbsolutePercentageError(),
+    MULTIVARIATE_EXOGENOUS_FORECAST: MeanAbsolutePercentageError(),
+    PANEL_FORECAST: MeanAbsolutePercentageError(),
+    PANEL_EXOGENOUS_FORECAST: MeanAbsolutePercentageError(),
 }
 
 STRING_TO_METRIC = {

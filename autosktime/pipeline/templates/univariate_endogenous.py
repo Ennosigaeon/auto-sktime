@@ -4,7 +4,8 @@ from typing import List, Tuple
 import pandas as pd
 
 from ConfigSpace import ConfigurationSpace, ForbiddenAndConjunction, ForbiddenEqualsClause
-from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, IGNORES_EXOGENOUS_X, SUPPORTED_INDEX_TYPES
+from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, IGNORES_EXOGENOUS_X, SUPPORTED_INDEX_TYPES, \
+    HANDLES_PANEL
 from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import AutoSktimeComponent, COMPONENT_PROPERTIES
 from autosktime.pipeline.components.forecast import ForecasterChoice
@@ -50,7 +51,8 @@ class UnivariateEndogenousPipeline(ConfigurableTransformedTargetForecaster):
     def get_properties(dataset_properties: DatasetProperties = None) -> COMPONENT_PROPERTIES:
         return {
             HANDLES_UNIVARIATE: True,
-            HANDLES_MULTIVARIATE: False,
+            HANDLES_MULTIVARIATE: True,
+            HANDLES_PANEL: True,
             IGNORES_EXOGENOUS_X: False,
             SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.DatetimeIndex, pd.PeriodIndex]
         }

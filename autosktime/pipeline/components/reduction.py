@@ -1,3 +1,4 @@
+import itertools
 from typing import Dict, Any
 
 import numpy as np
@@ -8,7 +9,8 @@ from sktime.forecasting.compose import make_reduction
 from sktime.forecasting.compose._reduce import _get_forecaster, _Reducer
 
 from ConfigSpace import ConfigurationSpace, CategoricalHyperparameter, UniformIntegerHyperparameter, Configuration
-from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, IGNORES_EXOGENOUS_X, SUPPORTED_INDEX_TYPES
+from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, IGNORES_EXOGENOUS_X, SUPPORTED_INDEX_TYPES, \
+    HANDLES_PANEL
 from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import COMPONENT_PROPERTIES, AutoSktimePredictor
 from autosktime.pipeline.components.data_preprocessing import DataPreprocessingPipeline
@@ -16,7 +18,12 @@ from autosktime.pipeline.components.regression import RegressorChoice
 
 
 def _predict_in_sample(self, fh, X=None, return_pred_int=False, alpha=None):
-    return pd.Series(np.zeros_like(fh._values, dtype=float), index=fh._values)
+    if self._y_mtype_last_seen == 'pd-multiindex':
+        top_level = self._y.index.levels[0]
+        index = pd.MultiIndex.from_tuples(itertools.product(top_level, fh._values))
+        return pd.DataFrame(np.zeros_like(index, dtype=float), columns=self._y.columns, index=index)
+
+    return pd.Series(np.zeros_like(fh._values, dtype=float), name=self._y.name, index=fh._values)
 
 
 class ReductionComponent(AutoSktimePredictor):
@@ -87,7 +94,8 @@ class ReductionComponent(AutoSktimePredictor):
     def get_properties(dataset_properties: DatasetProperties = None) -> COMPONENT_PROPERTIES:
         return {
             HANDLES_UNIVARIATE: True,
-            HANDLES_MULTIVARIATE: False,
+            HANDLES_MULTIVARIATE: True,
+            HANDLES_PANEL: False,
             IGNORES_EXOGENOUS_X: False,
             SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.DatetimeIndex, pd.PeriodIndex]
         }

@@ -9,7 +9,7 @@ from sktime.performance_metrics.forecasting._classes import BaseForecastingError
 import autosktime
 from ConfigSpace import ConfigurationSpace, Configuration
 from autosktime.automl_common.common.utils.backend import Backend
-from autosktime.data import AbstractDataManager
+from autosktime.data import DataManager
 from autosktime.data.splitter import BaseSplitter
 from autosktime.evaluation import ExecuteTaFunc, get_cost_of_crash
 from autosktime.metalearning.meta_base import MetaBase
@@ -30,7 +30,7 @@ class AutoMLSMBO:
     def __init__(
             self,
             config_space: ConfigurationSpace,
-            datamanager: AbstractDataManager,
+            datamanager: DataManager,
             backend: Backend,
             total_walltime_limit: float,
             func_eval_time_limit: float,

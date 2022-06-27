@@ -20,9 +20,8 @@ from sktime.performance_metrics.forecasting._classes import BaseForecastingError
 from ConfigSpace import ConfigurationSpace, Configuration
 from ConfigSpace.read_and_write import json as cs_json
 from autosktime.automl_common.common.ensemble_building.abstract_ensemble import AbstractEnsemble
-from autosktime.constants import SUPPORTED_Y_TYPES
-from autosktime.data import UnivariateTimeSeriesDataManager, UnivariateExogenousTimeSeriesDataManager, \
-    AbstractDataManager
+from autosktime.constants import SUPPORTED_Y_TYPES, PANEL_FORECAST, MULTIVARIATE_FORECAST, UNIVARIATE_FORECAST
+from autosktime.data import DataManager
 from autosktime.data.splitter import BaseSplitter, splitter_types
 from autosktime.ensembles.builder import EnsembleBuilderManager
 from autosktime.ensembles.singlebest import SingleBest
@@ -96,7 +95,7 @@ class AutoML(NotVectorizedMixin, BaseForecaster):
         self._metric = metric
         self._use_pynisher = use_pynisher
 
-        self._datamanager: Optional[AbstractDataManager] = None
+        self._datamanager: Optional[DataManager] = None
         self._dataset_name: Optional[str] = None
         self._stopwatch = StopWatch()
         self._task = None
@@ -145,9 +144,20 @@ class AutoML(NotVectorizedMixin, BaseForecaster):
         if dataset_name is None:
             dataset_name = str(uuid.uuid1(clock_seq=os.getpid()))
         self._dataset_name = dataset_name
+
+        if task is None:
+            if isinstance(y.index, pd.MultiIndex):
+                task = PANEL_FORECAST
+            elif isinstance(y, pd.DataFrame):
+                task = MULTIVARIATE_FORECAST
+            else:
+                task = UNIVARIATE_FORECAST
+            # By convention exogenous task is endogenous + 1
+            task += X is not None
         self._task = task
 
-        # TODO assert at most two levels of indices
+        if isinstance(y.index, pd.MultiIndex):
+            assert len(y.index.levels) == 2, 'auto-sktime currently only supports at most two different index levels'
 
         super().fit(y, X, fh)
 
@@ -178,11 +188,7 @@ class AutoML(NotVectorizedMixin, BaseForecaster):
 
         # Prepare training data
         self._stopwatch.start_task(self._dataset_name)
-        if X is None:
-            # TODO what about panel data?
-            self._datamanager = UnivariateTimeSeriesDataManager(y, self._dataset_name)
-        else:
-            self._datamanager = UnivariateExogenousTimeSeriesDataManager(y, X, self._dataset_name)
+        self._datamanager = DataManager(self._task, y, X, self._dataset_name)
         self._backend.save_datamanager(self._datamanager)
         time_for_load_data = self._stopwatch.wall_elapsed(self._dataset_name)
 

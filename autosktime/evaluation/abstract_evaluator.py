@@ -11,7 +11,7 @@ from sktime.performance_metrics.forecasting._classes import BaseForecastingError
 from ConfigSpace import Configuration
 from autosktime.automl_common.common.utils.backend import Backend
 from autosktime.constants import FORECAST_TASK, SUPPORTED_Y_TYPES
-from autosktime.data import AbstractDataManager
+from autosktime.data import DataManager
 from autosktime.evaluation import TaFuncResult
 from autosktime.metrics import calculate_loss, get_cost_of_crash
 from autosktime.pipeline.templates import TemplateChoice
@@ -64,7 +64,7 @@ class AbstractEvaluator:
         self.configuration = configuration
         self.backend = backend
 
-        self.datamanager: AbstractDataManager = self.backend.load_datamanager()
+        self.datamanager: DataManager = self.backend.load_datamanager()
 
         self.metric = metric
         self.task_type = self.datamanager.info['task']

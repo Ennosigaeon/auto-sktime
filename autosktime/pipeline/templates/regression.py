@@ -2,7 +2,8 @@ from typing import Tuple, List
 
 import pandas as pd
 
-from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, IGNORES_EXOGENOUS_X, SUPPORTED_INDEX_TYPES
+from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, IGNORES_EXOGENOUS_X, SUPPORTED_INDEX_TYPES, \
+    HANDLES_PANEL
 from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import AutoSktimeComponent, COMPONENT_PROPERTIES
 from autosktime.pipeline.components.preprocessing.detrend import DetrendComponent
@@ -27,7 +28,9 @@ class RegressionPipeline(ConfigurableTransformedTargetForecaster):
     def get_properties(dataset_properties: DatasetProperties = None) -> COMPONENT_PROPERTIES:
         return {
             HANDLES_UNIVARIATE: True,
-            HANDLES_MULTIVARIATE: False,
+            HANDLES_MULTIVARIATE: True,
+            # sktime reduction can not handle multi-index as of 0.12.x
+            HANDLES_PANEL: False,
             IGNORES_EXOGENOUS_X: False,
             SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.DatetimeIndex, pd.PeriodIndex]
         }

@@ -15,7 +15,7 @@ from autosktime.smac.prior import Prior
 class MetaBaseTest(unittest.TestCase):
 
     def setUp(self) -> None:
-        properties = DatasetProperties(index_type=pd.RangeIndex(0, 10, 1))
+        properties = DatasetProperties(task=UNIVARIATE_FORECAST, index_type=pd.RangeIndex(0, 10, 1))
         base_dir = os.path.join(pathlib.Path(__file__).parent.resolve(), 'files')
         self.base = MetaBase(util.get_configuration_space(properties), UNIVARIATE_FORECAST, 'mape', base_dir=base_dir)
 

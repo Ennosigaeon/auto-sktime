@@ -4,7 +4,8 @@ from typing import Dict, Type
 
 import pandas as pd
 
-from autosktime.constants import SUPPORTED_INDEX_TYPES, HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, IGNORES_EXOGENOUS_X
+from autosktime.constants import SUPPORTED_INDEX_TYPES, HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, IGNORES_EXOGENOUS_X, \
+    HANDLES_PANEL
 from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import AutoSktimeComponent, find_components, AutoSktimeChoice, \
     AutoSktimePredictor
@@ -20,7 +21,8 @@ class ForecasterChoice(AutoSktimeChoice, AutoSktimePredictor):
     def get_properties(dataset_properties: DatasetProperties = None):
         return {
             HANDLES_UNIVARIATE: True,
-            HANDLES_MULTIVARIATE: False,
+            HANDLES_MULTIVARIATE: True,
+            HANDLES_PANEL: True,
             IGNORES_EXOGENOUS_X: False,
             SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.DatetimeIndex, pd.PeriodIndex]
         }

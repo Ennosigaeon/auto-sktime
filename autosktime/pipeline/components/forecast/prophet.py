@@ -6,7 +6,8 @@ from autosktime.data import DatasetProperties
 from sktime.forecasting.base import ForecastingHorizon
 
 from ConfigSpace import ConfigurationSpace, UniformIntegerHyperparameter, CategoricalHyperparameter, Constant
-from autosktime.constants import IGNORES_EXOGENOUS_X, HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE,    SUPPORTED_INDEX_TYPES
+from autosktime.constants import IGNORES_EXOGENOUS_X, HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, SUPPORTED_INDEX_TYPES, \
+    HANDLES_PANEL
 from autosktime.pipeline.components.base import AutoSktimePredictor, COMPONENT_PROPERTIES
 # noinspection PyProtectedMember
 from sktime.utils.validation._dependencies import _check_soft_dependencies
@@ -63,7 +64,8 @@ class ProphetComponent(AutoSktimePredictor):
     def get_properties(dataset_properties: DatasetProperties = None) -> COMPONENT_PROPERTIES:
         return {
             HANDLES_UNIVARIATE: True,
-            HANDLES_MULTIVARIATE: False,
+            HANDLES_MULTIVARIATE: True,
+            HANDLES_PANEL: True,
             IGNORES_EXOGENOUS_X: False,
             SUPPORTED_INDEX_TYPES: [pd.DatetimeIndex]
         }

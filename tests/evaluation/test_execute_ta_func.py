@@ -3,12 +3,13 @@ import unittest
 from typing import Dict
 from unittest import mock
 
+from autosktime.constants import UNIVARIATE_FORECAST
 from smac.runhistory.runhistory import RunInfo
 from smac.stats.stats import Stats
 
 from ConfigSpace import Configuration
 from autosktime.automl_common.common.utils.backend import create
-from autosktime.data import UnivariateTimeSeriesDataManager
+from autosktime.data import DataManager
 from autosktime.data.splitter import HoldoutSplitter
 from autosktime.evaluation import ExecuteTaFunc
 from autosktime.metrics import MeanAbsolutePercentageError
@@ -20,7 +21,7 @@ class TestExecuteTAFunc(unittest.TestCase):
 
     def _test_configuration(self, config_dict: Dict):
         y = load_airline()
-        datamanager = UnivariateTimeSeriesDataManager(y, 'airlines')
+        datamanager = DataManager(UNIVARIATE_FORECAST, y, None, 'airlines')
 
         try:
             backend = create('test_tmp', 'test_output', 'prefix')

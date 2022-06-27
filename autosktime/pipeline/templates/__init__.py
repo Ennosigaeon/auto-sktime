@@ -5,7 +5,8 @@ import pandas as pd
 from sktime.forecasting.base import ForecastingHorizon
 
 from ConfigSpace import Configuration, ConfigurationSpace, CategoricalHyperparameter
-from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, IGNORES_EXOGENOUS_X, SUPPORTED_INDEX_TYPES
+from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, IGNORES_EXOGENOUS_X, SUPPORTED_INDEX_TYPES, \
+    HANDLES_PANEL, UNIVARIATE_TASKS, MULTIVARIATE_TASKS, PANEL_TASKS
 from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import AutoSktimePredictor, COMPONENT_PROPERTIES
 from autosktime.pipeline.components.util import sub_configuration
@@ -55,6 +56,8 @@ class TemplateChoice(AutoSktimePredictor):
         if len(available_components_) == 0:
             raise ValueError('No estimators found')
 
+        if default not in available_components_.keys():
+            default = None
         if default is None:
             for default_ in available_components_.keys():
                 if include is not None and default_ not in include.keys():
@@ -100,6 +103,17 @@ class TemplateChoice(AutoSktimePredictor):
             elif exclude is not None and name in exclude.keys():
                 continue
 
+            if dataset_properties is not None:
+                props = entry.get_properties()
+                if dataset_properties.index_type not in props[SUPPORTED_INDEX_TYPES]:
+                    continue
+                if dataset_properties.task in UNIVARIATE_TASKS and not props[HANDLES_UNIVARIATE]:
+                    continue
+                if dataset_properties.task in MULTIVARIATE_TASKS and not props[HANDLES_MULTIVARIATE]:
+                    continue
+                if dataset_properties.task in PANEL_TASKS and not props[HANDLES_PANEL]:
+                    continue
+
             try:
                 available_comp[name].check_dependencies()
             except ModuleNotFoundError:
@@ -130,7 +144,8 @@ class TemplateChoice(AutoSktimePredictor):
     def get_properties(dataset_properties: DatasetProperties = None) -> COMPONENT_PROPERTIES:
         return {
             HANDLES_UNIVARIATE: True,
-            HANDLES_MULTIVARIATE: False,
+            HANDLES_MULTIVARIATE: True,
+            HANDLES_PANEL: True,
             IGNORES_EXOGENOUS_X: False,
             SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.DatetimeIndex, pd.PeriodIndex]
         }

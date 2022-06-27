@@ -1,26 +1,28 @@
-import abc
 from collections.abc import MutableMapping
-from typing import Any, Dict, Optional, Union, Iterator
+from typing import Any, Dict, Optional, Union, Iterator, Type
 
 import pandas as pd
-
-from autosktime.constants import UNIVARIATE_ENDOGENOUS_FORECAST, UNIVARIATE_EXOGENOUS_FORECAST
 
 
 class DatasetProperties(MutableMapping):
 
-    def __init__(self, index_type: pd.Index = None, **kwargs):
+    def __init__(self, task: int, index_type: pd.Index, **kwargs):
         if isinstance(index_type, pd.MultiIndex):
             index_type = index_type.levels[-1]
 
         self._data = dict(
             kwargs,
             index_type=type(index_type),
+            task=task
         )
 
     @property
-    def index_type(self):
+    def index_type(self) -> Type[pd.Index]:
         return self._data['index_type']
+
+    @property
+    def task(self) -> int:
+        return self._data['task']
 
     def __setitem__(self, k: str, v: Any) -> None:
         self._data[k] = v
@@ -41,10 +43,9 @@ class DatasetProperties(MutableMapping):
         return DatasetProperties(**self._data)
 
 
-class AbstractDataManager:
-    __metaclass__ = abc.ABCMeta
+class DataManager:
 
-    def __init__(self, y: pd.Series, X: Optional[pd.DataFrame], task: int, dataset_name: str):
+    def __init__(self, task: int, y: pd.Series, X: Optional[pd.DataFrame] = None, dataset_name: str = ''):
         self._data = {
             'y_train': y,
             'X_train': X
@@ -53,7 +54,7 @@ class AbstractDataManager:
             'task': task
         }
         self._name = dataset_name
-        self.dataset_properties = DatasetProperties(y.index)
+        self.dataset_properties = DatasetProperties(task, y.index)
 
     @property
     def name(self) -> str:
@@ -74,15 +75,3 @@ class AbstractDataManager:
     @property
     def info(self) -> Dict[str, Any]:
         return self._info
-
-
-class UnivariateTimeSeriesDataManager(AbstractDataManager):
-
-    def __init__(self, y: pd.Series, dataset_name: str):
-        super().__init__(y, None, UNIVARIATE_ENDOGENOUS_FORECAST, dataset_name)
-
-
-class UnivariateExogenousTimeSeriesDataManager(AbstractDataManager):
-
-    def __init__(self, y: pd.Series, X: pd.DataFrame, dataset_name: str):
-        super().__init__(y, X, UNIVARIATE_EXOGENOUS_FORECAST, dataset_name)

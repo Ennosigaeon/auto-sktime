@@ -15,7 +15,8 @@ from sktime.forecasting.base import ForecastingHorizon, BaseForecaster
 from sktime.transformations.base import BaseTransformer
 
 from ConfigSpace import Configuration, ConfigurationSpace, CategoricalHyperparameter
-from autosktime.constants import SUPPORTED_INDEX_TYPES
+from autosktime.constants import SUPPORTED_INDEX_TYPES, UNIVARIATE_TASKS, MULTIVARIATE_TASKS, PANEL_TASKS, \
+    HANDLES_PANEL, HANDLES_MULTIVARIATE, HANDLES_UNIVARIATE
 from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.util import sub_configuration
 
@@ -217,8 +218,14 @@ class AutoSktimeChoice(AutoSktimeComponent, ABC):
                 continue
 
             if dataset_properties is not None:
-                if (dataset_properties.index_type is not None and
-                        dataset_properties.index_type not in entry.get_properties()[SUPPORTED_INDEX_TYPES]):
+                props = entry.get_properties()
+                if dataset_properties.index_type not in props[SUPPORTED_INDEX_TYPES]:
+                    continue
+                if dataset_properties.task in UNIVARIATE_TASKS and not props[HANDLES_UNIVARIATE]:
+                    continue
+                if dataset_properties.task in MULTIVARIATE_TASKS and not props[HANDLES_MULTIVARIATE]:
+                    continue
+                if dataset_properties.task in PANEL_TASKS and not props[HANDLES_PANEL]:
                     continue
 
             try:

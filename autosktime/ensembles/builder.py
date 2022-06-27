@@ -26,7 +26,7 @@ from smac.tae.base import StatusType
 from smac.tae.dask_runner import DaskParallelRunner
 
 from autosktime.automl_common.common.utils.backend import Backend
-from autosktime.data import AbstractDataManager
+from autosktime.data import DataManager
 from autosktime.ensembles.selection import EnsembleSelection
 from autosktime.ensembles.util import get_ensemble_train, PrefittedEnsembleForecaster
 from autosktime.metrics import calculate_loss
@@ -183,7 +183,7 @@ class EnsembleBuilderManager(IncorporateRunResultCallback):
                 logger.critical(exception_traceback)
                 logger.critical(error_message)
 
-    def get_ensemble(self, datamanager: AbstractDataManager) -> Optional[EnsembleForecaster]:
+    def get_ensemble(self, datamanager: DataManager) -> Optional[EnsembleForecaster]:
         ensemble: Optional[EnsembleSelection] = self.backend.load_ensemble(self.seed)
         if ensemble is None:
             return None

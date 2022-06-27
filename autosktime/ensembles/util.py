@@ -6,7 +6,7 @@ from sktime.forecasting.compose import EnsembleForecaster
 from sktime.forecasting.compose._ensemble import _check_aggfunc
 
 from autosktime.constants import SUPPORTED_Y_TYPES
-from autosktime.data import AbstractDataManager
+from autosktime.data import DataManager
 from autosktime.data.splitter import HoldoutSplitter
 from autosktime.pipeline.components.util import NotVectorizedMixin
 
@@ -38,14 +38,14 @@ def _aggregate(y: SUPPORTED_Y_TYPES, aggfunc: str, weights: Optional[List[float]
         return pd.DataFrame(y_agg, index=y.index, columns=y.columns)
 
 
-def get_ensemble_targets(datamanager: AbstractDataManager, ensemble_size: float) -> Tuple[pd.Series, pd.DataFrame]:
+def get_ensemble_targets(datamanager: DataManager, ensemble_size: float) -> Tuple[pd.Series, pd.DataFrame]:
     y = datamanager.y
     _, test = next(HoldoutSplitter(ensemble_size).split(y))
 
     return _get_by_index(y, datamanager.X, test)
 
 
-def get_ensemble_train(datamanager: AbstractDataManager, ensemble_size: float) -> Tuple[pd.Series, pd.DataFrame]:
+def get_ensemble_train(datamanager: DataManager, ensemble_size: float) -> Tuple[pd.Series, pd.DataFrame]:
     y = datamanager.y
 
     train, _ = next(HoldoutSplitter(ensemble_size).split(y))
