@@ -40,32 +40,45 @@ class AutoMLTest(unittest.TestCase):
         y = load_airline()
 
         incumbents = [{
-            'forecaster:__choice__': 'arima',
-            'forecaster:arima:d': 0,
-            'forecaster:arima:maxiter': 50,
-            'forecaster:arima:p': 1,
-            'forecaster:arima:q': 0,
-            'forecaster:arima:sp': 0,
-            'forecaster:arima:with_intercept': 'True',
-            'imputation:method': 'drift',
-            'normalizer:__choice__': 'box_cox',
-            'normalizer:box_cox:lower_bound': -2.0,
-            'normalizer:box_cox:method': 'mle',
-            'normalizer:box_cox:sp': 0,
-            'normalizer:box_cox:upper_bound': 2.0,
-            'outlier:n_sigma': 3.0,
-            'outlier:window_length': 10,
+            '__choice__': 'linear',
+            'linear:forecaster:__choice__': 'arima',
+            'linear:forecaster:arima:d': 0,
+            'linear:forecaster:arima:maxiter': 50,
+            'linear:forecaster:arima:p': 1,
+            'linear:forecaster:arima:q': 0,
+            'linear:forecaster:arima:sp': 0,
+            'linear:forecaster:arima:with_intercept': 'True',
+            'linear:imputation:method': 'drift',
+            'linear:normalizer:__choice__': 'box_cox',
+            'linear:normalizer:box_cox:lower_bound': -2.0,
+            'linear:normalizer:box_cox:method': 'mle',
+            'linear:normalizer:box_cox:sp': 0,
+            'linear:normalizer:box_cox:upper_bound': 2.0,
+            'linear:outlier:n_sigma': 3.0,
+            'linear:outlier:window_length': 10,
         }, {
-            'forecaster:__choice__': 'ets',
-            'forecaster:ets:damped_trend': True,
-            'forecaster:ets:error': 'mul',
-            'forecaster:ets:seasonal': 'mul',
-            'forecaster:ets:sp': 7,
-            'forecaster:ets:trend': 'mul',
-            'imputation:method': 'ffill',
-            'normalizer:__choice__': 'noop',
-            'outlier:n_sigma': 2.3617555184501295,
-            'outlier:window_length': 39,
+            '__choice__': 'regression',
+            'regression:detrend:degree': 2,
+            'regression:detrend:with_intercept': False,
+            'regression:imputation:method': 'linear',
+            'regression:outlier:n_sigma': 4.1524233479073684,
+            'regression:outlier:window_length': 6,
+            'regression:reduction:preprocessing:rescaling:__choice__': 'minmax',
+            'regression:reduction:preprocessing:selection:__choice__': 'pca',
+            'regression:reduction:preprocessing:selection:pca:keep_variance': 0.9750518438961764,
+            'regression:reduction:preprocessing:selection:pca:whiten': 'False',
+            'regression:reduction:regression:__choice__': 'random_forest',
+            'regression:reduction:regression:random_forest:bootstrap': 'True',
+            'regression:reduction:regression:random_forest:criterion': 'friedman_mse',
+            'regression:reduction:regression:random_forest:max_depth': 'None',
+            'regression:reduction:regression:random_forest:max_features': 0.22502824032754642,
+            'regression:reduction:regression:random_forest:max_leaf_nodes': 'None',
+            'regression:reduction:regression:random_forest:min_impurity_decrease': 0.0,
+            'regression:reduction:regression:random_forest:min_samples_leaf': 7,
+            'regression:reduction:regression:random_forest:min_samples_split': 8,
+            'regression:reduction:regression:random_forest:min_weight_fraction_leaf': 0.0,
+            'regression:reduction:strategy': 'recursive',
+            'regression:reduction:window_length': 3,
         }]
         perf = [2147483648., 0.3026, 0.1378]
 
@@ -84,7 +97,7 @@ class AutoMLTest(unittest.TestCase):
         y = load_airline()
 
         _, loss = fit_and_predict(y)
-        self.assertAlmostEqual(0.1414420215112278, loss)
+        self.assertAlmostEqual(0.3183865862138596, loss)
 
     def test_multi_index(self):
         y = _bottom_hier_datagen(no_levels=1, random_seed=0)
