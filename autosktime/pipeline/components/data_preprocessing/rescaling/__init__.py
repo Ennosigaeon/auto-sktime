@@ -1,9 +1,10 @@
 import os
 from collections import OrderedDict
-from typing import Dict, Type
+from typing import Dict, Type, List
 
 import pandas as pd
 
+from ConfigSpace import ConfigurationSpace
 from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, HANDLES_PANEL, IGNORES_EXOGENOUS_X, \
     SUPPORTED_INDEX_TYPES
 from autosktime.data import DatasetProperties
@@ -15,6 +16,15 @@ _rescalers = find_components(__package__, rescaling_directory, AutoSktimePreproc
 
 
 class RescalingChoice(AutoSktimeChoice, AutoSktimePreprocessingAlgorithm):
+    
+    def get_hyperparameter_search_space(
+            self,
+            dataset_properties: DatasetProperties = None,
+            default: str = 'robust_scaler',
+            include: List[str] = None,
+            exclude: List[str] = None
+    ) -> ConfigurationSpace:
+        return super().get_hyperparameter_search_space(dataset_properties, default, include, exclude)
 
     @classmethod
     def get_components(cls) -> Dict[str, Type[AutoSktimeComponent]]:

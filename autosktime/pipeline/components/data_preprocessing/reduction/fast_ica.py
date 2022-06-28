@@ -51,6 +51,8 @@ class FastICAComponent(AutoSktimePreprocessingAlgorithm):
             except ValueError as e:
                 if 'array must not contain infs or NaNs' in e.args[0]:
                     raise ValueError('Bug in scikit-learn: https://github.com/scikit-learn/scikit-learn/pull/2738')
+                else:
+                    raise
 
         return self
 

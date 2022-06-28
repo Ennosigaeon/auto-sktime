@@ -63,8 +63,8 @@ class RandomForestComponent(AutoSktimeRegressionAlgorithm):
             max_leaf_nodes=self.max_leaf_nodes,
             min_impurity_decrease=self.min_impurity_decrease,
             random_state=self.random_state,
-            n_jobs=self.n_jobs,
-            warm_start=True)
+            n_jobs=self.n_jobs
+        )
 
         if y.ndim == 2 and y.shape[1] == 1:
             y = y.flatten()

@@ -1,9 +1,10 @@
 import os
 from collections import OrderedDict
-from typing import Dict, Type, Union
+from typing import Dict, Type, Union, List
 
 import pandas as pd
 
+from ConfigSpace import ConfigurationSpace
 from autosktime.constants import SUPPORTED_INDEX_TYPES, HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, IGNORES_EXOGENOUS_X, \
     HANDLES_PANEL
 from autosktime.data import DatasetProperties
@@ -16,6 +17,15 @@ _normalizers = find_components(__package__, _normalizer_directory, AutoSktimeTra
 
 
 class NormalizerChoice(AutoSktimeChoice, AutoSktimeTransformer):
+    
+    def get_hyperparameter_search_space(
+            self,
+            dataset_properties: DatasetProperties = None,
+            default: str = 'box_cox',
+            include: List[str] = None,
+            exclude: List[str] = None
+    ) -> ConfigurationSpace:
+        return super().get_hyperparameter_search_space(dataset_properties, default, include, exclude)
 
     @staticmethod
     def get_properties(dataset_properties: DatasetProperties = None):

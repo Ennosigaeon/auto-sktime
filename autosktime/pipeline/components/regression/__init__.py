@@ -1,8 +1,10 @@
 import os
 from collections import OrderedDict
-from typing import Dict, Type
+from typing import Dict, Type, List
 
 import pandas as pd
+
+from ConfigSpace import ConfigurationSpace
 from autosktime.constants import SUPPORTED_INDEX_TYPES, HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, IGNORES_EXOGENOUS_X, \
     HANDLES_PANEL
 from autosktime.data import DatasetProperties
@@ -17,6 +19,15 @@ _regressors = find_components(__package__, _regressor_directory, AutoSktimeRegre
 class RegressorChoice(AutoSktimeChoice, AutoSktimeRegressionAlgorithm):
     _estimator_class: Type[RegressorMixin] = None
     estimator: RegressorMixin = None
+
+    def get_hyperparameter_search_space(
+            self,
+            dataset_properties: DatasetProperties = None,
+            default: str = 'random_forest',
+            include: List[str] = None,
+            exclude: List[str] = None
+    ) -> ConfigurationSpace:
+        return super().get_hyperparameter_search_space(dataset_properties, default, include, exclude)
 
     @staticmethod
     def get_properties(dataset_properties: DatasetProperties = None):

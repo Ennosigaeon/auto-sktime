@@ -1,8 +1,10 @@
 import os
 from collections import OrderedDict
+from typing import List
 
 import pandas as pd
 
+from ConfigSpace import ConfigurationSpace
 from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, IGNORES_EXOGENOUS_X, SUPPORTED_INDEX_TYPES, \
     HANDLES_PANEL
 from autosktime.data import DatasetProperties
@@ -14,6 +16,15 @@ _preprocessors = find_components(__package__, classifier_directory, AutoSktimePr
 
 
 class ReductionChoice(AutoSktimeChoice, AutoSktimePreprocessingAlgorithm):
+
+    def get_hyperparameter_search_space(
+            self,
+            dataset_properties: DatasetProperties = None,
+            default: str = 'pca',
+            include: List[str] = None,
+            exclude: List[str] = None
+    ) -> ConfigurationSpace:
+        return super().get_hyperparameter_search_space(dataset_properties, default, include, exclude)
 
     @classmethod
     def get_components(cls):
