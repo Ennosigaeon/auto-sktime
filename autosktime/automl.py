@@ -402,6 +402,7 @@ class AutoML(NotVectorizedMixin, BaseForecaster):
         ta = ExecuteTaFunc(
             backend=self._backend,
             seed=self._seed,
+            random_state=self._random_state,
             splitter=self._determine_resampling(),
             metric=self._metric,
             stats=stats,

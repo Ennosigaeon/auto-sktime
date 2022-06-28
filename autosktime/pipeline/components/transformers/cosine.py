@@ -31,7 +31,7 @@ class CosineComponent(AutoSktimeTransformer):
             HANDLES_MULTIVARIATE: True,
             HANDLES_PANEL: True,
             IGNORES_EXOGENOUS_X: True,
-            SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.DatetimeIndex, pd.PeriodIndex]
+            SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.DatetimeIndex, pd.PeriodIndex, pd.core.indexes.numeric.Int64Index]
         }
 
     @staticmethod

@@ -38,7 +38,7 @@ class TestExecuteTAFunc(unittest.TestCase):
             scenario_mock.wallclock_limit = 300
             stats = Stats(scenario_mock)
 
-            ta_executor = ExecuteTaFunc(backend, 1, splitter, metric, stats)
+            ta_executor = ExecuteTaFunc(backend, 1, np.random.RandomState(), splitter, metric, stats)
             info, value = ta_executor.run_wrapper(
                 RunInfo(config=config, instance=None, instance_specific='', seed=1, cutoff=300, capped=True)
             )

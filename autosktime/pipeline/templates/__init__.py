@@ -148,5 +148,5 @@ class TemplateChoice(AutoSktimePredictor):
             HANDLES_MULTIVARIATE: True,
             HANDLES_PANEL: True,
             IGNORES_EXOGENOUS_X: False,
-            SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.DatetimeIndex, pd.PeriodIndex]
+            SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.DatetimeIndex, pd.PeriodIndex, pd.core.indexes.numeric.Int64Index]
         }
