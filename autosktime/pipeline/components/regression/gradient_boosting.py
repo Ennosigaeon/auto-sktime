@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 from ConfigSpace.configuration_space import ConfigurationSpace
 from ConfigSpace.hyperparameters import UniformFloatHyperparameter, UniformIntegerHyperparameter, Constant, \
@@ -24,7 +25,7 @@ class GradientBoostingComponent(AutoSktimeRegressionAlgorithm):
             scoring: str = 'loss',
             n_iter_no_change=10,
             validation_fraction: float = None,
-            random_state=None,
+            random_state: np.random.RandomState = None,
             verbose: int = 0
     ):
         super().__init__()

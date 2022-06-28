@@ -1,5 +1,3 @@
-from typing import Optional, Union
-
 import numpy as np
 import pandas as pd
 
@@ -10,7 +8,7 @@ from autosktime.pipeline.components.base import AutoSktimePreprocessingAlgorithm
 
 
 class MinMaxScalerComponent(AutoSktimePreprocessingAlgorithm):
-    def __init__(self, random_state: Optional[Union[int, np.random.RandomState]] = None):
+    def __init__(self, random_state: np.random.RandomState = None):
         super().__init__()
         from sklearn.preprocessing import MinMaxScaler
         self.estimator = MinMaxScaler(copy=False)

@@ -1,5 +1,6 @@
 from typing import Union
 
+import numpy as np
 import pandas as pd
 
 from ConfigSpace import ConfigurationSpace, UniformIntegerHyperparameter, UniformFloatHyperparameter
@@ -14,7 +15,7 @@ class HampelFilterComponent(AutoSktimeTransformer):
 
     _estimator_class = HampelFilter
 
-    def __init__(self, window_length: int = 10, n_sigma: float = 3., random_state=None):
+    def __init__(self, window_length: int = 10, n_sigma: float = 3., random_state: np.random.RandomState = None):
         super().__init__()
         self.window_length = window_length
         self.n_sigma = n_sigma

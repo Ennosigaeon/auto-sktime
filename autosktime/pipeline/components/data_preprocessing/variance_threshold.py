@@ -10,7 +10,7 @@ from autosktime.pipeline.components.base import COMPONENT_PROPERTIES, AutoSktime
 
 
 class VarianceThresholdComponent(AutoSktimePreprocessingAlgorithm):
-    def __init__(self, random_state: Optional[Union[int, np.random.RandomState]] = None) -> None:
+    def __init__(self, random_state: np.random.RandomState = None) -> None:
         from sklearn.feature_selection import VarianceThreshold
         super().__init__()
         self.estimator = VarianceThreshold(threshold=0.0)

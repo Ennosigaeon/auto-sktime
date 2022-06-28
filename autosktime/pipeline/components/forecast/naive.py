@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 
 from autosktime.data import DatasetProperties
@@ -18,7 +19,7 @@ class NaiveForecasterComponent(AutoSktimePredictor):
             self,
             sp: int = 1,
             strategy: str = 'last',
-            random_state=None
+            random_state: np.random.RandomState = None
     ):
         super().__init__()
         self.sp = sp

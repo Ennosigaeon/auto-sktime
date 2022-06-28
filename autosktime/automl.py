@@ -54,7 +54,7 @@ class AutoML(NotVectorizedMixin, BaseForecaster):
                  ensemble_size: int = 1,
                  ensemble_nbest: int = 1,
                  max_models_on_disc: int = 1,
-                 seed: int = 1,
+                 seed: int = None,
                  memory_limit: int = 3072,
                  include: Optional[Dict[str, List[str]]] = None,
                  exclude: Optional[Dict[str, List[str]]] = None,
@@ -78,7 +78,6 @@ class AutoML(NotVectorizedMixin, BaseForecaster):
         self._ensemble_size = ensemble_size
         self._ensemble_nbest = ensemble_nbest
         self._max_models_on_disc = max_models_on_disc
-        self._seed = seed
         self._memory_limit = memory_limit
         self._include = include
         self._exclude = exclude
@@ -89,6 +88,11 @@ class AutoML(NotVectorizedMixin, BaseForecaster):
         self._hp_priors = hp_priors
         self._n_jobs: int = n_jobs
         self._dask_client: Optional[dask.distributed.Client] = dask_client
+
+        self._random_state = np.random.RandomState(seed)
+        if seed is None:
+            seed = 1
+        self._seed = seed
 
         self.logging_config: Dict[str, Any] = logging_config
 
@@ -232,7 +236,7 @@ class AutoML(NotVectorizedMixin, BaseForecaster):
                 ensemble_nbest=self._ensemble_nbest,
                 max_models_on_disc=self._max_models_on_disc,
                 seed=self._seed,
-                random_state=self._seed
+                random_state=self._random_state
             )
             y_ens, _ = get_ensemble_targets(self._datamanager, ensemble_size=0.2)
             self._backend.save_targets_ensemble(y_ens)
@@ -272,6 +276,7 @@ class AutoML(NotVectorizedMixin, BaseForecaster):
                 splitter=self._determine_resampling(),
                 use_pynisher=self._use_pynisher,
                 seed=self._seed,
+                random_state=self._random_state,
                 metadata_directory=self._metadata_directory,
                 num_metalearning_configs=self._num_metalearning_configs,
                 hp_priors=self._hp_priors,
@@ -541,6 +546,7 @@ class AutoML(NotVectorizedMixin, BaseForecaster):
             dataset_properties=self._datamanager.dataset_properties,
             include=self._include,
             exclude=self._exclude,
+            random_state=self._random_state
         )
         # noinspection PyTypeChecker
         self._backend.write_txt_file(configspace_path, cs_json.write(configuration_space), 'Configuration space')

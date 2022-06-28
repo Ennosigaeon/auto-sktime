@@ -39,12 +39,13 @@ class TrainEvaluator(AbstractEvaluator):
             configuration: Configuration,
             splitter: BaseSplitter,
             seed: int = 1,
+            random_state: np.random.RandomState = None,
             num_run: int = 0,
             ensemble_size: float = 0.2,
             budget: Optional[float] = None,
             budget_type: Optional[str] = None,
     ):
-        super().__init__(backend, metric, configuration, seed, num_run, budget, budget_type)
+        super().__init__(backend, metric, configuration, seed, random_state, num_run, budget, budget_type)
         self.splitter = splitter
         self.ensemble_size = ensemble_size
 
@@ -175,6 +176,7 @@ def evaluate(
         backend: Backend,
         metric: BaseForecastingErrorMetric,
         seed: int,
+        random_state: np.random.RandomState,
         num_run: int,
         splitter: BaseSplitter,
         budget: Optional[float] = 100.0,
@@ -186,6 +188,7 @@ def evaluate(
         configuration=config,
         splitter=splitter,
         seed=seed,
+        random_state=random_state,
         num_run=num_run,
         budget=budget,
         budget_type=budget_type,

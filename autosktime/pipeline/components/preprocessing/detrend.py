@@ -1,5 +1,6 @@
 from typing import Union
 
+import numpy as np
 import pandas as pd
 
 from ConfigSpace import ConfigurationSpace, UniformIntegerHyperparameter, CategoricalHyperparameter
@@ -15,7 +16,7 @@ class DetrendComponent(AutoSktimeTransformer):
 
     _estimator_class = Detrender
 
-    def __init__(self, degree: int = 1, with_intercept: bool = True, random_state=None):
+    def __init__(self, degree: int = 1, with_intercept: bool = True, random_state: np.random.RandomState = None):
         super().__init__()
         self.degree = degree
         self.with_intercept = with_intercept

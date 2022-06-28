@@ -1,4 +1,5 @@
 import pandas as pd
+
 from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, IGNORES_EXOGENOUS_X, SUPPORTED_INDEX_TYPES, \
     HANDLES_PANEL
 from autosktime.data import DatasetProperties

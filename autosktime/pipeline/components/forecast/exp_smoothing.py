@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 
 from autosktime.data import DatasetProperties
@@ -21,7 +22,7 @@ class ExponentialSmoothingComponent(AutoSktimePredictor):
             trend: str = None,
             seasonal: str = None,
             damped_trend: bool = False,
-            random_state=None
+            random_state: np.random.RandomState = None
     ):
         super().__init__()
         self.sp = sp

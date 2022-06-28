@@ -33,7 +33,7 @@ class ReductionComponent(AutoSktimePredictor):
             estimator: AutoSktimePredictor = None,
             strategy: str = 'recursive',
             window_length: int = 10,
-            random_state=None
+            random_state: np.random.RandomState = None
     ):
         super().__init__()
         self.strategy = strategy

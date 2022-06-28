@@ -26,7 +26,7 @@ class SGDComponent(AutoSktimeRegressionAlgorithm):
             eta0: float = 0.01,
             power_t: float = 0.5,
             average: bool = False,
-            random_state=None
+            random_state: np.random.RandomState = None
     ):
         super().__init__()
         self.loss = loss

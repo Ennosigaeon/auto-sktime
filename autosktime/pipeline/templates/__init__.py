@@ -1,6 +1,7 @@
 from collections import OrderedDict
 from typing import Dict, Union, Any, List, Type
 
+import numpy as np
 import pandas as pd
 from sktime.forecasting.base import ForecastingHorizon
 
@@ -21,7 +22,7 @@ class TemplateChoice(AutoSktimePredictor):
             self,
             config: Configuration = None,
             init_params: Dict[str, Any] = None,
-            random_state=None
+            random_state: np.random.RandomState = None
     ):
         super().__init__()
         self.config = config
@@ -38,7 +39,7 @@ class TemplateChoice(AutoSktimePredictor):
     ):
         params = configuration.get_dictionary() if isinstance(configuration, Configuration) else configuration
         choice, sub_config = sub_configuration(params, init_params)
-        self.estimator = self.get_components()[choice](config=sub_config)
+        self.estimator = self.get_components()[choice](config=sub_config, random_state=self.random_state)
         return self
 
     def get_hyperparameter_search_space(

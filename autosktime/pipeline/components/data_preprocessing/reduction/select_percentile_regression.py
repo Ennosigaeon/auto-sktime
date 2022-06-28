@@ -1,5 +1,6 @@
 from functools import partial
 
+import numpy as np
 import pandas as pd
 from ConfigSpace.configuration_space import ConfigurationSpace
 from ConfigSpace.hyperparameters import UniformFloatHyperparameter, CategoricalHyperparameter
@@ -12,7 +13,12 @@ from autosktime.pipeline.components.base import AutoSktimePreprocessingAlgorithm
 
 class SelectPercentileRegression(AutoSktimePreprocessingAlgorithm):
 
-    def __init__(self, percentile: int = 50, score_func: str = 'f_regression', random_state=None):
+    def __init__(
+            self,
+            percentile: int = 50,
+            score_func: str = 'f_regression',
+            random_state: np.random.RandomState = None
+    ):
         super().__init__()
         import sklearn.feature_selection
 

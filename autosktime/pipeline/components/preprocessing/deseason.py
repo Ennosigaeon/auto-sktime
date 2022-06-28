@@ -1,5 +1,6 @@
 from typing import Union
 
+import numpy as np
 import pandas as pd
 
 from ConfigSpace import ConfigurationSpace, CategoricalHyperparameter
@@ -14,7 +15,7 @@ class DeseasonalizerComponent(AutoSktimeTransformer):
 
     _estimator_class = Deseasonalizer
 
-    def __init__(self, model: str = 'additive', sp: int = 1, random_state=None):
+    def __init__(self, model: str = 'additive', sp: int = 1, random_state: np.random.RandomState = None):
         super().__init__()
         self.model = model
         self.sp = sp

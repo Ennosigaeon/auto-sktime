@@ -1,5 +1,6 @@
 from typing import Union
 
+import numpy as np
 import pandas as pd
 
 from ConfigSpace import ConfigurationSpace, UniformFloatHyperparameter
@@ -14,7 +15,12 @@ class ScaledLogitComponent(AutoSktimeTransformer):
 
     _estimator_class = ScaledLogitTransformer
 
-    def __init__(self, lower_bound: float = 0.75, upper_bound: float = 1.25, random_state=None):
+    def __init__(
+            self,
+            lower_bound: float = 0.75,
+            upper_bound: float = 1.25,
+            random_state: np.random.RandomState = None
+    ):
         super().__init__()
         self.lower_bound = lower_bound
         self.upper_bound = upper_bound

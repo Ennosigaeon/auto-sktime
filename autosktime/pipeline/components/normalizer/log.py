@@ -1,5 +1,6 @@
 from typing import Union
 
+import numpy as np
 import pandas as pd
 
 from ConfigSpace import ConfigurationSpace
@@ -14,7 +15,7 @@ class LogComponent(AutoSktimeTransformer):
 
     _estimator_class = LogTransformer
 
-    def __init__(self, random_state=None):
+    def __init__(self, random_state: np.random.RandomState = None):
         super().__init__()
         self.random_state = random_state
 

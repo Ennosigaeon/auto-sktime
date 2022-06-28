@@ -1,9 +1,8 @@
-from typing import Optional, Union
-
 import numpy as np
 import pandas as pd
 from ConfigSpace.configuration_space import ConfigurationSpace
 from ConfigSpace.hyperparameters import UniformFloatHyperparameter
+
 from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, IGNORES_EXOGENOUS_X, SUPPORTED_INDEX_TYPES, \
     HANDLES_PANEL
 from autosktime.data import DatasetProperties
@@ -15,7 +14,7 @@ class RobustScalerComponent(AutoSktimePreprocessingAlgorithm):
             self,
             q_min: float = 0.25,
             q_max: float = 0.75,
-            random_state: Optional[Union[int, np.random.RandomState]] = None
+            random_state: np.random.RandomState = None
     ):
         super().__init__()
         from sklearn.preprocessing import RobustScaler

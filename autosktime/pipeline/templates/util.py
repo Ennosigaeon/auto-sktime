@@ -1,4 +1,4 @@
-from typing import Optional, Dict, List, Union
+from typing import Optional, Dict, List
 
 import numpy as np
 
@@ -11,7 +11,7 @@ def get_configuration_space(
         dataset_properties: DatasetProperties,
         include: Optional[Dict[str, List[str]]] = None,
         exclude: Optional[Dict[str, List[str]]] = None,
-        random_state: Optional[Union[int, np.random.RandomState]] = None
+        random_state: np.random.RandomState = None
 ) -> ConfigurationSpace:
     return TemplateChoice(random_state=random_state).get_hyperparameter_search_space(
         dataset_properties=dataset_properties,

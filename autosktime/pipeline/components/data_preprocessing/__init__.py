@@ -1,5 +1,6 @@
 from typing import List, Tuple, Dict, Any
 
+import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator
 from sklearn.pipeline import Pipeline
@@ -23,7 +24,7 @@ class DataPreprocessingPipeline(Pipeline, ConfigurablePipeline):
             dataset_properties: DatasetProperties = None,
             include: Dict[str, List[str]] = None,
             exclude: Dict[str, List[str]] = None,
-            random_state=None,
+            random_state: np.random.RandomState = None,
             init_params: Dict[str, Any] = None
     ):
         self._init(config, dataset_properties, include, exclude, random_state, init_params)

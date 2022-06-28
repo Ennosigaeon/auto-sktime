@@ -53,7 +53,7 @@ class EnsembleBuilderManager(IncorporateRunResultCallback):
             ensemble_nbest: Union[int, float],
             max_models_on_disc: Union[int, float] = None,
             seed: int = 1,
-            random_state: Union[int, np.random.RandomState] = None,
+            random_state: np.random.RandomState = None,
     ):
         """ SMAC callback to handle ensemble building
 
@@ -211,7 +211,7 @@ def _fit_and_return_ensemble(
         end_at: float,
         iteration: int,
         current_performance: float,
-        random_state: Optional[Union[int, np.random.RandomState]] = None,
+        random_state: Optional[np.random.RandomState] = None,
 ) -> Tuple[float, float, int]:
     return EnsembleBuilder(
         backend=backend,
@@ -260,7 +260,7 @@ class EnsembleBuilder:
             max_models_on_disc: Union[int, float] = None,
             seed: int = 1,
             previous_performance=np.inf,
-            random_state: Optional[Union[int, np.random.RandomState]] = None,
+            random_state: np.random.RandomState = None,
             use_pynisher: bool = False
     ):
         self.backend = backend

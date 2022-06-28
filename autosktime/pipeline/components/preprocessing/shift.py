@@ -16,7 +16,7 @@ class ShiftTransformerComponent(AutoSktimeTransformer):
         'capability:inverse_transform': True
     }
 
-    def __init__(self, lower_bound: float = 10, padding: float = 1.5, random_state=None):
+    def __init__(self, lower_bound: float = 10, padding: float = 1.5, random_state: np.random.RandomState = None):
         super().__init__()
         self.lower_bound = lower_bound
         self.padding = padding

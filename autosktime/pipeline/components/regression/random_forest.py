@@ -1,5 +1,6 @@
 from typing import Union
 
+import numpy as np
 import pandas as pd
 from ConfigSpace.configuration_space import ConfigurationSpace
 from ConfigSpace.hyperparameters import UniformFloatHyperparameter, UniformIntegerHyperparameter, \
@@ -25,7 +26,7 @@ class RandomForestComponent(AutoSktimeRegressionAlgorithm):
             bootstrap: bool = True,
             max_leaf_nodes: int = None,
             min_impurity_decrease: float = 0.,
-            random_state=None,
+            random_state: np.random.RandomState = None,
             n_jobs: int = 1
     ):
         super().__init__()

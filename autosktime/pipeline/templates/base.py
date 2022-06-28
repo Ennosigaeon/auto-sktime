@@ -1,6 +1,7 @@
 from abc import ABC
 from typing import Dict, Any, List, Tuple, Union
 
+import numpy as np
 from sktime.forecasting.compose import TransformedTargetForecaster
 
 from ConfigSpace import Configuration, ConfigurationSpace
@@ -16,7 +17,7 @@ class ConfigurablePipeline(ABC):
             dataset_properties: DatasetProperties = None,
             include: Dict[str, List[str]] = None,
             exclude: Dict[str, List[str]] = None,
-            random_state=None,
+            random_state: np.random.RandomState = None,
             init_params: Dict[str, Any] = None
     ):
         self.init_params = init_params if init_params is not None else {}
@@ -167,7 +168,7 @@ class ConfigurableTransformedTargetForecaster(TransformedTargetForecaster, Confi
             dataset_properties: DatasetProperties = None,
             include: Dict[str, List[str]] = None,
             exclude: Dict[str, List[str]] = None,
-            random_state=None,
+            random_state: np.random.RandomState = None,
             init_params: Dict[str, Any] = None
     ):
         self._init(config, dataset_properties, include, exclude, random_state, init_params)

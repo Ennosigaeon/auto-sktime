@@ -1,5 +1,6 @@
 import warnings
 
+import numpy as np
 import pandas as pd
 from ConfigSpace.conditions import EqualsCondition
 from ConfigSpace.configuration_space import ConfigurationSpace
@@ -19,7 +20,7 @@ class FastICAComponent(AutoSktimePreprocessingAlgorithm):
             whiten: bool = False,
             fun: str = 'logcosh',
             n_components: int = None,
-            random_state=None
+            random_state: np.random.RandomState = None
     ):
         super().__init__()
         self.algorithm = algorithm

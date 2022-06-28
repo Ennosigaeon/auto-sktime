@@ -3,6 +3,7 @@ import logging
 import os
 from typing import Optional, Tuple, List, Dict
 
+import numpy as np
 import pandas as pd
 from sktime.performance_metrics.forecasting._classes import BaseForecastingErrorMetric
 
@@ -39,6 +40,7 @@ class AutoMLSMBO:
             splitter: BaseSplitter,
             use_pynisher: bool = True,
             seed: int = 1,
+            random_state: np.random.RandomState = None,
             metadata_directory: str = None,
             num_metalearning_configs: int = -1,
             hp_priors: bool = False,
@@ -63,6 +65,7 @@ class AutoMLSMBO:
         self.func_eval_time_limit = int(func_eval_time_limit)
         self.memory_limit = memory_limit
         self.seed = seed
+        self.random_state = random_state
 
         # metalearning
         self.metadata_directory = metadata_directory
@@ -108,6 +111,7 @@ class AutoMLSMBO:
         ta_kwargs = {
             'backend': copy.deepcopy(self.backend),
             'seed': self.seed,
+            'random_state': self.random_state,
             'splitter': self.splitter,
             'metric': self.metric,
             'memory_limit': self.memory_limit,

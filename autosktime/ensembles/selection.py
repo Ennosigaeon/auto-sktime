@@ -1,9 +1,8 @@
 from collections import Counter
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
 
 import numpy as np
 import pandas as pd
-from numpy.random import RandomState
 from sklearn.utils import check_random_state
 from sktime.performance_metrics.forecasting._classes import BaseForecastingErrorMetric
 
@@ -22,7 +21,7 @@ class EnsembleSelection(AbstractEnsemble):
             task_type: int,
             metric: BaseForecastingErrorMetric,
             mode: str = 'fast',
-            random_state: Optional[Union[int, np.random.RandomState]] = None,
+            random_state: np.random.RandomState = None
     ) -> None:
         """ An ensemble of selected algorithms
 
@@ -40,7 +39,7 @@ class EnsembleSelection(AbstractEnsemble):
             *   'slow' - The original method used in Rich Caruana's ensemble selection.
             *   'fast' - A faster version of Rich Caruanas' ensemble selection.
 
-        random_state: Optional[int | RandomState] = None
+        random_state: Optional[int | np.random.RandomState] = None
             The random_state used for ensemble selection.
             *   None - Uses numpy's default RandomState object
             *   int - Successive calls to fit will produce the same results

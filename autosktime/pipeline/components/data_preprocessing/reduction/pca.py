@@ -12,7 +12,7 @@ from autosktime.util.common import check_for_bool
 
 
 class PCAComponent(AutoSktimePreprocessingAlgorithm):
-    def __init__(self, keep_variance: float = 0.999, whiten: bool = False, random_state=None):
+    def __init__(self, keep_variance: float = 0.999, whiten: bool = False, random_state: np.random.RandomState = None):
         super().__init__()
         self.keep_variance = keep_variance
         self.whiten = whiten
@@ -25,7 +25,7 @@ class PCAComponent(AutoSktimePreprocessingAlgorithm):
         n_components = float(self.keep_variance)
         self.whiten = check_for_bool(self.whiten)
 
-        self.estimator = PCA(n_components=n_components, whiten=self.whiten, copy=True)
+        self.estimator = PCA(n_components=n_components, whiten=self.whiten, copy=True, random_state=self.random_state)
         # noinspection PyUnresolvedReferences
         self.estimator.fit(X)
 

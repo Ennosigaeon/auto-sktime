@@ -1,7 +1,6 @@
-from typing import Optional, Union
-
 import numpy as np
 import pandas as pd
+
 from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, IGNORES_EXOGENOUS_X, SUPPORTED_INDEX_TYPES, \
     HANDLES_PANEL
 from autosktime.data import DatasetProperties
@@ -9,7 +8,7 @@ from autosktime.pipeline.components.base import COMPONENT_PROPERTIES, AutoSktime
 
 
 class StandardScalerComponent(AutoSktimePreprocessingAlgorithm):
-    def __init__(self, random_state: Optional[Union[int, np.random.RandomState]] = None):
+    def __init__(self, random_state: np.random.RandomState = None):
         super().__init__()
         from sklearn.preprocessing import StandardScaler
         self.estimator = StandardScaler(copy=False)

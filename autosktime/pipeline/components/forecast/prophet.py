@@ -1,5 +1,6 @@
 from typing import Union
 
+import numpy as np
 import pandas as pd
 
 from autosktime.data import DatasetProperties
@@ -26,7 +27,7 @@ class ProphetComponent(AutoSktimePredictor):
             weekly_seasonality: Union[bool, str] = 'auto',
             daily_seasonality: Union[bool, str] = 'auto',
             seasonality_mode: str = 'additive',
-            random_state=None
+            random_state: np.random.RandomState = None
     ):
         super().__init__()
         self.growth = growth

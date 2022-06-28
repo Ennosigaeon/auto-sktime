@@ -1,5 +1,6 @@
 from typing import Union
 
+import numpy as np
 import pandas as pd
 
 from ConfigSpace import ConfigurationSpace
@@ -11,12 +12,11 @@ from sktime.base._base import TagAliaserMixin
 
 
 class IdentityComponent(AutoSktimeTransformer):
-
     _tags = {
         'capability:inverse_transform': True
     }
 
-    def __init__(self, random_state=None):
+    def __init__(self, random_state: np.random.RandomState = None):
         super().__init__()
         self.random_state = random_state
 

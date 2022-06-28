@@ -1,5 +1,6 @@
 from typing import Union
 
+import numpy as np
 import pandas as pd
 
 from ConfigSpace import ConfigurationSpace, CategoricalHyperparameter
@@ -14,13 +15,13 @@ class ImputerComponent(AutoSktimeTransformer):
 
     _estimator_class = Imputer
 
-    def __init__(self, method: str = 'drift', random_state=None):
+    def __init__(self, method: str = 'drift', random_state: np.random.RandomState = None):
         super().__init__()
         self.method = method
         self.random_state = random_state
 
     def _fit(self, X: Union[pd.Series, pd.DataFrame], y: pd.Series = None):
-        self.estimator = self._estimator_class(method=self.method)
+        self.estimator = self._estimator_class(method=self.method, random_state=self.random_state)
         self.estimator.fit(X=X, y=y)
         return self
 

@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 from ConfigSpace.configuration_space import ConfigurationSpace
 from ConfigSpace.hyperparameters import UniformFloatHyperparameter, UniformIntegerHyperparameter, \
@@ -16,7 +17,7 @@ class AdaboostRegressorComponent(AutoSktimeRegressionAlgorithm):
             learning_rate: float = 1.0,
             loss: str = 'linear',
             max_depth: int = 1,
-            random_state=None
+            random_state: np.random.RandomState = None
     ):
         super().__init__()
         self.n_estimators = n_estimators

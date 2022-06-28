@@ -1,5 +1,6 @@
 from typing import Union
 
+import numpy as np
 import pandas as pd
 
 from ConfigSpace import ConfigurationSpace, UniformIntegerHyperparameter, CategoricalHyperparameter, \
@@ -21,7 +22,7 @@ class BoxCoxComponent(AutoSktimeTransformer):
             upper_bound: float = 2,
             method: str = 'mle',
             sp: int = None,
-            random_state=None
+            random_state: np.random.RandomState = None
     ):
         super().__init__()
         self.lower_bound = lower_bound

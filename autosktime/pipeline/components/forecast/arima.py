@@ -1,5 +1,6 @@
 from typing import Union
 
+import numpy as np
 import pandas as pd
 
 from ConfigSpace import ConfigurationSpace, UniformIntegerHyperparameter, CategoricalHyperparameter, \
@@ -27,7 +28,7 @@ class ARIMAComponent(AutoSktimePredictor):
             sp: int = 0,
             maxiter: int = 50,
             with_intercept: Union[bool, str] = True,
-            random_state=None
+            random_state: np.random.RandomState = None
     ):
         super().__init__()
         self.p = p

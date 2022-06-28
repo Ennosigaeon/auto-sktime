@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 from ConfigSpace.configuration_space import ConfigurationSpace
 from ConfigSpace.hyperparameters import UniformFloatHyperparameter
@@ -9,7 +10,13 @@ from autosktime.pipeline.components.base import AutoSktimeRegressionAlgorithm, C
 
 
 class GaussianProcessComponent(AutoSktimeRegressionAlgorithm):
-    def __init__(self, alpha: float = 1e-8, thetaL: float = 1e-5, thetaU: float = 1e-5, random_state=None):
+    def __init__(
+            self,
+            alpha: float = 1e-8,
+            thetaL: float = 1e-5,
+            thetaU: float = 1e-5,
+            random_state: np.random.RandomState = None
+    ):
         super().__init__()
         self.alpha = alpha
         self.thetaL = thetaL

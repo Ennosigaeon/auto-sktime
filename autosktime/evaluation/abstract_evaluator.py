@@ -4,6 +4,7 @@ import time
 import warnings
 from typing import Optional, Union, Type, TextIO
 
+import numpy as np
 import pandas as pd
 from sktime.forecasting.base import ForecastingHorizon
 from sktime.performance_metrics.forecasting._classes import BaseForecastingErrorMetric
@@ -57,6 +58,7 @@ class AbstractEvaluator:
             metric: BaseForecastingErrorMetric,
             configuration: Configuration,
             seed: int = 1,
+            random_state: np.random.RandomState = None,
             num_run: int = 0,
             budget: Optional[float] = None,
             budget_type: Optional[str] = None,
@@ -69,6 +71,7 @@ class AbstractEvaluator:
         self.metric = metric
         self.task_type = self.datamanager.info['task']
         self.seed = seed
+        self.random_state = random_state
         self.num_run = num_run
 
         if self.task_type in FORECAST_TASK:
@@ -118,7 +121,7 @@ class AbstractEvaluator:
         raise NotImplementedError()
 
     def _get_model(self) -> AutoSktimePredictor:
-        return TemplateChoice(config=self.configuration)
+        return TemplateChoice(config=self.configuration, random_state=self.random_state)
 
     def _loss(self, y_true: SUPPORTED_Y_TYPES, y_hat: SUPPORTED_Y_TYPES, error: str = 'raise') -> float:
         try:

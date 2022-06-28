@@ -1,5 +1,6 @@
 from functools import partial
 
+import numpy as np
 import pandas as pd
 from ConfigSpace.configuration_space import ConfigurationSpace
 from ConfigSpace.hyperparameters import UniformFloatHyperparameter, \
@@ -13,7 +14,7 @@ from autosktime.pipeline.components.base import AutoSktimePreprocessingAlgorithm
 
 
 class SelectRegressionRates(AutoSktimePreprocessingAlgorithm):
-    def __init__(self, alpha, mode='percentile', score_func='f_regression', random_state=None):
+    def __init__(self, alpha, mode='percentile', score_func='f_regression', random_state: np.random.RandomState = None):
         super().__init__()
         import sklearn.feature_selection
 

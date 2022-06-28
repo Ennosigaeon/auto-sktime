@@ -55,6 +55,7 @@ class ExecuteTaFunc(AbstractTAFunc):
             self,
             backend: Backend,
             seed: int,
+            random_state: np.random.RandomState,
             splitter: BaseSplitter,
             metric: BaseForecastingErrorMetric,
             stats: Stats,
@@ -73,7 +74,8 @@ class ExecuteTaFunc(AbstractTAFunc):
             fit_predict_try_except_decorator,
             ta=eval_function,
             cost_for_crash=self.worst_possible_result,
-            splitter=splitter
+            splitter=splitter,
+            random_state=random_state
         )
 
         super().__init__(

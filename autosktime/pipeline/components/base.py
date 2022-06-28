@@ -7,6 +7,7 @@ from abc import ABC
 from collections import OrderedDict
 from typing import Dict, Type, List, Any, Union
 
+import numpy as np
 import pandas as pd
 from sklearn.base import RegressorMixin, TransformerMixin
 from sklearn.exceptions import NotFittedError
@@ -184,7 +185,7 @@ class AutoSktimeChoice(AutoSktimeComponent, ABC):
         'requires-fh-in-fit': False
     }
 
-    def __init__(self, estimator: AutoSktimeComponent = None, random_state=None):
+    def __init__(self, estimator: AutoSktimeComponent = None, random_state: np.random.RandomState = None):
         super().__init__()
         self.estimator = estimator
         self.random_state = random_state
@@ -316,7 +317,7 @@ class AutoSktimePreprocessingAlgorithm(TransformerMixin, AutoSktimeComponent, AB
     _estimator_class: Type[TransformerMixin] = None
     estimator: TransformerMixin = None
 
-    def __init__(self, random_state=None):
+    def __init__(self, random_state: np.random.RandomState = None):
         super().__init__()
         self.random_state = random_state
 

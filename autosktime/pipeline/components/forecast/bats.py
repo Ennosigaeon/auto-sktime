@@ -1,5 +1,6 @@
 from typing import Tuple
 
+import numpy as np
 import pandas as pd
 from sktime.forecasting.base import ForecastingHorizon
 from sktime.utils.validation._dependencies import _check_soft_dependencies
@@ -24,7 +25,7 @@ class BATSComponent(AutoSktimePredictor):
             use_damped_trend: bool = None,
             sp: int = None,
             use_arma_errors: bool = True,
-            random_state=None
+            random_state: np.random.RandomState = None
     ):
         super().__init__()
         self.use_box_cox = use_box_cox
