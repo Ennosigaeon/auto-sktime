@@ -1,8 +1,10 @@
 import shutil
 import unittest
 
+import pandas as pd
+
 from autosktime.metrics import calculate_loss
-from sktime.datasets import load_airline
+from sktime.datasets import load_airline, load_longley
 from sktime.forecasting.model_selection import temporal_train_test_split
 
 from autosktime.automl import AutoML
@@ -11,14 +13,19 @@ from autosktime.util import resolve_index
 from sktime.utils._testing.hierarchical import _bottom_hier_datagen
 
 
-def fit_and_predict(y: SUPPORTED_Y_TYPES):
+def fit_and_predict(y: SUPPORTED_Y_TYPES, X: pd.DataFrame = None):
     try:
         shutil.rmtree('tmp')
         shutil.rmtree('output')
     except FileNotFoundError:
         pass
 
-    y_train, y_test = temporal_train_test_split(y, test_size=0.2)
+    if X is not None:
+        y_train, y_test, X_train, X_test = temporal_train_test_split(y, X, test_size=0.2)
+    else:
+        y_train, y_test = temporal_train_test_split(y, test_size=0.2)
+        X_train = None
+        X_test = None
 
     automl = AutoML(
         time_left_for_this_task=10,
@@ -27,8 +34,8 @@ def fit_and_predict(y: SUPPORTED_Y_TYPES):
         seed=0
     )
 
-    automl.fit(y_train, dataset_name='test')
-    y_pred = automl.predict(resolve_index(y_test.index))
+    automl.fit(y_train, X_train, dataset_name='test')
+    y_pred = automl.predict(resolve_index(y_test.index), X_test)
     loss = calculate_loss(y_test, y_pred, automl._task, automl._metric)
 
     return automl, loss
@@ -55,7 +62,7 @@ class AutoMLTest(unittest.TestCase):
             'linear:normalizer:box_cox:sp': 0,
             'linear:normalizer:box_cox:upper_bound': 2.0,
             'linear:outlier:n_sigma': 3.0,
-            'linear:outlier:window_length': 10,
+            'linear:outlier:window_length': 5,
         }, {
             '__choice__': 'regression',
             'regression:detrend:degree': 2,
@@ -80,7 +87,7 @@ class AutoMLTest(unittest.TestCase):
             'regression:reduction:strategy': 'recursive',
             'regression:reduction:window_length': 3,
         }]
-        perf = [2147483648., 0.3026, 0.1378]
+        perf = [2147483648., 0.2953, 0.1378]
 
         for i in range(3):
             automl, _ = fit_and_predict(y)
@@ -93,14 +100,20 @@ class AutoMLTest(unittest.TestCase):
             self.assertEqual(incumbents[1], automl.trajectory_[2].incumbent.get_dictionary())
             self.assertEqual(perf[1], automl.trajectory_[1].train_perf)
 
-    def test_series(self):
+    def test_univariate_endogenous(self):
         y = load_airline()
 
         _, loss = fit_and_predict(y)
-        self.assertAlmostEqual(0.3183865862138596, loss)
+        self.assertAlmostEqual(0.30466174260378953, loss)
 
-    def test_multi_index(self):
+    def test_univariate_exogenous(self):
+        y, X = load_longley()
+
+        _, loss = fit_and_predict(y, X)
+        self.assertAlmostEqual(1.3497793876562705, loss)
+
+    def test_panel_endogenous(self):
         y = _bottom_hier_datagen(no_levels=1, random_seed=0)
 
         _, loss = fit_and_predict(y)
-        self.assertAlmostEqual(0.387640331022832, loss)
+        self.assertAlmostEqual(0.37356907491439234, loss)

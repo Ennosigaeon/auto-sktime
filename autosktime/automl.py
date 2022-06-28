@@ -43,7 +43,8 @@ from smac.tae import StatusType
 
 class AutoML(NotVectorizedMixin, BaseForecaster):
     _tags = {
-        'requires-fh-in-fit': False
+        'requires-fh-in-fit': False,
+        'X-y-must-have-same-index': True
     }
 
     def __init__(self,

@@ -1,6 +1,7 @@
 from typing import Tuple, List
 
 import pandas as pd
+from sktime.forecasting.compose._pipeline import SUPPORTED_MTYPES
 
 from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, IGNORES_EXOGENOUS_X, SUPPORTED_INDEX_TYPES, \
     HANDLES_PANEL
@@ -14,6 +15,16 @@ from autosktime.pipeline.templates.base import ConfigurableTransformedTargetFore
 
 
 class RegressionPipeline(ConfigurableTransformedTargetForecaster):
+    _tags = {
+        "scitype:y": "both",
+        "y_inner_mtype": SUPPORTED_MTYPES,
+        "X_inner_mtype": SUPPORTED_MTYPES,
+        "ignores-exogeneous-X": False,
+        "requires-fh-in-fit": False,
+        "handles-missing-data": False,
+        "capability:pred_int": True,
+        'X-y-must-have-same-index': True
+    }
 
     def _get_pipeline_steps(self) -> List[Tuple[str, AutoSktimeComponent]]:
         steps = [

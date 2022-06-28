@@ -2,6 +2,7 @@ from itertools import product
 from typing import List, Tuple
 
 import pandas as pd
+from sktime.forecasting.compose._pipeline import SUPPORTED_MTYPES
 
 from ConfigSpace import ConfigurationSpace, ForbiddenAndConjunction, ForbiddenEqualsClause
 from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, IGNORES_EXOGENOUS_X, SUPPORTED_INDEX_TYPES, \
@@ -17,6 +18,16 @@ from autosktime.pipeline.templates.base import ConfigurableTransformedTargetFore
 
 
 class UnivariateEndogenousPipeline(ConfigurableTransformedTargetForecaster):
+    _tags = {
+        "scitype:y": "both",
+        "y_inner_mtype": SUPPORTED_MTYPES,
+        "X_inner_mtype": SUPPORTED_MTYPES,
+        "ignores-exogeneous-X": False,
+        "requires-fh-in-fit": False,
+        "handles-missing-data": False,
+        "capability:pred_int": True,
+        'X-y-must-have-same-index': True
+    }
 
     def get_hyperparameter_search_space(self, dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
         if not hasattr(self, 'config_space') or self.config_space is None:

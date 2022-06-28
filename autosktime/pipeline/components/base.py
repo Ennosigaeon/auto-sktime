@@ -31,7 +31,8 @@ class AutoSktimeComponent(BaseEstimator):
     estimator: BaseEstimator = None
 
     _tags = {
-        'fit_is_empty': False
+        'fit_is_empty': False,
+        'X-y-must-have-same-index': True
     }
 
     @staticmethod
@@ -181,9 +182,6 @@ def find_components(package, directory, base_class) -> Dict[str, Type[AutoSktime
 
 
 class AutoSktimeChoice(AutoSktimeComponent, ABC):
-    _tags = {
-        'requires-fh-in-fit': False
-    }
 
     def __init__(self, estimator: AutoSktimeComponent = None, random_state: np.random.RandomState = None):
         super().__init__()
