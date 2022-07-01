@@ -1,29 +1,57 @@
+import os.path
 import shutil
 import unittest
+from pathlib import Path
 
+import numpy as np
 import pandas as pd
-
-from autosktime.metrics import calculate_loss
 from sktime.datasets import load_airline, load_longley
 from sktime.forecasting.model_selection import temporal_train_test_split
+from sktime.utils._testing.hierarchical import _bottom_hier_datagen
 
 from autosktime.automl import AutoML
 from autosktime.constants import SUPPORTED_Y_TYPES
+from autosktime.data.benchmark.rul import load_rul
+from autosktime.data.splitter import PanelHoldoutSplitter
+from autosktime.metrics import calculate_loss
 from autosktime.util import resolve_index
-from sktime.utils._testing.hierarchical import _bottom_hier_datagen
 
 
-def fit_and_predict(y: SUPPORTED_Y_TYPES, X: pd.DataFrame = None):
+def train_test_split(y: SUPPORTED_Y_TYPES, X: pd.DataFrame = None, test_size: float = None):
+    train_split, test_split = next(PanelHoldoutSplitter(test_size, random_state=np.random.RandomState(42)).split(y))
+
+    y_train = y.iloc[train_split]
+    y_test = y.iloc[test_split]
+
+    y_train.index = y_train.index.remove_unused_levels()
+    y_test.index = y_test.index.remove_unused_levels()
+
+    if X is None:
+        return y_train, y_test
+    else:
+        X_train = X.iloc[train_split, :]
+        X_test = X.iloc[test_split, :]
+        X_train.index = X_train.index.remove_unused_levels()
+        X_test.index = X_test.index.remove_unused_levels()
+
+        return y_train, y_test, X_train, X_test
+
+
+def fit_and_predict(y: SUPPORTED_Y_TYPES, X: pd.DataFrame = None, panel: bool = False):
     try:
         shutil.rmtree('tmp')
         shutil.rmtree('output')
     except FileNotFoundError:
         pass
 
+    splitter = train_test_split if panel else temporal_train_test_split
+
     if X is not None:
-        y_train, y_test, X_train, X_test = temporal_train_test_split(y, X, test_size=0.2)
+        y_train, y_test, X_train, X_test = splitter(y, X, test_size=0.2)
+        if panel:
+            X_test[y_test.columns[0]] = y_test
     else:
-        y_train, y_test = temporal_train_test_split(y, test_size=0.2)
+        y_train, y_test = splitter(y, test_size=0.2)
         X_train = None
         X_test = None
 
@@ -31,6 +59,7 @@ def fit_and_predict(y: SUPPORTED_Y_TYPES, X: pd.DataFrame = None):
         time_left_for_this_task=10,
         per_run_time_limit=10,
         temporary_directory='tmp',
+        resampling_strategy='panel-holdout' if panel else 'temporal-holdout',
         seed=0
     )
 
@@ -116,4 +145,12 @@ class AutoMLTest(unittest.TestCase):
         y = _bottom_hier_datagen(no_levels=1, random_seed=0)
 
         _, loss = fit_and_predict(y)
-        self.assertAlmostEqual(0.37356907491439234, loss)
+        self.assertAlmostEqual(0.16764395883774477, loss)
+
+    def test_panel_exogenous(self):
+        X, y = load_rul(
+            os.path.join(Path(__file__).parent.resolve(), 'data', 'rul')
+        )
+        _, loss = fit_and_predict(y, X, panel=True)
+
+        self.assertAlmostEqual(5.17433814792307e-05, loss)

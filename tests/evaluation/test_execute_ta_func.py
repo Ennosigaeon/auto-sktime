@@ -3,6 +3,8 @@ import unittest
 from typing import Dict
 from unittest import mock
 
+import numpy as np
+
 from autosktime.constants import UNIVARIATE_FORECAST
 from smac.runhistory.runhistory import RunInfo
 from smac.stats.stats import Stats
@@ -10,7 +12,7 @@ from smac.stats.stats import Stats
 from ConfigSpace import Configuration
 from autosktime.automl_common.common.utils.backend import create
 from autosktime.data import DataManager
-from autosktime.data.splitter import HoldoutSplitter
+from autosktime.data.splitter import TemporalHoldoutSplitter
 from autosktime.evaluation import ExecuteTaFunc
 from autosktime.metrics import MeanAbsolutePercentageError
 from autosktime.pipeline.templates.univariate_endogenous import UnivariateEndogenousPipeline
@@ -28,7 +30,7 @@ class TestExecuteTAFunc(unittest.TestCase):
 
             backend.save_datamanager(datamanager)
             metric = MeanAbsolutePercentageError()
-            splitter = HoldoutSplitter()
+            splitter = TemporalHoldoutSplitter()
 
             cs = UnivariateEndogenousPipeline(dataset_properties=datamanager.dataset_properties).config_space
             config = Configuration(cs, config_dict)

@@ -53,6 +53,9 @@ class ReductionComponent(AutoSktimePredictor):
         return self
 
     def set_hyperparameters(self, configuration: Configuration, init_params: Dict[str, Any] = None):
+        if self.estimator is not None:
+            return
+
         preprocessing_params = {}
         regression_params = {}
 

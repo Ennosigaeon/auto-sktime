@@ -82,7 +82,7 @@ class AutoML(NotVectorizedMixin, BaseForecaster):
         self._memory_limit = memory_limit
         self._include = include
         self._exclude = exclude
-        self._resampling_strategy = resampling_strategy if resampling_strategy else 'holdout'
+        self._resampling_strategy = resampling_strategy
         self._resampling_strategy_arguments = resampling_strategy_arguments if resampling_strategy_arguments is not None else {}
         self._metadata_directory = metadata_directory
         self._num_metalearning_configs = num_metalearning_configs
@@ -226,6 +226,11 @@ class AutoML(NotVectorizedMixin, BaseForecaster):
             self._logger.info('Not starting ensemble builder because ensemble size is <= 0.')
         else:
             self._logger.info(f'Start Ensemble with {time_left_for_ensembles:5.2f}sec time left')
+
+            splitter = self._determine_resampling()
+            splitter.random_state = 42
+            splitter.fh_ = 0.2
+
             proc_ensemble = EnsembleBuilderManager(
                 start_time=time.time(),
                 time_left_for_ensembles=time_left_for_ensembles,
@@ -235,11 +240,12 @@ class AutoML(NotVectorizedMixin, BaseForecaster):
                 metric=self._metric,
                 ensemble_size=self._ensemble_size,
                 ensemble_nbest=self._ensemble_nbest,
+                splitter=splitter,
                 max_models_on_disc=self._max_models_on_disc,
                 seed=self._seed,
                 random_state=self._random_state
             )
-            y_ens, _ = get_ensemble_targets(self._datamanager, ensemble_size=0.2)
+            y_ens, _ = get_ensemble_targets(self._datamanager, splitter)
             self._backend.save_targets_ensemble(y_ens)
 
         # Run SMAC
@@ -359,6 +365,8 @@ class AutoML(NotVectorizedMixin, BaseForecaster):
             splitter = self._resampling_strategy
         elif self._resampling_strategy in splitter_types:
             splitter = splitter_types[self._resampling_strategy](**self._resampling_strategy_arguments)
+            # Not all splitters have a random_state argument
+            splitter.random_state = self._random_state
         else:
             raise ValueError(f'Unable to create {type(BaseSplitter)} from = {self._resampling_strategy}')
         return splitter

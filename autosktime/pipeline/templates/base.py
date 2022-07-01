@@ -6,7 +6,7 @@ from sktime.forecasting.compose import TransformedTargetForecaster
 
 from ConfigSpace import Configuration, ConfigurationSpace
 from autosktime.data import DatasetProperties
-from autosktime.pipeline.components.base import AutoSktimeComponent, AutoSktimeChoice
+from autosktime.pipeline.components.base import AutoSktimeComponent, AutoSktimeChoice, AutoSktimePredictor
 
 
 class ConfigurablePipeline(ABC):
@@ -159,7 +159,7 @@ class ConfigurablePipeline(ABC):
         raise NotImplementedError()
 
 
-class ConfigurableTransformedTargetForecaster(TransformedTargetForecaster, ConfigurablePipeline, AutoSktimeComponent,
+class ConfigurableTransformedTargetForecaster(TransformedTargetForecaster, ConfigurablePipeline, AutoSktimePredictor,
                                               ABC):
 
     def __init__(

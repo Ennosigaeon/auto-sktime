@@ -10,13 +10,14 @@ from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, IGNOR
     HANDLES_PANEL, UNIVARIATE_TASKS, MULTIVARIATE_TASKS, PANEL_TASKS
 from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import AutoSktimePredictor, COMPONENT_PROPERTIES
-from autosktime.pipeline.components.util import sub_configuration
+from autosktime.pipeline.components.util import sub_configuration, NotVectorizedMixin
 from autosktime.pipeline.templates.base import ConfigurableTransformedTargetForecaster
+from autosktime.pipeline.templates.panel_regression import PanelRegressionPipeline
 from autosktime.pipeline.templates.regression import RegressionPipeline
 from autosktime.pipeline.templates.univariate_endogenous import UnivariateEndogenousPipeline
 
 
-class TemplateChoice(AutoSktimePredictor):
+class TemplateChoice(NotVectorizedMixin, AutoSktimePredictor):
 
     def __init__(
             self,
@@ -132,7 +133,8 @@ class TemplateChoice(AutoSktimePredictor):
     def get_components(self) -> Dict[str, Type[ConfigurableTransformedTargetForecaster]]:
         return {
             'linear': UnivariateEndogenousPipeline,
-            'regression': RegressionPipeline
+            'regression': RegressionPipeline,
+            'panel-regression': PanelRegressionPipeline
         }
 
     def _fit(self, y: pd.Series, X: pd.DataFrame = None, fh: ForecastingHorizon = None):

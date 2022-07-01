@@ -16,5 +16,6 @@ def get_configuration_space(
     return TemplateChoice(random_state=random_state).get_hyperparameter_search_space(
         dataset_properties=dataset_properties,
         include=include,
-        exclude=exclude
+        exclude=exclude,
+        default='panel-regression'
     )

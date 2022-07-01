@@ -107,6 +107,8 @@ class AbstractEvaluator:
 
             fh = ForecastingHorizon(resolve_index(y.index), is_relative=False)
             name = get_name(y)
+            if isinstance(y.index, pd.MultiIndex):
+                X = pd.concat([X, y], axis=1) if X is not None else y
 
             y_pred = model.predict(fh, X=X)
             y_pred.name = name

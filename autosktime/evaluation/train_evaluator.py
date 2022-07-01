@@ -165,7 +165,10 @@ class TrainEvaluator(AbstractEvaluator):
         _fit_and_suppress_warnings(self.logger, model, y, X, fh)
         self.model = model
 
-        y_test, X_test = get_ensemble_targets(self.datamanager, ensemble_size)
+        splitter = type(self.splitter)(fh=0.2)
+        splitter.random_state = 42
+
+        y_test, X_test = get_ensemble_targets(self.datamanager, splitter)
         test_pred = self.predict_function(y_test, X_test, model)
 
         return model, test_pred
