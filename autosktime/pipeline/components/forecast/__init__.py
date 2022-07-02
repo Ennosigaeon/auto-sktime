@@ -21,7 +21,7 @@ class ForecasterChoice(AutoSktimeChoice, AutoSktimePredictor):
     def get_hyperparameter_search_space(
             self,
             dataset_properties: DatasetProperties = None,
-            default: str = 'arima',
+            default: str = 'naive',
             include: List[str] = None,
             exclude: List[str] = None
     ) -> ConfigurationSpace:
