@@ -92,7 +92,7 @@ class SGDComponent(AutoSktimeRegressionAlgorithm):
             raise NotImplementedError()
         # noinspection PyUnresolvedReferences
         y_pred = self.estimator.predict(X)
-        tmp = self.scaler.inverse_transform(np.atleast_2d(y_pred))
+        tmp = self.scaler.inverse_transform(np.atleast_2d(y_pred))[0]
         return tmp
 
     @staticmethod

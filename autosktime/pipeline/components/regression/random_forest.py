@@ -87,7 +87,7 @@ class RandomForestComponent(AutoSktimeRegressionAlgorithm):
     @staticmethod
     def get_hyperparameter_search_space(dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
         cs = ConfigurationSpace()
-        criterion = CategoricalHyperparameter('criterion', ['mse', 'friedman_mse', 'mae'])
+        criterion = CategoricalHyperparameter('criterion', ['squared_error', 'absolute_error', 'poisson'])
 
         max_features = UniformFloatHyperparameter('max_features', 0.1, 1.0, default_value=1.0)
 
