@@ -10,7 +10,7 @@ from autosktime.pipeline.components.base import AutoSktimeComponent, COMPONENT_P
 from autosktime.pipeline.components.preprocessing.detrend import DetrendComponent
 from autosktime.pipeline.components.preprocessing.impute import ImputerComponent
 from autosktime.pipeline.components.preprocessing.outlier import HampelFilterComponent
-from autosktime.pipeline.components.reduction import ReductionComponent
+from autosktime.pipeline.components.reduction.reduction import ReductionComponent
 from autosktime.pipeline.templates.base import ConfigurableTransformedTargetForecaster
 
 

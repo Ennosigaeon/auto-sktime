@@ -84,8 +84,11 @@ class AutoSktimeComponent(BaseEstimator):
         tags.update(self._tags)
         return tags
 
-    def set_hyperparameters(self, configuration: Configuration, init_params: Dict[str, Any] = None):
-        params = configuration.get_dictionary()
+    def set_hyperparameters(self, configuration: Union[Configuration, Dict], init_params: Dict[str, Any] = None):
+        if isinstance(configuration, Configuration):
+            params = configuration.get_dictionary()
+        else:
+            params = configuration
 
         for param, value in params.items():
             if not hasattr(self, param):
