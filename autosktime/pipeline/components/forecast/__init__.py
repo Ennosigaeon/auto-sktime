@@ -3,6 +3,7 @@ from collections import OrderedDict
 from typing import Dict, Type, List
 
 import pandas as pd
+from sktime.forecasting.base import ForecastingHorizon
 
 from ConfigSpace import ConfigurationSpace
 from autosktime.constants import SUPPORTED_INDEX_TYPES, HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, IGNORES_EXOGENOUS_X, \
@@ -10,7 +11,7 @@ from autosktime.constants import SUPPORTED_INDEX_TYPES, HANDLES_UNIVARIATE, HAND
 from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import AutoSktimeComponent, find_components, AutoSktimeChoice, \
     AutoSktimePredictor
-from sktime.forecasting.base import ForecastingHorizon
+from autosktime.pipeline.util import Int64Index
 
 _forecaster_directory = os.path.split(__file__)[0]
 _forecasters = find_components(__package__, _forecaster_directory, AutoSktimePredictor)
@@ -34,7 +35,7 @@ class ForecasterChoice(AutoSktimeChoice, AutoSktimePredictor):
             HANDLES_MULTIVARIATE: True,
             HANDLES_PANEL: True,
             IGNORES_EXOGENOUS_X: False,
-            SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.DatetimeIndex, pd.PeriodIndex, pd.core.indexes.numeric.Int64Index]
+            SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.DatetimeIndex, pd.PeriodIndex, Int64Index]
         }
 
     @classmethod

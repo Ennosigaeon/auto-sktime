@@ -19,7 +19,7 @@ from ConfigSpace import Configuration, ConfigurationSpace, CategoricalHyperparam
 from autosktime.constants import SUPPORTED_INDEX_TYPES, UNIVARIATE_TASKS, MULTIVARIATE_TASKS, PANEL_TASKS, \
     HANDLES_PANEL, HANDLES_MULTIVARIATE, HANDLES_UNIVARIATE
 from autosktime.data import DatasetProperties
-from autosktime.pipeline.components.util import sub_configuration
+from autosktime.pipeline.util import sub_configuration
 
 COMPONENT_PROPERTIES = Any
 

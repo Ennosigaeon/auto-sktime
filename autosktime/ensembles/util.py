@@ -8,7 +8,7 @@ from sktime.forecasting.compose._ensemble import _check_aggfunc
 from autosktime.constants import SUPPORTED_Y_TYPES
 from autosktime.data import DataManager
 from autosktime.data.splitter import BaseSplitter
-from autosktime.pipeline.components.util import NotVectorizedMixin
+from autosktime.pipeline.util import NotVectorizedMixin
 
 
 # noinspection PyAbstractClass

@@ -11,8 +11,8 @@ from autosktime.pipeline.components.base import AutoSktimeComponent, COMPONENT_P
 from autosktime.pipeline.components.data_preprocessing import DataPreprocessingPipeline
 from autosktime.pipeline.components.reduction.panel import RecursivePanelReducer
 from autosktime.pipeline.components.regression import RegressorChoice
-from autosktime.pipeline.components.util import NotVectorizedMixin
 from autosktime.pipeline.templates.base import ConfigurableTransformedTargetForecaster
+from autosktime.pipeline.util import NotVectorizedMixin, Int64Index
 
 
 class PanelRegressionPipeline(NotVectorizedMixin, ConfigurableTransformedTargetForecaster):
@@ -79,5 +79,5 @@ class PanelRegressionPipeline(NotVectorizedMixin, ConfigurableTransformedTargetF
             HANDLES_MULTIVARIATE: False,
             HANDLES_PANEL: True,
             IGNORES_EXOGENOUS_X: False,
-            SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.DatetimeIndex, pd.PeriodIndex, pd.core.indexes.numeric.Int64Index]
+            SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.DatetimeIndex, pd.PeriodIndex, Int64Index]
         }

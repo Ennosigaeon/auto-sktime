@@ -14,6 +14,7 @@ from autosktime.pipeline.components.data_preprocessing.reduction import Reductio
 from autosktime.pipeline.components.data_preprocessing.rescaling import RescalingChoice
 from autosktime.pipeline.components.data_preprocessing.variance_threshold import VarianceThresholdComponent
 from autosktime.pipeline.templates.base import ConfigurablePipeline
+from autosktime.pipeline.util import Int64Index
 
 
 class DataPreprocessingPipeline(Pipeline, ConfigurablePipeline):
@@ -37,7 +38,7 @@ class DataPreprocessingPipeline(Pipeline, ConfigurablePipeline):
             HANDLES_MULTIVARIATE: True,
             HANDLES_PANEL: True,
             IGNORES_EXOGENOUS_X: False,
-            SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.DatetimeIndex, pd.PeriodIndex, pd.core.indexes.numeric.Int64Index]
+            SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.DatetimeIndex, pd.PeriodIndex, Int64Index]
         }
 
     def _get_pipeline_steps(self, dataset_properties: DatasetProperties = None) -> List[Tuple[str, BaseEstimator]]:

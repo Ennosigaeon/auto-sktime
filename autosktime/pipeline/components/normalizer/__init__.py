@@ -11,13 +11,14 @@ from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import AutoSktimeComponent, find_components, AutoSktimeChoice, \
     AutoSktimeTransformer
 from autosktime.pipeline.components.identity import IdentityComponent
+from autosktime.pipeline.util import Int64Index
 
 _normalizer_directory = os.path.split(__file__)[0]
 _normalizers = find_components(__package__, _normalizer_directory, AutoSktimeTransformer)
 
 
 class NormalizerChoice(AutoSktimeChoice, AutoSktimeTransformer):
-    
+
     def get_hyperparameter_search_space(
             self,
             dataset_properties: DatasetProperties = None,
@@ -34,7 +35,7 @@ class NormalizerChoice(AutoSktimeChoice, AutoSktimeTransformer):
             HANDLES_MULTIVARIATE: True,
             HANDLES_PANEL: True,
             IGNORES_EXOGENOUS_X: True,
-            SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.DatetimeIndex, pd.PeriodIndex, pd.core.indexes.numeric.Int64Index]
+            SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.DatetimeIndex, pd.PeriodIndex, Int64Index]
         }
 
     @classmethod

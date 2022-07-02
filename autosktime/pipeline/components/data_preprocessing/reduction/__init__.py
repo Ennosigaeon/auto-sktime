@@ -10,6 +10,7 @@ from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, IGNOR
 from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import AutoSktimeChoice, find_components, AutoSktimePreprocessingAlgorithm, \
     COMPONENT_PROPERTIES
+from autosktime.pipeline.util import Int64Index
 
 classifier_directory = os.path.split(__file__)[0]
 _preprocessors = find_components(__package__, classifier_directory, AutoSktimePreprocessingAlgorithm)
@@ -39,5 +40,5 @@ class ReductionChoice(AutoSktimeChoice, AutoSktimePreprocessingAlgorithm):
             HANDLES_MULTIVARIATE: True,
             HANDLES_PANEL: True,
             IGNORES_EXOGENOUS_X: False,
-            SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.DatetimeIndex, pd.PeriodIndex, pd.core.indexes.numeric.Int64Index]
+            SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.DatetimeIndex, pd.PeriodIndex, Int64Index]
         }

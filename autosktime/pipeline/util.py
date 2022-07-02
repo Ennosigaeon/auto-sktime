@@ -1,5 +1,6 @@
 from typing import Any, Dict, Tuple
 
+import pandas as pd
 from sktime.datatypes import check_is_scitype
 
 
@@ -49,3 +50,7 @@ def sub_configuration(params: Dict[str, Any], init_params: Dict[str, Any]) -> Tu
             new_params[param] = value
 
     return choice, new_params
+
+
+# noinspection PyUnresolvedReferences
+Int64Index = pd.core.indexes.numeric.Int64Index

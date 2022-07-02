@@ -112,7 +112,7 @@ class MeanAbsoluteScaledError(MeanAbsoluteScaledError_):
 
 class OverallWeightedAverage(_BaseForecastingErrorMetric):
 
-    def __init__(self, multioutput="uniform_average", symmetric=True):
+    def __init__(self, multioutput: str = "uniform_average", symmetric: bool = True):
         name = "OverallWeightedAverage"
         func = overall_weighted_average
         super().__init__(

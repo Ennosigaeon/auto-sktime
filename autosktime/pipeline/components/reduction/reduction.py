@@ -15,6 +15,7 @@ from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import COMPONENT_PROPERTIES, AutoSktimePredictor
 from autosktime.pipeline.components.data_preprocessing import DataPreprocessingPipeline
 from autosktime.pipeline.components.regression import RegressorChoice
+from autosktime.pipeline.util import Int64Index
 
 
 def _predict_in_sample(self, fh, X=None, return_pred_int=False, alpha=None):
@@ -100,7 +101,7 @@ class ReductionComponent(AutoSktimePredictor):
             HANDLES_MULTIVARIATE: True,
             HANDLES_PANEL: False,
             IGNORES_EXOGENOUS_X: False,
-            SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.DatetimeIndex, pd.PeriodIndex, pd.core.indexes.numeric.Int64Index]
+            SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.DatetimeIndex, pd.PeriodIndex, Int64Index]
         }
 
     @staticmethod

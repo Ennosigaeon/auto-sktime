@@ -165,7 +165,7 @@ class TrainEvaluator(AbstractEvaluator):
         _fit_and_suppress_warnings(self.logger, model, y, X, fh)
         self.model = model
 
-        splitter = type(self.splitter)(fh=0.2)
+        splitter = type(self.splitter)(fh=ensemble_size)
         splitter.random_state = 42
 
         y_test, X_test = get_ensemble_targets(self.datamanager, splitter)

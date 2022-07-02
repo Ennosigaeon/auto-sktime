@@ -11,6 +11,7 @@ from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, IGNOR
     HANDLES_PANEL
 from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import AutoSktimePreprocessingAlgorithm, COMPONENT_PROPERTIES
+from autosktime.pipeline.util import Int64Index
 
 
 class SelectRegressionRates(AutoSktimePreprocessingAlgorithm):
@@ -51,6 +52,7 @@ class SelectRegressionRates(AutoSktimePreprocessingAlgorithm):
             # noinspection PyUnresolvedReferences
             Xt = self.estimator.transform(X)
         except ValueError as e:
+            # noinspection PyUnresolvedReferences
             if 'zero-size array to reduction operation maximum which has no identity' in e.message:
                 raise ValueError(f'{self.__class__.__name__} removed all features.')
             else:
@@ -67,7 +69,7 @@ class SelectRegressionRates(AutoSktimePreprocessingAlgorithm):
             HANDLES_MULTIVARIATE: True,
             HANDLES_PANEL: True,
             IGNORES_EXOGENOUS_X: False,
-            SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.DatetimeIndex, pd.PeriodIndex, pd.core.indexes.numeric.Int64Index]
+            SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.DatetimeIndex, pd.PeriodIndex, Int64Index]
         }
 
     @staticmethod

@@ -28,9 +28,9 @@ from autosktime.ensembles.singlebest import SingleBest
 from autosktime.ensembles.util import PrefittedEnsembleForecaster, get_ensemble_targets
 from autosktime.evaluation import ExecuteTaFunc
 from autosktime.metrics import default_metric_for_task
-from autosktime.pipeline.components.util import NotVectorizedMixin
 from autosktime.pipeline.templates import util
 from autosktime.pipeline.templates.base import BasePipeline
+from autosktime.pipeline.util import NotVectorizedMixin
 from autosktime.smbo import AutoMLSMBO
 from autosktime.util.backend import create, Backend
 from autosktime.util.dask_single_thread_client import SingleThreadedClient
@@ -83,7 +83,8 @@ class AutoML(NotVectorizedMixin, BaseForecaster):
         self._include = include
         self._exclude = exclude
         self._resampling_strategy = resampling_strategy
-        self._resampling_strategy_arguments = resampling_strategy_arguments if resampling_strategy_arguments is not None else {}
+        res_strat = resampling_strategy_arguments if resampling_strategy_arguments is not None else {}
+        self._resampling_strategy_arguments = res_strat
         self._metadata_directory = metadata_directory
         self._num_metalearning_configs = num_metalearning_configs
         self._hp_priors = hp_priors
