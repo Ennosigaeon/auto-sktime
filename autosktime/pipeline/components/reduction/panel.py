@@ -1,18 +1,24 @@
+from typing import List, Union, Dict, Any, Tuple
+
 import numpy as np
 import pandas as pd
+from sklearn.pipeline import Pipeline
 from sktime.forecasting.base import ForecastingHorizon
 from sktime.forecasting.base._base import DEFAULT_ALPHA
 from sktime.forecasting.compose._reduce import RecursiveTabularRegressionForecaster
 
-from ConfigSpace import ConfigurationSpace
+from ConfigSpace import ConfigurationSpace, Configuration, UniformIntegerHyperparameter
 from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, HANDLES_PANEL, IGNORES_EXOGENOUS_X, \
     SUPPORTED_INDEX_TYPES
 from autosktime.data import DatasetProperties
-from autosktime.pipeline.components.base import AutoSktimeComponent, COMPONENT_PROPERTIES
+from autosktime.pipeline.components.base import AutoSktimeComponent, COMPONENT_PROPERTIES, AutoSktimeTransformer
 from autosktime.pipeline.components.util import NotVectorizedMixin
+from autosktime.pipeline.templates.base import set_pipeline_configuration, get_pipeline_search_space
 
 
-class RecursiveReducer(NotVectorizedMixin, RecursiveTabularRegressionForecaster, AutoSktimeComponent):
+class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForecaster, AutoSktimeComponent):
+    configspace: ConfigurationSpace = None
+
     _tags = {
         'scitype:transform-input': 'Panel',
         'scitype:transform-output': 'Panel',
@@ -27,8 +33,17 @@ class RecursiveReducer(NotVectorizedMixin, RecursiveTabularRegressionForecaster,
         'fit_is_empty': False
     }
 
-    def __init__(self, estimator, window_length=5, transformers=None):
+    def __init__(
+            self,
+            estimator: Pipeline,
+            dataset_properties: DatasetProperties,
+            window_length: int = 5,
+            transformers: List[AutoSktimeTransformer] = None,
+            random_state: np.random.RandomState = None
+    ):
         super(NotVectorizedMixin, self).__init__(estimator, window_length, transformers)
+        self.dataset_properties = dataset_properties
+        self.random_state = random_state
 
     @staticmethod
     def get_properties(dataset_properties: DatasetProperties = None) -> COMPONENT_PROPERTIES:
@@ -40,9 +55,8 @@ class RecursiveReducer(NotVectorizedMixin, RecursiveTabularRegressionForecaster,
             SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.DatetimeIndex, pd.PeriodIndex, pd.core.indexes.numeric.Int64Index]
         }
 
-    @staticmethod
-    def get_hyperparameter_search_space(dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
-        return ConfigurationSpace()
+    def get_fitted_params(self):
+        pass
 
     def _fit(self, y, X=None, fh=None):
         self._target_column = y.name if isinstance(y, pd.Series) else y.columns[0]
@@ -100,3 +114,48 @@ class RecursiveReducer(NotVectorizedMixin, RecursiveTabularRegressionForecaster,
             return pd.DataFrame(y_pred, columns=self._y.columns, index=fh.to_pandas())
         else:
             return pd.Series(y_pred, name=self._y.name, index=fh.to_pandas())
+
+    def set_hyperparameters(
+            self,
+            configuration: Union[Configuration, Dict[str, Any]],
+            init_params: Dict[str, Any] = None
+    ):
+        # RecursiveReducer is a hybrid between Component and Pipeline which makes Configuration handling a bit messy
+        if isinstance(configuration, Configuration):
+            params = configuration.get_dictionary()
+        else:
+            params = configuration
+
+        def split_dict(d: Dict) -> Tuple[Dict, Dict]:
+            sub_hp = {}
+            own_hp = {}
+            for param, value in d.items():
+                if param.startswith('estimator:'):
+                    new_name = param.replace(f'estimator:', '', 1)
+                    sub_hp[new_name] = value
+                else:
+                    own_hp[param] = value
+            return own_hp, sub_hp
+
+        own_hp, estimator_config_dict = split_dict(params)
+        if init_params is not None:
+            own_init_params, estimator_init_params = split_dict(init_params)
+        else:
+            own_init_params, estimator_init_params = None, None
+
+        super().set_hyperparameters(own_hp, own_init_params)
+        set_pipeline_configuration(estimator_config_dict, self.estimator.steps, self.dataset_properties,
+                                   estimator_init_params)
+
+        return self
+
+    def get_hyperparameter_search_space(self, dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
+        # RecursiveReducer is a hybrid between Component and Pipeline which makes Configuration handling a bit messy
+        window_length = UniformIntegerHyperparameter('window_length', lower=3, upper=20, default_value=5)
+        estimator = get_pipeline_search_space(self.estimator.steps, dataset_properties=dataset_properties)
+
+        cs = ConfigurationSpace()
+        cs.add_hyperparameters([window_length])
+        cs.add_configuration_space('estimator', estimator)
+
+        return cs

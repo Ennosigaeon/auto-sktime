@@ -48,12 +48,16 @@ def fit_and_predict(y: SUPPORTED_Y_TYPES, X: pd.DataFrame = None, panel: bool = 
 
     if X is not None:
         y_train, y_test, X_train, X_test = splitter(y, X, test_size=0.2)
-        if panel:
-            X_test[y_test.columns[0]] = y_test
     else:
         y_train, y_test = splitter(y, test_size=0.2)
         X_train = None
         X_test = None
+
+    if panel:
+        if X_test is not None:
+            X_test[y_test.columns[0]] = y_test
+        else:
+            X_test = y_test
 
     automl = AutoML(
         time_left_for_this_task=10,
@@ -140,8 +144,8 @@ class AutoMLTest(unittest.TestCase):
     def test_panel_endogenous(self):
         y = _bottom_hier_datagen(no_levels=1, random_seed=0)
 
-        _, loss = fit_and_predict(y)
-        self.assertAlmostEqual(0.16764395883774477, loss)
+        _, loss = fit_and_predict(y, panel=True)
+        self.assertAlmostEqual(0.0748293358604245, loss)
 
     def test_panel_exogenous(self):
         X, y = load_rul(
@@ -149,4 +153,4 @@ class AutoMLTest(unittest.TestCase):
         )
         _, loss = fit_and_predict(y, X, panel=True)
 
-        self.assertAlmostEqual(5.17433814792307e-05, loss)
+        self.assertAlmostEqual(0.017498089602830648, loss)

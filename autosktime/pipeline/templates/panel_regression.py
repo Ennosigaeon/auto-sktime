@@ -1,14 +1,16 @@
 from typing import Tuple, List
 
 import pandas as pd
+from sklearn.pipeline import Pipeline
 from sktime.forecasting.base import ForecastingHorizon
 
 from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, IGNORES_EXOGENOUS_X, SUPPORTED_INDEX_TYPES, \
     HANDLES_PANEL
 from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import AutoSktimeComponent, COMPONENT_PROPERTIES
-from autosktime.pipeline.components.reduction2.recursive import RecursiveReducer
-from autosktime.pipeline.components.regression.random_forest import RandomForestComponent
+from autosktime.pipeline.components.data_preprocessing import DataPreprocessingPipeline
+from autosktime.pipeline.components.reduction.panel import RecursivePanelReducer
+from autosktime.pipeline.components.regression import RegressorChoice
 from autosktime.pipeline.components.util import NotVectorizedMixin
 from autosktime.pipeline.templates.base import ConfigurableTransformedTargetForecaster
 
@@ -34,7 +36,10 @@ class PanelRegressionPipeline(NotVectorizedMixin, ConfigurableTransformedTargetF
         return super().fit(y, X, fh)
 
     def _predict(self, fh: ForecastingHorizon = None, X: pd.DataFrame = None):
-        if X is not None and isinstance(X.index, pd.MultiIndex):
+        if X is None:
+            raise ValueError('Provide a timeseries that should be forecasted as exogenous data')
+
+        if isinstance(X.index, pd.MultiIndex):
             y_pred_complete = []
 
             index = X.index.remove_unused_levels()
@@ -54,9 +59,16 @@ class PanelRegressionPipeline(NotVectorizedMixin, ConfigurableTransformedTargetF
         # return super()._predict(fh, X)
 
     def _get_pipeline_steps(self) -> List[Tuple[str, AutoSktimeComponent]]:
+        pipeline = Pipeline(steps=[
+            ('preprocessing', DataPreprocessingPipeline(random_state=self.random_state)),
+            ('regression', RegressorChoice(random_state=self.random_state))
+        ])
+
         steps = [
             # Detrending by collapsing panel data to univariate timeseries by averaging
-            ('reduction', RecursiveReducer(RandomForestComponent(random_state=self.random_state))),
+            ('reduction',
+             RecursivePanelReducer(pipeline, random_state=self.random_state,
+                                   dataset_properties=self.dataset_properties)),
         ]
         return steps
 
