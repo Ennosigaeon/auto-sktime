@@ -2,7 +2,7 @@ from abc import ABC
 from typing import Dict, Any, List, Tuple, Union
 
 import numpy as np
-from sktime.forecasting.compose import TransformedTargetForecaster
+from sktime.forecasting.compose import TransformedTargetForecaster, ForecastingPipeline
 
 from ConfigSpace import Configuration, ConfigurationSpace
 from autosktime.data import DatasetProperties
@@ -141,6 +141,20 @@ class ConfigurableTransformedTargetForecaster(TransformedTargetForecaster, Confi
     def get_fitted_params(self):
         # Only implemented for type checker, not actually used
         return super(ConfigurableTransformedTargetForecaster, self).get_fitted_params()
+
+
+class ConfigurableForecastingPipeline(ConfigurablePipeline, ForecastingPipeline, AutoSktimePredictor, ABC):
+    def __init__(
+            self,
+            config: Union[Configuration, Dict[str, Any]] = None,
+            dataset_properties: DatasetProperties = None,
+            include: Dict[str, List[str]] = None,
+            exclude: Dict[str, List[str]] = None,
+            random_state: np.random.RandomState = None,
+            init_params: Dict[str, Any] = None
+    ):
+        self._init(config, dataset_properties, include, exclude, random_state, init_params)
+        super().__init__(self.steps)
 
 
 BasePipeline = ConfigurableTransformedTargetForecaster

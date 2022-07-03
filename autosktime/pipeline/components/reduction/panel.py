@@ -38,10 +38,12 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
             estimator: Pipeline,
             dataset_properties: DatasetProperties,
             window_length: int = 5,
-            transformers: List[AutoSktimeTransformer] = None,
+            transformers: List[Tuple[str, AutoSktimeTransformer]] = None,
             random_state: np.random.RandomState = None
     ):
         super(NotVectorizedMixin, self).__init__(estimator, window_length, transformers)
+        # Just to make type explicit for type checker
+        self.transformers: List[Tuple[str, AutoSktimeTransformer]] = transformers
         self.dataset_properties = dataset_properties
         self.random_state = random_state
 
@@ -60,7 +62,22 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
 
     def _fit(self, y, X=None, fh=None):
         self._target_column = y.name if isinstance(y, pd.Series) else y.columns[0]
-        return super()._fit(y, X, fh)
+
+        if self.transformers is None:
+            return super()._fit(y, X, fh)
+
+        transformers = self.transformers
+
+        yt = y
+        Xt = X
+        for _, t in transformers:
+            yt, Xt = t.fit_transform(X=yt, y=Xt)
+        self.transformers = None
+
+        res = super()._fit(yt, Xt, fh)
+
+        self.transformers = transformers
+        return res
 
     def _transform(self, y, X=None):
         if isinstance(y.index, pd.MultiIndex):
@@ -126,26 +143,29 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
         else:
             params = configuration
 
-        def split_dict(d: Dict) -> Tuple[Dict, Dict]:
-            sub_hp = {}
-            own_hp = {}
+        def split_dict(d: Dict) -> Dict[str, Dict]:
+            res = {'own': {}, 'estimator': {}, 'transformers': {}}
             for param, value in d.items():
                 if param.startswith('estimator:'):
-                    new_name = param.replace(f'estimator:', '', 1)
-                    sub_hp[new_name] = value
+                    new_name = param.replace('estimator:', '', 1)
+                    res['estimator'][new_name] = value
+                elif param.startswith('transformers:'):
+                    new_name = param.replace('transformers:', '', 1)
+                    res['transformers'][new_name] = value
                 else:
-                    own_hp[param] = value
-            return own_hp, sub_hp
+                    res['own'][param] = value
+            return res
 
-        own_hp, estimator_config_dict = split_dict(params)
-        if init_params is not None:
-            own_init_params, estimator_init_params = split_dict(init_params)
-        else:
-            own_init_params, estimator_init_params = None, None
+        grouped_hps = split_dict(params)
+        grouped_init_params = split_dict(init_params if init_params is not None else {})
 
-        super().set_hyperparameters(own_hp, own_init_params)
-        set_pipeline_configuration(estimator_config_dict, self.estimator.steps, self.dataset_properties,
-                                   estimator_init_params)
+        super().set_hyperparameters(grouped_hps['own'], grouped_init_params['own'])
+        set_pipeline_configuration(grouped_hps['estimator'], self.estimator.steps, self.dataset_properties,
+                                   grouped_init_params['estimator'])
+
+        if self.transformers is not None:
+            set_pipeline_configuration(grouped_hps['transformers'], self.transformers, self.dataset_properties,
+                                       grouped_init_params['transformers'])
 
         return self
 
@@ -157,5 +177,11 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
         cs = ConfigurationSpace()
         cs.add_hyperparameters([window_length])
         cs.add_configuration_space('estimator', estimator)
+
+        if self.transformers is not None:
+            transformers = ConfigurationSpace()
+            for name, t in self.transformers:
+                transformers.add_configuration_space(name, t.get_hyperparameter_search_space(dataset_properties))
+            cs.add_configuration_space('transformers', transformers)
 
         return cs

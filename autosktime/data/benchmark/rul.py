@@ -24,9 +24,6 @@ def load_rul(base_dir: str, cache_dir: str = f'{Path.home()}/.cache/auto-sktime/
         experiment = _read_single_experiment(file, overview)
         complete.append(experiment)
 
-    # TODO: remove
-    complete = complete[:10]
-
     X = pd.concat(complete).sort_index()
     y = X[['RUL']]
     X.drop(columns=['RUL'], inplace=True)

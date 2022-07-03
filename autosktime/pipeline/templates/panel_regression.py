@@ -9,6 +9,8 @@ from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, IGNOR
 from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import AutoSktimeComponent, COMPONENT_PROPERTIES
 from autosktime.pipeline.components.data_preprocessing import DataPreprocessingPipeline
+from autosktime.pipeline.components.downsampling.resampling import ResamplingDownSampling
+from autosktime.pipeline.components.preprocessing.impute import ImputerComponent
 from autosktime.pipeline.components.reduction.panel import RecursivePanelReducer
 from autosktime.pipeline.components.regression import RegressorChoice
 from autosktime.pipeline.templates.base import ConfigurableTransformedTargetForecaster
@@ -28,6 +30,7 @@ class PanelRegressionPipeline(NotVectorizedMixin, ConfigurableTransformedTargetF
         "capability:pred_int": True,
         'X-y-must-have-same-index': True,
         "vectorize_panel_data": True,
+        'fit_is_empty': False
     }
 
     def fit(self, y, X=None, fh=None):
@@ -66,9 +69,14 @@ class PanelRegressionPipeline(NotVectorizedMixin, ConfigurableTransformedTargetF
 
         steps = [
             # Detrending by collapsing panel data to univariate timeseries by averaging
+            ('imputation', ImputerComponent(random_state=self.random_state)),
             ('reduction',
-             RecursivePanelReducer(pipeline, random_state=self.random_state,
-                                   dataset_properties=self.dataset_properties)),
+             RecursivePanelReducer(
+                 transformers=[('resampling', ResamplingDownSampling(random_state=self.random_state))],
+                 estimator=pipeline,
+                 random_state=self.random_state,
+                 dataset_properties=self.dataset_properties)
+             ),
         ]
         return steps
 
