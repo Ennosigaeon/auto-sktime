@@ -1,18 +1,21 @@
+# noinspection PyProtectedMember
 import warnings
 from typing import Optional, Dict
 
 import numpy as np
+from autosktime.constants import FORECAST_TASK, UNIVARIATE_FORECAST, UNIVARIATE_EXOGENOUS_FORECAST, MAXINT, \
+    SUPPORTED_Y_TYPES, MULTIVARIATE_FORECAST, MULTIVARIATE_EXOGENOUS_FORECAST, PANEL_FORECAST, PANEL_EXOGENOUS_FORECAST
+from autosktime.data.benchmark.m4 import naive_2
+from sklearn.metrics import mean_squared_error, mean_absolute_error
+from sklearn.metrics._regression import _check_reg_targets
+from sklearn.utils import check_consistent_length
 from sktime.performance_metrics.forecasting import (
     MeanAbsolutePercentageError as MeanAbsolutePercentageError_,
     MedianAbsolutePercentageError as MedianAbsolutePercentageError_,
     MeanAbsoluteScaledError as MeanAbsoluteScaledError_
 )
 # noinspection PyProtectedMember
-from sktime.performance_metrics.forecasting._classes import _BaseForecastingErrorMetric, BaseForecastingErrorMetric
-
-from autosktime.constants import FORECAST_TASK, UNIVARIATE_FORECAST, UNIVARIATE_EXOGENOUS_FORECAST, MAXINT, \
-    SUPPORTED_Y_TYPES, MULTIVARIATE_FORECAST, MULTIVARIATE_EXOGENOUS_FORECAST, PANEL_FORECAST, PANEL_EXOGENOUS_FORECAST
-from autosktime.data.benchmark.m4 import naive_2
+from sktime.performance_metrics.forecasting._classes import BaseForecastingErrorMetric
 
 
 def calculate_loss(
@@ -20,6 +23,7 @@ def calculate_loss(
         prediction: SUPPORTED_Y_TYPES,
         task_type: int,
         metric: BaseForecastingErrorMetric,
+        **kwargs
 ) -> float:
     """
     Returns a loss (a magnitude that allows casting the
@@ -45,7 +49,7 @@ def calculate_loss(
     """
 
     if task_type in FORECAST_TASK:
-        score = metric(solution, prediction)
+        score = metric(solution, prediction, **kwargs)
     else:
         raise NotImplementedError('Scoring of non FORECAST_TASK not supported')
 
@@ -62,6 +66,88 @@ def get_cost_of_crash(metric: BaseForecastingErrorMetric) -> float:
         return MAXINT
     else:
         return 0
+
+
+class RootMeanSquaredError(BaseForecastingErrorMetric):
+    def _evaluate(self, y_true, y_pred, **kwargs):
+        return mean_squared_error(y_true, y_pred, multioutput=self.multioutput, squared=False)
+
+
+class WeightedRootMeanSquaredError(BaseForecastingErrorMetric):
+    def _evaluate(self, y_true, y_pred, **kwargs):
+        # TODO how is this number known?
+        t_j_eol = 1
+        sample_weights = np.power(np.arange(y_true.shape[0]) / t_j_eol, 3)
+
+        return mean_squared_error(y_true, y_pred, sample_weight=sample_weights, multioutput=self.multioutput,
+                                  squared=False)
+
+
+class MeanAbsoluteError(BaseForecastingErrorMetric):
+    def _evaluate(self, y_true, y_pred, **kwargs):
+        return mean_absolute_error(y_true, y_pred, multioutput=self.multioutput)
+
+
+class WeightedMeanAbsoluteError(BaseForecastingErrorMetric):
+    def _evaluate(self, y_true, y_pred, **kwargs):
+        # TODO how is this number known?
+        t_j_eol = 1
+        sample_weights = np.power(np.arange(y_true.shape[0]) / t_j_eol, 3)
+
+        return mean_absolute_error(y_true, y_pred, sample_weight=sample_weights, multioutput=self.multioutput)
+
+
+class MeanError(BaseForecastingErrorMetric):
+    def _evaluate(self, y_true, y_pred, **kwargs):
+        sample_weight = kwargs.get('sample_weight', None)
+
+        y_type, y_true, y_pred, multioutput = _check_reg_targets(
+            y_true, y_pred, self.multioutput
+        )
+        check_consistent_length(y_true, y_pred, sample_weight)
+        output_errors = np.average(y_pred - y_true, weights=sample_weight, axis=0)
+        if isinstance(multioutput, str):
+            if multioutput == "raw_values":
+                return output_errors
+            elif multioutput == "uniform_average":
+                # pass None as weights to np.average: uniform mean
+                multioutput = None
+
+        return np.average(output_errors, weights=multioutput)
+
+
+class StandardDeviationError:
+    pass
+
+
+class MeanArctangentAbsoluteRelativeError(BaseForecastingErrorMetric):
+    def _evaluate(self, y_true, y_pred, **kwargs):
+        y_type, y_true, y_pred, multioutput = _check_reg_targets(
+            y_true, y_pred, self.multioutput
+        )
+        check_consistent_length(y_true, y_pred)
+        output_errors = np.arctan(np.abs(y_true - y_pred) / y_true)
+
+        if isinstance(multioutput, str):
+            if multioutput == "raw_values":
+                return output_errors
+            elif multioutput == "uniform_average":
+                # pass None as weights to np.average: uniform mean
+                multioutput = None
+
+        return np.average(output_errors, weights=multioutput)
+
+
+class RelativePrognosticHorizon(BaseForecastingErrorMetric):
+    pass
+
+
+class PrognosticHorizonRate(BaseForecastingErrorMetric):
+    pass
+
+
+class CumulativeRelativeAccuracy(BaseForecastingErrorMetric):
+    pass
 
 
 class MeanAbsolutePercentageError(MeanAbsolutePercentageError_):
@@ -110,37 +196,28 @@ class MeanAbsoluteScaledError(MeanAbsoluteScaledError_):
             return super().__call__(y_true, y_pred, horizon_weight=horizon_weight, **kwargs)
 
 
-class OverallWeightedAverage(_BaseForecastingErrorMetric):
+class OverallWeightedAverage(BaseForecastingErrorMetric):
 
-    def __init__(self, multioutput: str = "uniform_average", symmetric: bool = True):
-        name = "OverallWeightedAverage"
-        func = overall_weighted_average
-        super().__init__(
-            func=func,
-            name=name,
-            multioutput=multioutput
-        )
+    def _evaluate(
+            self,
+            y_true: SUPPORTED_Y_TYPES,
+            y_pred: SUPPORTED_Y_TYPES,
+            horizon_weight: Optional[np.ndarray] = None,
+            y_train: SUPPORTED_Y_TYPES = None,
+            **kwargs
+    ) -> float:
+        if y_train is None:
+            raise ValueError('y_train has to be provided for OWA')
 
+        y_naive2 = naive_2(y_train)
 
-def overall_weighted_average(
-        y_true: SUPPORTED_Y_TYPES,
-        y_pred: SUPPORTED_Y_TYPES,
-        horizon_weight: Optional[np.ndarray] = None,
-        y_train: SUPPORTED_Y_TYPES = None,
-        **kwargs
-) -> float:
-    if y_train is None:
-        raise ValueError('y_train has to be provided for OWA')
+        sMAPE = MeanAbsolutePercentageError()
+        MASE = MeanAbsoluteScaledError()
 
-    y_naive2 = naive_2(y_train)
-
-    sMAPE = MeanAbsolutePercentageError()
-    MASE = MeanAbsoluteScaledError()
-
-    return (
-                   sMAPE(y_true, y_pred, horizon_weight) / sMAPE(y_true, y_naive2, horizon_weight) +
-                   MASE(y_true, y_pred, y_train=y_train) / MASE(y_true, y_naive2, horizon_weight, y_train=y_train)
-           ) / 2
+        return (
+                       sMAPE(y_true, y_pred, horizon_weight) / sMAPE(y_true, y_naive2, horizon_weight) +
+                       MASE(y_true, y_pred, y_train=y_train) / MASE(y_true, y_naive2, horizon_weight, y_train=y_train)
+               ) / 2
 
 
 default_metric_for_task: Dict[int, BaseForecastingErrorMetric] = {
@@ -153,9 +230,21 @@ default_metric_for_task: Dict[int, BaseForecastingErrorMetric] = {
 }
 
 STRING_TO_METRIC = {
+    'rmse': RootMeanSquaredError(),
+    'wrmse': WeightedRootMeanSquaredError(),
+    'mae': MeanAbsoluteError(),
+    'wmae': WeightedMeanAbsoluteError(),
+    'me': MeanError(),
+    'std': StandardDeviationError(),
+    'maare': MeanArctangentAbsoluteRelativeError(),
+    'relph': RelativePrognosticHorizon(),
+    'phrate': PrognosticHorizonRate(),
+    'cra': CumulativeRelativeAccuracy(),
+
     'mape': MeanAbsolutePercentageError(),
     'mdape': MedianAbsolutePercentageError(),
     'mase': MeanAbsoluteScaledError(),
     'owa': OverallWeightedAverage(),
+
 }
 METRIC_TO_STRING = {type(value): key for key, value in STRING_TO_METRIC.items()}

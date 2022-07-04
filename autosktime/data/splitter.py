@@ -4,7 +4,7 @@ from typing import Optional, Dict, Type, Union
 
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import train_test_split, check_cv
+from sklearn.model_selection import train_test_split, KFold
 from sktime.forecasting.base import ForecastingHorizon
 from sktime.forecasting.model_selection import (
     SingleWindowSplitter as SingleWindowSplitter_,
@@ -101,13 +101,14 @@ class PanelHoldoutSplitter(PanelSplitter):
 
 class PanelCVSplitter(PanelSplitter):
 
-    def __init__(self, fh: int = 4, random_state: Union[np.random.RandomState, int] = None):
+    def __init__(self, fh: int = 4, shuffle: bool = True, random_state: Union[np.random.RandomState, int] = None):
         super().__init__(1)
         self.fh_ = fh
+        self.shuffle = shuffle
         self.random_state = random_state
 
     def _split(self, y: pd.Index) -> SPLIT_GENERATOR_TYPE:
-        cv = check_cv(self.fh_)
+        cv = KFold(self.fh_, shuffle=self.shuffle, random_state=self.random_state)
         return map(lambda t: (y[t[0]], y[t[1]]), cv.split(y))
 
     def get_n_splits(self, y: Optional[ACCEPTED_Y_TYPES] = None) -> int:
@@ -143,13 +144,36 @@ def multiindex_train_test_split(
     train, test = train_test_split(index.levels[0], test_size=test_size, train_size=train_size,
                                    random_state=random_state, shuffle=shuffle, stratify=stratify)
 
-    def safe_index(df: pd.DataFrame, idx):
-        sub_df = df.loc[idx]
-        sub_df.index = sub_df.index.remove_unused_levels()
-        return sub_df
-
     return list(
         chain.from_iterable(
-            (safe_index(a, train), safe_index(a, test)) for a in dfs
+            (_safe_index(a, train), _safe_index(a, test)) for a in dfs
         )
     )
+
+
+def multiindex_cross_validation(
+        *dfs: pd.DataFrame,
+        folds: int = 5,
+        random_state: Union[np.random.RandomState, int] = None
+):
+    index = dfs[0].index
+    if not np.all([df.index == index for df in dfs]):
+        raise ValueError('All dataframes must share same index')
+
+    if not isinstance(index, pd.MultiIndex):
+        raise ValueError(f'Only {type(pd.MultiIndex)} is supported got {type(index)}')
+
+    res = []
+    for train, test in PanelCVSplitter(folds, random_state=random_state).split(index.levels[0]):
+        res.append(list(
+            chain.from_iterable(
+                (_safe_index(a, train), _safe_index(a, test)) for a in dfs
+            )
+        ))
+    return res
+
+
+def _safe_index(df: pd.DataFrame, idx):
+    sub_df = df.loc[idx]
+    sub_df.index = sub_df.index.remove_unused_levels()
+    return sub_df
