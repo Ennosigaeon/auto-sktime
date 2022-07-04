@@ -1,9 +1,7 @@
 from typing import Tuple, List
 
+import numpy as np
 import pandas as pd
-from sklearn.pipeline import Pipeline
-from sktime.forecasting.base import ForecastingHorizon
-
 from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, IGNORES_EXOGENOUS_X, SUPPORTED_INDEX_TYPES, \
     HANDLES_PANEL
 from autosktime.data import DatasetProperties
@@ -15,6 +13,8 @@ from autosktime.pipeline.components.reduction.panel import RecursivePanelReducer
 from autosktime.pipeline.components.regression import RegressorChoice
 from autosktime.pipeline.templates.base import ConfigurableTransformedTargetForecaster
 from autosktime.pipeline.util import NotVectorizedMixin, Int64Index
+from sklearn.pipeline import Pipeline
+from sktime.forecasting.base import ForecastingHorizon
 
 
 class PanelRegressionPipeline(NotVectorizedMixin, ConfigurableTransformedTargetForecaster):
@@ -35,8 +35,12 @@ class PanelRegressionPipeline(NotVectorizedMixin, ConfigurableTransformedTargetF
 
     def fit(self, y, X=None, fh=None):
         # mean = y.groupby(y.index.get_level_values(1)).mean()
+        res = super().fit(y, X, fh)
 
-        return super().fit(y, X, fh)
+        panel_size = y.groupby(level=0).size()
+        self._identical_fh = np.all(panel_size == panel_size.iloc[0])
+
+        return res
 
     def _predict(self, fh: ForecastingHorizon = None, X: pd.DataFrame = None):
         if X is None:
@@ -47,11 +51,18 @@ class PanelRegressionPipeline(NotVectorizedMixin, ConfigurableTransformedTargetF
 
             index = X.index.remove_unused_levels()
             for key in index.levels[0]:
-                fh = ForecastingHorizon(X.xs(key, level=0).index, is_relative=False)
+                if fh is not None and not self._identical_fh:
+                    if fh.is_relative:
+                        last_observation = X.xs(key, level=0).index[-1]
+                        fh_ = ForecastingHorizon(fh.to_pandas() + last_observation, is_relative=False)
+                    else:
+                        fh_ = ForecastingHorizon(X.xs(key, level=0).index, is_relative=False)
+                else:
+                    fh_ = fh
 
                 X_ = X.loc[[key]]
 
-                y_pred = super()._predict(fh, X=X_)
+                y_pred = super()._predict(fh_, X=X_)
                 y_pred_complete.append(y_pred)
 
             y_pred = pd.concat(y_pred_complete)

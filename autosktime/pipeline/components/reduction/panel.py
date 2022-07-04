@@ -2,11 +2,6 @@ from typing import List, Union, Dict, Any, Tuple
 
 import numpy as np
 import pandas as pd
-from sklearn.pipeline import Pipeline
-from sktime.forecasting.base import ForecastingHorizon
-from sktime.forecasting.base._base import DEFAULT_ALPHA
-from sktime.forecasting.compose._reduce import RecursiveTabularRegressionForecaster
-
 from ConfigSpace import ConfigurationSpace, Configuration, UniformIntegerHyperparameter
 from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, HANDLES_PANEL, IGNORES_EXOGENOUS_X, \
     SUPPORTED_INDEX_TYPES
@@ -14,6 +9,11 @@ from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import AutoSktimeComponent, COMPONENT_PROPERTIES, AutoSktimeTransformer
 from autosktime.pipeline.templates.base import set_pipeline_configuration, get_pipeline_search_space
 from autosktime.pipeline.util import NotVectorizedMixin
+from sklearn.pipeline import Pipeline
+from sktime.forecasting.base import ForecastingHorizon
+from sktime.forecasting.base._base import DEFAULT_ALPHA
+from sktime.forecasting.compose._reduce import RecursiveTabularRegressionForecaster
+from sktime.utils.datetime import _shift
 
 
 class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForecaster, AutoSktimeComponent):
@@ -102,30 +102,113 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
 
             for idx in keys:
                 X_ = X.loc[idx]
+                original_cutoff = self.cutoff
+                self._cutoff = X_.index[-1]
+
                 y_pred = super()._predict(fh, X_)
                 y_pred_complete.append(y_pred)
+
+                self._cutoff = original_cutoff
 
             return pd.concat(y_pred_complete, keys=keys)
         else:
             return super()._predict(fh, X)
 
+    # noinspection PyMethodOverriding
+    def _get_last_window(self, y: pd.DataFrame, X: pd.DataFrame):
+        """Select last window."""
+        # Get the start and end points of the last window.
+        cutoff = self.cutoff
+        start = _shift(cutoff, by=-self.window_length_ + 1)
+
+        # Get the last window of the endogenous variable.
+        y = y.loc[start:cutoff].to_numpy()
+
+        # If X is given, also get the last window of the exogenous variables.
+        X = X.loc[start:cutoff].to_numpy() if X is not None else None
+
+        return y, X
+
     def _predict_last_window(
             self, fh, X=None, return_pred_int=False, alpha=DEFAULT_ALPHA
     ):
-        return self._predict_in_sample(fh, X, return_pred_int, alpha)
+        X, y = self._split_X(X)
+
+        # Get last window of available data.
+        y_last, X_last = self._get_last_window(y, X)
+
+        # Pre-allocate arrays.
+        if X is None:
+            n_columns = 1
+        else:
+            n_columns = X.shape[1] + 1
+        window_length = self.window_length_
+        fh_max = fh.to_relative(self.cutoff)[-1]
+
+        y_pred = np.zeros(fh_max)
+        last = np.zeros((1, n_columns, window_length + fh_max))
+
+        # Fill pre-allocated arrays with available data.
+        last[:, 0, :window_length] = y_last.T
+        if X is not None:
+            last[:, 1:, :window_length] = X_last.T
+            last[:, 1:, window_length:] = X.T
+
+        # Recursively generate predictions by iterating over forecasting horizon.
+        for i in range(fh_max):
+            # Slice prediction window.
+            X_pred = last[:, :, i: window_length + i]
+
+            # Reshape data into tabular array.
+            X_pred = X_pred.reshape(1, -1)
+
+            # Generate predictions.
+            y_pred[i] = self.estimator_.predict(X_pred)
+
+            # Update last window with previous prediction.
+            last[:, 0, window_length + i] = y_pred[i]
+
+        # While the recursive strategy requires to generate predictions for all steps
+        # until the furthest step in the forecasting horizon, we only return the
+        # requested ones.
+        fh_idx = fh.to_indexer(self.cutoff)
+
+        if isinstance(y_pred, pd.Series) or isinstance(y_pred, pd.DataFrame):
+            y_return = y_pred.iloc[fh_idx]
+        else:
+            y_return = y_pred[fh_idx]
+            if self._y_mtype_last_seen == 'pd-multiindex':
+                y_return = pd.DataFrame(y_return, columns=self._y.columns, index=fh.to_pandas())
+            else:
+                y_return = pd.Series(y_return, name=self._y.name, index=fh.to_pandas())
+
+        return y_return
+
+    def _split_X(self, X: pd.DataFrame):
+        if X is None:
+            raise ValueError('`X` must be passed to `predict`.')
+
+        y = X[[self._target_column]]
+        X = X.drop(columns=[self._target_column])
+        if len(X.columns) == 0:
+            X = None
+
+        return X, y
 
     def _predict_in_sample(self, fh: ForecastingHorizon, X: pd.DataFrame = None, return_pred_int=False, alpha=None):
-        if X is None:
-            y_pred = np.zeros_like(fh._values, dtype=float)
-        else:
-            y = X.loc[fh.to_pandas(), [self._target_column]]
-            X_ = X.loc[fh.to_pandas()].drop(columns=[self._target_column])
+        X_, y = self._split_X(X)
 
-            _, Xt = self._transform(y, X_)
-            y_pred = self.estimator_.predict(Xt)
+        start = max(_shift(fh.to_pandas()[0], by=-self.window_length_ + 1), y.index[0])
+        cutoff = fh.to_pandas()[-1] + 1
 
-            padding = np.ones(self.window_length_) * y_pred[0]
-            y_pred = np.concatenate((padding, y_pred))
+        y = y.loc[start:cutoff]
+        X_ = X_.loc[start: cutoff, :] if X_ is not None else None
+
+        _, Xt = self._transform(y, X_)
+        y_pred = self.estimator_.predict(Xt)
+
+        padding = np.ones(fh.to_pandas().shape[0] - y_pred.shape[0]) * y_pred[0]
+        y_pred = np.concatenate((padding, y_pred))
 
         if self._y_mtype_last_seen == 'pd-multiindex':
             return pd.DataFrame(y_pred, columns=self._y.columns, index=fh.to_pandas())

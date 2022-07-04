@@ -22,9 +22,6 @@ class IdentityComponent(BaseDownSampling):
         super().__init__()
         self.random_state = random_state
 
-    def _fit(self, X: Union[pd.Series, pd.DataFrame], y: pd.Series = None):
-        return self
-
     def _transform(self, X: Union[pd.Series, pd.DataFrame], y: pd.Series = None):
         return X, y
 

@@ -26,17 +26,23 @@ class ResamplingDownSampling(BaseDownSampling):
         self.initial_size = initial_size
         self.random_state = random_state
 
-    def _transform(self, X: Union[pd.Series, pd.DataFrame], y: pd.Series = None):
+    def _transform(self, X: Union[pd.Series, pd.DataFrame], y: pd.DataFrame = None):
         self.initial_size = X.shape[0]
 
         if isinstance(self.num, float):
             n = int(self.initial_size * self.num)
         else:
-            n = int(self.num)
+            n = int(self.initial_size / self.num)
 
-        Xt = signal.resample(X, n)
+        index = X.index
+        if isinstance(index, pd.PeriodIndex):
+            index = pd.date_range(start=index[0].to_timestamp(), end=index[-1].to_timestamp(), periods=n)
+        else:
+            index = np.linspace(index[0], index[-1], n, endpoint=False)
+
+        Xt = pd.DataFrame(signal.resample(X, n), columns=X.columns, index=index)
         if y is not None:
-            yt = signal.resample(y, n)
+            yt = pd.DataFrame(signal.resample(y, n), columns=y.columns, index=index)
         else:
             yt = None
         return Xt, yt

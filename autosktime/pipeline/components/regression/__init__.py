@@ -47,8 +47,6 @@ class RegressorChoice(AutoSktimeChoice, AutoSktimeRegressionAlgorithm):
         return components
 
     def fit(self, X: pd.DataFrame, y: pd.Series):
-        print(X.shape, y.shape)
-
         # noinspection PyUnresolvedReferences
         return self.estimator.fit(X, y)
 

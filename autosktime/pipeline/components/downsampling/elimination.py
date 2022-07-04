@@ -20,21 +20,16 @@ class EliminationDownSampler(BaseDownSampling):
         self.window_size = window_size
         self.random_state = random_state
 
-    def _fit(self, X: Union[pd.Series, pd.DataFrame], y: pd.Series = None):
-        pass
-
-    def _transform(self, X: Union[pd.Series, pd.DataFrame], y: pd.Series = None):
-        # TODO X.shape[0] has to be multiple of self.window_size
-
+    def _transform(self, X: Union[pd.Series, pd.DataFrame], y: pd.DataFrame = None):
         if isinstance(self.window_size, float):
             self.window_size_ = int(X.shape[0] * self.window_size)
         else:
             self.window_size_ = int(self.window_size)
         self._original_size = X.shape[0]
 
-        Xt = X.values[::self.window_size_]
+        Xt = pd.DataFrame(X.values[::self.window_size_], columns=X.columns, index=X.index[::self.window_size_])
         if y is not None:
-            yt = y.values[::self.window_size_]
+            yt = pd.DataFrame(y.values[::self.window_size_], columns=y.columns, index=y.index[::self.window_size_])
         else:
             yt = None
 

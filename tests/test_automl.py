@@ -5,16 +5,16 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from sktime.datasets import load_airline, load_longley
-from sktime.forecasting.model_selection import temporal_train_test_split
-from sktime.utils._testing.hierarchical import _bottom_hier_datagen
-
 from autosktime.automl import AutoML
 from autosktime.constants import SUPPORTED_Y_TYPES
 from autosktime.data.benchmark.rul import load_rul
 from autosktime.data.splitter import PanelHoldoutSplitter
 from autosktime.metrics import calculate_loss
 from autosktime.util import resolve_index
+from sktime.datasets import load_airline, load_longley
+from sktime.forecasting.base import ForecastingHorizon
+from sktime.forecasting.model_selection import temporal_train_test_split
+from sktime.utils._testing.hierarchical import _bottom_hier_datagen
 
 
 def train_test_split(y: SUPPORTED_Y_TYPES, X: pd.DataFrame = None, test_size: float = None):
@@ -37,7 +37,13 @@ def train_test_split(y: SUPPORTED_Y_TYPES, X: pd.DataFrame = None, test_size: fl
         return y_train, y_test, X_train, X_test
 
 
-def fit_and_predict(y: SUPPORTED_Y_TYPES, X: pd.DataFrame = None, panel: bool = False):
+def fit_and_predict(
+        y: SUPPORTED_Y_TYPES,
+        X: pd.DataFrame = None,
+        panel: bool = False,
+        fh: ForecastingHorizon = None,
+        y_test_metric: np.ndarray = None
+):
     try:
         shutil.rmtree('tmp')
         shutil.rmtree('output')
@@ -59,6 +65,12 @@ def fit_and_predict(y: SUPPORTED_Y_TYPES, X: pd.DataFrame = None, panel: bool = 
         else:
             X_test = y_test
 
+    if fh is None:
+        fh = ForecastingHorizon(resolve_index(y_test.index), is_relative=False)
+
+    if y_test_metric is None:
+        y_test_metric = y_test
+
     automl = AutoML(
         time_left_for_this_task=10,
         per_run_time_limit=10,
@@ -68,8 +80,8 @@ def fit_and_predict(y: SUPPORTED_Y_TYPES, X: pd.DataFrame = None, panel: bool = 
     )
 
     automl.fit(y_train, X_train, dataset_name='test')
-    y_pred = automl.predict(resolve_index(y_test.index), X_test)
-    loss = calculate_loss(y_test, y_pred, automl._task, automl._metric)
+    y_pred = automl.predict(fh, X_test)
+    loss = calculate_loss(y_test_metric, y_pred, automl._task, automl._metric)
 
     return automl, loss
 
@@ -139,18 +151,48 @@ class AutoMLTest(unittest.TestCase):
         y, X = load_longley()
 
         _, loss = fit_and_predict(y, X)
-        self.assertAlmostEqual(0.04423657419818824, loss)
+        self.assertAlmostEqual(0.010168705176617804, loss)
 
     def test_panel_endogenous(self):
         y = _bottom_hier_datagen(no_levels=1, random_seed=0)
 
         _, loss = fit_and_predict(y, panel=True)
-        self.assertAlmostEqual(0.0748293358604245, loss)
+        self.assertAlmostEqual(0.09982033042925743, loss)
+
+    def test_panel_endogenous_different_size(self):
+        X, y = load_rul(
+            os.path.join(Path(__file__).parent.resolve(), 'data', 'rul'),
+            f'{Path.home()}/.cache/auto-sktime/test'
+        )
+        automl, loss = fit_and_predict(y, panel=True)
+
+        if len(automl.runhistory_.get_all_configs()) == 3:
+            self.assertAlmostEqual(6.643866020291058e-06, loss)
+        else:
+            self.assertAlmostEqual(0.07232810928942789, loss)
 
     def test_panel_exogenous(self):
         X, y = load_rul(
-            os.path.join(Path(__file__).parent.resolve(), 'data', 'rul')
+            os.path.join(Path(__file__).parent.resolve(), 'data', 'rul'),
+            f'{Path.home()}/.cache/auto-sktime/test'
         )
-        _, loss = fit_and_predict(y, X, panel=True)
+        automl, loss = fit_and_predict(y, X, panel=True)
 
-        self.assertAlmostEqual(0.017498089602830648, loss)
+        if len(automl.runhistory_.get_all_configs()) == 3:
+            self.assertAlmostEqual(0.0013918583293422411, loss)
+        else:
+            self.assertAlmostEqual(0.058506681306847774, loss)
+
+    def test_panel_relative_forecast_horizon(self):
+        X, y = load_rul(
+            os.path.join(Path(__file__).parent.resolve(), 'data', 'rul'),
+            f'{Path.home()}/.cache/auto-sktime/test'
+        )
+        _, loss = fit_and_predict(
+            y,
+            panel=True,
+            fh=ForecastingHorizon(np.arange(1, 20, 1), is_relative=True),
+            y_test_metric=np.ones(38) * 0.26
+        )
+
+        self.assertAlmostEqual(0.0, loss)
