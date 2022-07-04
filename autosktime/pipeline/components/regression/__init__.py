@@ -24,7 +24,7 @@ class RegressorChoice(AutoSktimeChoice, AutoSktimeRegressionAlgorithm):
     def get_hyperparameter_search_space(
             self,
             dataset_properties: DatasetProperties = None,
-            default: str = 'random_forest',
+            default: str = 'k_nearest_neighbors',
             include: List[str] = None,
             exclude: List[str] = None
     ) -> ConfigurationSpace:
@@ -47,6 +47,8 @@ class RegressorChoice(AutoSktimeChoice, AutoSktimeRegressionAlgorithm):
         return components
 
     def fit(self, X: pd.DataFrame, y: pd.Series):
+        print(X.shape, y.shape)
+
         # noinspection PyUnresolvedReferences
         return self.estimator.fit(X, y)
 

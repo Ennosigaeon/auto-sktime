@@ -9,7 +9,7 @@ from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, IGNOR
 from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import AutoSktimeComponent, COMPONENT_PROPERTIES
 from autosktime.pipeline.components.data_preprocessing import DataPreprocessingPipeline
-from autosktime.pipeline.components.downsampling.resampling import ResamplingDownSampling
+from autosktime.pipeline.components.downsampling.elimination import EliminationDownSampler
 from autosktime.pipeline.components.preprocessing.impute import ImputerComponent
 from autosktime.pipeline.components.reduction.panel import RecursivePanelReducer
 from autosktime.pipeline.components.regression import RegressorChoice
@@ -72,7 +72,7 @@ class PanelRegressionPipeline(NotVectorizedMixin, ConfigurableTransformedTargetF
             ('imputation', ImputerComponent(random_state=self.random_state)),
             ('reduction',
              RecursivePanelReducer(
-                 transformers=[('resampling', ResamplingDownSampling(random_state=self.random_state))],
+                 transformers=[('downsampling', EliminationDownSampler(random_state=self.random_state))],
                  estimator=pipeline,
                  random_state=self.random_state,
                  dataset_properties=self.dataset_properties)

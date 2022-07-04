@@ -78,7 +78,6 @@ class EnsembleBuilderManager(IncorporateRunResultCallback):
             if int: consider only the n best prediction
             if float: consider only this fraction of the best models
             Both wrt to validation predictions
-            If performance_range_threshold > 0, might return fewer models
         max_models_on_disc: int
             Defines the maximum number of models that are kept in the disc. As a consequence, it also defines an upper
             bound on the models that can be used in the ensemble.

@@ -15,9 +15,10 @@ from autosktime.pipeline.util import Int64Index
 
 class EliminationDownSampler(BaseDownSampling):
 
-    def __init__(self, window_size: Union[float, int] = 0.05):
+    def __init__(self, window_size: Union[float, int] = 10, random_state: np.random.RandomState = None):
         super().__init__()
         self.window_size = window_size
+        self.random_state = random_state
 
     def _fit(self, X: Union[pd.Series, pd.DataFrame], y: pd.Series = None):
         pass
@@ -52,10 +53,10 @@ class EliminationDownSampler(BaseDownSampling):
 
     @staticmethod
     def get_hyperparameter_search_space(dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
-        window_size = UniformFloatHyperparameter('window_size', 0.01, 0.1, default_value=0.05)
+        # window_size = UniformFloatHyperparameter('window_size', 0.01, 0.1, default_value=0.05)
 
         cs = ConfigurationSpace()
-        cs.add_hyperparameters([window_size])
+        # cs.add_hyperparameters([window_size])
         return cs
 
     @staticmethod

@@ -1,4 +1,5 @@
 from abc import ABC
+from itertools import chain
 from typing import Optional, Dict, Type, Union
 
 import numpy as np
@@ -122,3 +123,33 @@ splitter_types: Dict[str, Type[BaseSplitter]] = {
     'panel-holdout': PanelHoldoutSplitter,
     'panel-cv': PanelCVSplitter,
 }
+
+
+def multiindex_train_test_split(
+        *dfs: Union[pd.DataFrame, pd.Series],
+        test_size: Union[float, int] = None,
+        train_size: Union[float, int] = None,
+        random_state: Union[int, np.random.RandomState] = None,
+        shuffle: bool = True,
+        stratify=None
+):
+    index = dfs[0].index
+    if not np.all([df.index == index for df in dfs]):
+        raise ValueError('All dataframes must share same index')
+
+    if not isinstance(index, pd.MultiIndex):
+        raise ValueError(f'Only {type(pd.MultiIndex)} is supported got {type(index)}')
+
+    train, test = train_test_split(index.levels[0], test_size=test_size, train_size=train_size,
+                                   random_state=random_state, shuffle=shuffle, stratify=stratify)
+
+    def safe_index(df: pd.DataFrame, idx):
+        sub_df = df.loc[idx]
+        sub_df.index = sub_df.index.remove_unused_levels()
+        return sub_df
+
+    return list(
+        chain.from_iterable(
+            (safe_index(a, train), safe_index(a, test)) for a in dfs
+        )
+    )

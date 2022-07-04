@@ -1,3 +1,4 @@
+import copy
 from abc import ABC
 from typing import Dict, Any, List, Tuple, Union
 
@@ -105,7 +106,7 @@ class ConfigurablePipeline(ABC):
         """
         if not hasattr(self, 'config_space') or self.config_space is None:
             self.config_space = self._get_hyperparameter_search_space()
-        return self.config_space
+        return copy.deepcopy(self.config_space)
 
     def _get_hyperparameter_search_space(self) -> ConfigurationSpace:
         cs = get_pipeline_search_space(self.steps, self.include, self.exclude, self.dataset_properties)
