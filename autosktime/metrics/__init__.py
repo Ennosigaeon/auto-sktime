@@ -3,9 +3,7 @@ import warnings
 from typing import Optional, Dict
 
 import numpy as np
-from autosktime.constants import FORECAST_TASK, UNIVARIATE_FORECAST, UNIVARIATE_EXOGENOUS_FORECAST, MAXINT, \
-    SUPPORTED_Y_TYPES, MULTIVARIATE_FORECAST, MULTIVARIATE_EXOGENOUS_FORECAST, PANEL_FORECAST, PANEL_EXOGENOUS_FORECAST
-from autosktime.data.benchmark.m4 import naive_2
+import pandas as pd
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from sklearn.metrics._regression import _check_reg_targets
 from sklearn.utils import check_consistent_length
@@ -16,6 +14,10 @@ from sktime.performance_metrics.forecasting import (
 )
 # noinspection PyProtectedMember
 from sktime.performance_metrics.forecasting._classes import BaseForecastingErrorMetric
+
+from autosktime.constants import FORECAST_TASK, UNIVARIATE_FORECAST, UNIVARIATE_EXOGENOUS_FORECAST, MAXINT, \
+    SUPPORTED_Y_TYPES, MULTIVARIATE_FORECAST, MULTIVARIATE_EXOGENOUS_FORECAST, PANEL_FORECAST, PANEL_EXOGENOUS_FORECAST
+from autosktime.data.benchmark.m4 import naive_2
 
 
 def calculate_loss(
@@ -53,7 +55,7 @@ def calculate_loss(
     else:
         raise NotImplementedError('Scoring of non FORECAST_TASK not supported')
 
-    if metric.get_tag("lower_is_better"):
+    if metric.get_tag('lower_is_better'):
         return score
     else:
         return -1 * score
@@ -62,7 +64,7 @@ def calculate_loss(
 def get_cost_of_crash(metric: BaseForecastingErrorMetric) -> float:
     if hasattr(metric, 'worst_score'):
         return metric.worst_score
-    elif metric.get_tag("lower_is_better"):
+    elif metric.get_tag('lower_is_better'):
         return MAXINT
     else:
         return 0
@@ -90,9 +92,7 @@ class MeanAbsoluteError(BaseForecastingErrorMetric):
 
 class WeightedMeanAbsoluteError(BaseForecastingErrorMetric):
     def _evaluate(self, y_true, y_pred, **kwargs):
-        # TODO how is this number known?
-        t_j_eol = 1
-        sample_weights = np.power(np.arange(y_true.shape[0]) / t_j_eol, 3)
+        sample_weights = np.power(np.arange(y_true.shape[0]) / y_true.shape[0], 3)
 
         return mean_absolute_error(y_true, y_pred, sample_weight=sample_weights, multioutput=self.multioutput)
 
@@ -107,47 +107,103 @@ class MeanError(BaseForecastingErrorMetric):
         check_consistent_length(y_true, y_pred, sample_weight)
         output_errors = np.average(y_pred - y_true, weights=sample_weight, axis=0)
         if isinstance(multioutput, str):
-            if multioutput == "raw_values":
+            if multioutput == 'raw_values':
                 return output_errors
-            elif multioutput == "uniform_average":
+            elif multioutput == 'uniform_average':
                 # pass None as weights to np.average: uniform mean
                 multioutput = None
 
         return np.average(output_errors, weights=multioutput)
 
 
-class StandardDeviationError:
-    pass
+class StandardDeviationError(BaseForecastingErrorMetric):
+    def _evaluate(self, y_true, y_pred, **kwargs):
+        diff = np.abs(y_true - y_pred)
+        return diff.std().iloc[0]
 
 
 class MeanArctangentAbsoluteRelativeError(BaseForecastingErrorMetric):
     def _evaluate(self, y_true, y_pred, **kwargs):
-        y_type, y_true, y_pred, multioutput = _check_reg_targets(
-            y_true, y_pred, self.multioutput
-        )
-        check_consistent_length(y_true, y_pred)
-        output_errors = np.arctan(np.abs(y_true - y_pred) / y_true)
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', RuntimeWarning)
+            y_type, y_true, y_pred, multioutput = _check_reg_targets(
+                y_true, y_pred, self.multioutput
+            )
+            check_consistent_length(y_true, y_pred)
+            output_errors = np.arctan(np.abs(y_true - y_pred) / y_true)
 
-        if isinstance(multioutput, str):
-            if multioutput == "raw_values":
-                return output_errors
-            elif multioutput == "uniform_average":
-                # pass None as weights to np.average: uniform mean
-                multioutput = None
+            if isinstance(multioutput, str):
+                if multioutput == 'raw_values':
+                    return output_errors
+                elif multioutput == 'uniform_average':
+                    # pass None as weights to np.average: uniform mean
+                    multioutput = None
 
-        return np.average(output_errors, weights=multioutput)
+            return np.average(output_errors, weights=multioutput)
 
 
 class RelativePrognosticHorizon(BaseForecastingErrorMetric):
-    pass
+    _tags = {
+        'lower_is_better': False,
+    }
+
+    def __init__(self, alpha: float = 0.05):
+        super().__init__()
+        self.alpha = alpha
+
+    def _evaluate(self, y_true, y_pred, **kwargs):
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', RuntimeWarning)
+            upper_bound = y_true + self.alpha * y_true.shape[0]
+            lower_bound = y_true - self.alpha * y_true.shape[0]
+
+            in_bound = (lower_bound <= y_pred) & (y_pred <= upper_bound)
+
+            t_j_alpha = self.find_longest_suffix(in_bound)
+
+            return (y_true.shape[0] - t_j_alpha) / y_true.shape[0]
+
+    def find_longest_suffix(self, x: pd.Series):
+        if not np.all(x.iloc[-1]):
+            return x.shape[0]
+
+        # find run starts
+        loc_run_start = np.empty(x.shape, dtype=bool)
+        loc_run_start[0] = True
+        np.not_equal(x[:-1], x[1:], out=loc_run_start[1:])
+        run_starts = np.nonzero(loc_run_start)[0]
+
+        # find run lengths
+        run_lengths = np.diff(np.append(run_starts, x.shape[0]))
+
+        return x.shape[0] - run_lengths[-1]
 
 
 class PrognosticHorizonRate(BaseForecastingErrorMetric):
-    pass
+    _tags = {
+        'lower_is_better': False,
+    }
+
+    def __init__(self, alpha: float = 0.05):
+        super().__init__()
+        self.alpha = alpha
+
+    def _evaluate(self, y_true, y_pred, **kwargs):
+        upper_bound = y_true + self.alpha * y_true.shape[0]
+        lower_bound = y_true - self.alpha * y_true.shape[0]
+
+        in_bound = (lower_bound <= y_pred) & (y_pred <= upper_bound)
+
+        return (in_bound.sum() / in_bound.shape[0]).iloc[0]
 
 
 class CumulativeRelativeAccuracy(BaseForecastingErrorMetric):
-    pass
+    _tags = {
+        'lower_is_better': False,
+    }
+
+    def _evaluate(self, y_true, y_pred, **kwargs):
+        return (1 - np.abs(y_true - y_pred) / y_true).mean().iloc[0]
 
 
 class MeanAbsolutePercentageError(MeanAbsolutePercentageError_):

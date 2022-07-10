@@ -54,3 +54,18 @@ def sub_configuration(params: Dict[str, Any], init_params: Dict[str, Any]) -> Tu
 
 # noinspection PyUnresolvedReferences
 Int64Index = pd.core.indexes.numeric.Int64Index
+
+
+class ChainedPandasAssigment:
+    def __init__(self, chained: str = None):
+        acceptable = [None, 'warn', 'raise']
+        assert chained in acceptable, f'chained must be in {acceptable}'
+        self.swcw = chained
+
+    def __enter__(self):
+        self.saved_swcw = pd.options.mode.chained_assignment
+        pd.options.mode.chained_assignment = self.swcw
+        return self
+
+    def __exit__(self, *args):
+        pd.options.mode.chained_assignment = self.saved_swcw

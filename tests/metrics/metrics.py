@@ -2,10 +2,12 @@ import unittest
 from typing import Dict, Type
 
 import numpy as np
+from sktime.performance_metrics.forecasting._classes import BaseForecastingErrorMetric
+
 from autosktime.metrics import RootMeanSquaredError, WeightedRootMeanSquaredError, WeightedMeanAbsoluteError, \
     MeanAbsoluteError, MeanError, MeanArctangentAbsoluteRelativeError, MeanAbsolutePercentageError, \
-    MedianAbsolutePercentageError, MeanAbsoluteScaledError, OverallWeightedAverage
-from sktime.performance_metrics.forecasting._classes import BaseForecastingErrorMetric
+    MedianAbsolutePercentageError, MeanAbsoluteScaledError, OverallWeightedAverage, RelativePrognosticHorizon, \
+    CumulativeRelativeAccuracy, PrognosticHorizonRate, StandardDeviationError
 
 
 def exclude_base(func):
@@ -133,6 +135,16 @@ class METest(BaseMetricTest):
     }
 
 
+class STDTest(BaseMetricTest):
+    module = StandardDeviationError
+    res = {
+        'test_random_univariate': 0.16003411457234076,
+        'test_random_multivariate': 0.28548096275330204,
+        'test_identical': 0.0,
+        'test_offset_one': 0.0,
+    }
+
+
 class MAARETest(BaseMetricTest):
     module = MeanArctangentAbsoluteRelativeError
     res = {
@@ -140,6 +152,39 @@ class MAARETest(BaseMetricTest):
         'test_random_multivariate': 0.7754344161537233,
         'test_identical': 0.0,
         'test_offset_one': np.pi / 2,
+    }
+
+
+class RelPHTest(BaseMetricTest):
+    module = RelativePrognosticHorizon
+
+    res = {
+        'test_random_univariate': 1.0,
+        'test_random_multivariate': 0.2,
+        'test_identical': 1.0,
+        'test_offset_one': 0.0,
+    }
+
+
+class PHRateTest(BaseMetricTest):
+    module = PrognosticHorizonRate
+
+    res = {
+        'test_random_univariate': 1.0,
+        'test_random_multivariate': 0.7,
+        'test_identical': 1.0,
+        'test_offset_one': 0.0,
+    }
+
+
+class CRATest(BaseMetricTest):
+    module = CumulativeRelativeAccuracy
+
+    res = {
+        'test_random_univariate': 0.24088151644147335,
+        'test_random_multivariate': -2.994246126474539,
+        'test_identical': 1.0,
+        'test_offset_one': -np.inf,
     }
 
 
