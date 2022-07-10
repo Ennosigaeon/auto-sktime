@@ -83,8 +83,8 @@ class BaseDownSampling(AutoSktimeTransformer):
 
         # Skip down-sampling if input data is small
         # TODO move to choice and use dataset_properties to only include identity
-        if X.shape[0] < 1000:
-            return X, y
+        # if X.shape[0] < 1000:
+        #     return X, y
 
         # input check and conversion for X/y
         X_inner, y_inner, metadata = self._check_X_y(X=X, y=y, return_metadata=True)

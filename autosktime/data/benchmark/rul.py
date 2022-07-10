@@ -43,7 +43,7 @@ def _read_overview(base_dir: str) -> pd.DataFrame:
 
 def _read_single_experiment(file_name: str, overview: pd.DataFrame) -> pd.DataFrame:
     df = pd.read_csv(file_name, index_col='Messpunkt')
-    df = df[['Differenzdruck', 'Durchfluss', 'Vorschub', 'RUL']]
+    df = df[['Differenzdruck', 'Vorschub', 'RUL']]
 
     regex = r'Data_No_(\d+)_'
     match = re.search(regex, file_name)

@@ -23,7 +23,7 @@ class DownsamplerChoice(AutoSktimeChoice, AutoSktimeTransformer):
     def get_hyperparameter_search_space(
             self,
             dataset_properties: DatasetProperties = None,
-            default: str = 'none',
+            default: str = 'convolution',
             include: List[str] = None,
             exclude: List[str] = None
     ) -> ConfigurationSpace:

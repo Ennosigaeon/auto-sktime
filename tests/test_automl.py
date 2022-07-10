@@ -59,12 +59,6 @@ def fit_and_predict(
         X_train = None
         X_test = None
 
-    if panel:
-        if X_test is not None:
-            X_test[y_test.columns[0]] = y_test
-        else:
-            X_test = y_test
-
     if fh is None:
         fh = ForecastingHorizon(resolve_index(y_test.index), is_relative=False)
 
@@ -153,12 +147,14 @@ class AutoMLTest(unittest.TestCase):
         _, loss = fit_and_predict(y, X)
         self.assertAlmostEqual(0.010168705176617804, loss)
 
+    @unittest.skip('Panel without exogenous data not supported')
     def test_panel_endogenous(self):
         y = _bottom_hier_datagen(no_levels=1, random_seed=0)
 
         _, loss = fit_and_predict(y, panel=True)
         self.assertAlmostEqual(0.09982033042925743, loss)
 
+    @unittest.skip('Panel without exogenous data not supported')
     def test_panel_endogenous_different_size(self):
         X, y = load_rul(
             os.path.join(Path(__file__).parent.resolve(), 'data', 'rul'),
@@ -178,11 +174,9 @@ class AutoMLTest(unittest.TestCase):
         )
         automl, loss = fit_and_predict(y, X, panel=True)
 
-        if len(automl.runhistory_.get_all_configs()) == 3:
-            self.assertAlmostEqual(0.0013918583293422411, loss)
-        else:
-            self.assertAlmostEqual(0.058506681306847774, loss)
+        self.assertAlmostEqual(0.2023553231208388, loss)
 
+    @unittest.skip('Panel without exogenous data not supported')
     def test_panel_relative_forecast_horizon(self):
         X, y = load_rul(
             os.path.join(Path(__file__).parent.resolve(), 'data', 'rul'),

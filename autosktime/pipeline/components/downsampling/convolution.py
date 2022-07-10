@@ -15,7 +15,7 @@ from scipy import signal
 
 class ConvolutionDownSampler(BaseDownSampling):
 
-    def __init__(self, window_size: Union[float, int] = 0.05, random_state: np.random.RandomState = None):
+    def __init__(self, window_size: Union[float, int] = 0.01, random_state: np.random.RandomState = None):
         super().__init__()
         self.window_size = window_size
         self.random_state = random_state
@@ -27,7 +27,7 @@ class ConvolutionDownSampler(BaseDownSampling):
             n = int(self.window_size)
 
         self._original_size = X.shape[0]
-        self._X_filter = (1.0 / n) * np.ones((n, X.shape[1]))
+        self._X_filter = np.ones((n, X.shape[1])) / n
 
         Xt = signal.convolve(X, self._X_filter, mode='valid')[::n]
 
@@ -39,8 +39,8 @@ class ConvolutionDownSampler(BaseDownSampling):
 
         Xt = pd.DataFrame(Xt, columns=X.columns, index=index)
         if y is not None:
-            self._y_filter = (1.0 / n) * np.ones((n, y.shape[1]))
-            yt = pd.DataFrame(signal.convolve(y, self._X_filter, mode='valid')[::n], columns=y.columns, index=index)
+            self._y_filter = np.ones((n, y.shape[1])) / n
+            yt = pd.DataFrame(signal.convolve(y, self._y_filter, mode='valid')[::n], columns=y.columns, index=index)
         else:
             yt = None
 

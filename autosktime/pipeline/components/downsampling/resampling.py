@@ -38,7 +38,7 @@ class ResamplingDownSampling(BaseDownSampling):
         if isinstance(index, pd.PeriodIndex):
             index = pd.date_range(start=index[0].to_timestamp(), end=index[-1].to_timestamp(), periods=n)
         else:
-            index = np.linspace(index[0], index[-1], n, endpoint=False)
+            index = np.linspace(index[0], index[-1], n, endpoint=False, dtype=int)
 
         Xt = pd.DataFrame(signal.resample(X, n), columns=X.columns, index=index)
         if y is not None:

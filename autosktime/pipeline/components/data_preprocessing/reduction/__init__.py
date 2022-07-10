@@ -21,7 +21,7 @@ class ReductionChoice(AutoSktimeChoice, AutoSktimePreprocessingAlgorithm):
     def get_hyperparameter_search_space(
             self,
             dataset_properties: DatasetProperties = None,
-            default: str = 'pca',
+            default: str = 'none',
             include: List[str] = None,
             exclude: List[str] = None
     ) -> ConfigurationSpace:

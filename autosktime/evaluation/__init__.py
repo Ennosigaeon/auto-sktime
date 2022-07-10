@@ -185,5 +185,5 @@ class ExecuteTaFunc(AbstractTAFunc):
         additional_run_info['configuration_origin'] = config.origin
         additional_run_info['status'] = info.status
 
-        self.logger.info(f'Finished evaluating configuration {config.config_id}')
+        self.logger.info(f'Finished evaluating configuration {config.config_id} with loss {cost}')
         return cost, additional_run_info

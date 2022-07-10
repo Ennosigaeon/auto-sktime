@@ -2,18 +2,19 @@ from typing import List, Union, Dict, Any, Tuple
 
 import numpy as np
 import pandas as pd
+from sklearn.pipeline import Pipeline
+from sktime.forecasting.base import ForecastingHorizon
+from sktime.forecasting.base._base import DEFAULT_ALPHA
+from sktime.forecasting.compose._reduce import RecursiveTabularRegressionForecaster
+from sktime.utils.datetime import _shift
+
 from ConfigSpace import ConfigurationSpace, Configuration, UniformIntegerHyperparameter
 from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, HANDLES_PANEL, IGNORES_EXOGENOUS_X, \
     SUPPORTED_INDEX_TYPES
 from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import AutoSktimeComponent, COMPONENT_PROPERTIES, AutoSktimeTransformer
 from autosktime.pipeline.templates.base import set_pipeline_configuration, get_pipeline_search_space
-from autosktime.pipeline.util import NotVectorizedMixin
-from sklearn.pipeline import Pipeline
-from sktime.forecasting.base import ForecastingHorizon
-from sktime.forecasting.base._base import DEFAULT_ALPHA
-from sktime.forecasting.compose._reduce import RecursiveTabularRegressionForecaster
-from sktime.utils.datetime import _shift
+from autosktime.pipeline.util import NotVectorizedMixin, ChainedPandasAssigment
 
 
 class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForecaster, AutoSktimeComponent):
@@ -38,10 +39,12 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
             estimator: Pipeline,
             dataset_properties: DatasetProperties,
             window_length: int = 5,
+            include_index: bool = True,
             transformers: List[Tuple[str, AutoSktimeTransformer]] = None,
             random_state: np.random.RandomState = None
     ):
         super(NotVectorizedMixin, self).__init__(estimator, window_length, transformers)
+        self.include_index = include_index
         # Just to make type explicit for type checker
         self.transformers: List[Tuple[str, AutoSktimeTransformer]] = transformers
         self.dataset_properties = dataset_properties
@@ -79,7 +82,12 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
         self.transformers = transformers
         return res
 
-    def _transform(self, y, X=None):
+    def _transform(self, y: pd.Series, X: pd.DataFrame = None):
+        if y is None and X is None:
+            raise ValueError('Provide either X or y')
+        elif y is None:
+            y = pd.Series(np.zeros(X.shape[0]), X.index)
+
         if isinstance(y.index, pd.MultiIndex):
             Xt_complete = []
             yt_complete = []
@@ -87,15 +95,20 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
                 X_ = X.loc[idx] if X is not None else None
                 y_ = y.loc[idx]
 
-                yt, Xt = super()._transform(y_, X_)
+                yt, Xt = self._transform(y_, X_)
                 yt_complete.append(yt)
                 Xt_complete.append(Xt)
 
             return np.concatenate(yt_complete), np.concatenate(Xt_complete)
         else:
-            return super()._transform(y, X)
+            if X is not None and self.include_index:
+                with ChainedPandasAssigment():
+                    X['__index__'] = X.index
 
-    def _predict(self, fh, X=None):
+            yt, Xt = super()._transform(y, X)
+            return yt, Xt[:, self.window_length:]
+
+    def _predict(self, fh: ForecastingHorizon, X: pd.DataFrame = None):
         if X is not None and isinstance(X.index, pd.MultiIndex):
             y_pred_complete = []
             keys = X.index.remove_unused_levels().levels[0]
@@ -105,37 +118,39 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
                 original_cutoff = self.cutoff
                 self._cutoff = X_.index[-1]
 
-                y_pred = super()._predict(fh, X_)
+                y_pred = self._predict(fh, X_)
                 y_pred_complete.append(y_pred)
 
                 self._cutoff = original_cutoff
 
             return pd.concat(y_pred_complete, keys=keys)
         else:
+            if X is not None and self.include_index:
+                with ChainedPandasAssigment():
+                    X['__index__'] = fh.to_pandas()
+
             return super()._predict(fh, X)
 
     # noinspection PyMethodOverriding
-    def _get_last_window(self, y: pd.DataFrame, X: pd.DataFrame):
+    def _get_last_window(self, X: pd.DataFrame) -> np.ndarray:
         """Select last window."""
         # Get the start and end points of the last window.
         cutoff = self.cutoff
         start = _shift(cutoff, by=-self.window_length_ + 1)
 
         # Get the last window of the endogenous variable.
-        y = y.loc[start:cutoff].to_numpy()
+        X = X.loc[start:cutoff].to_numpy()
 
-        # If X is given, also get the last window of the exogenous variables.
-        X = X.loc[start:cutoff].to_numpy() if X is not None else None
-
-        return y, X
+        return X
 
     def _predict_last_window(
             self, fh, X=None, return_pred_int=False, alpha=DEFAULT_ALPHA
     ):
-        X, y = self._split_X(X)
+        if X is None:
+            raise ValueError('`X` must be passed to `predict`.')
 
-        # Get last window of available data.
-        y_last, X_last = self._get_last_window(y, X)
+            # Get last window of available data.
+        X_last = self._get_last_window(X)
 
         # Pre-allocate arrays.
         if X is None:
@@ -149,7 +164,7 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
         last = np.zeros((1, n_columns, window_length + fh_max))
 
         # Fill pre-allocated arrays with available data.
-        last[:, 0, :window_length] = y_last.T
+        last[:, 0, :window_length] = np.zeros(1, window_length)
         if X is not None:
             last[:, 1:, :window_length] = X_last.T
             last[:, 1:, window_length:] = X.T
@@ -184,27 +199,16 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
 
         return y_return
 
-    def _split_X(self, X: pd.DataFrame):
+    def _predict_in_sample(self, fh: ForecastingHorizon, X: pd.DataFrame = None, return_pred_int=False, alpha=None):
         if X is None:
             raise ValueError('`X` must be passed to `predict`.')
 
-        y = X[[self._target_column]]
-        X = X.drop(columns=[self._target_column])
-        if len(X.columns) == 0:
-            X = None
-
-        return X, y
-
-    def _predict_in_sample(self, fh: ForecastingHorizon, X: pd.DataFrame = None, return_pred_int=False, alpha=None):
-        X_, y = self._split_X(X)
-
-        start = max(_shift(fh.to_pandas()[0], by=-self.window_length_ + 1), y.index[0])
+        start = max(_shift(fh.to_pandas()[0], by=-self.window_length_ + 1), X.index[0])
         cutoff = fh.to_pandas()[-1] + 1
 
-        y = y.loc[start:cutoff]
-        X_ = X_.loc[start: cutoff, :] if X_ is not None else None
+        X = X.loc[start: cutoff, :]
 
-        _, Xt = self._transform(y, X_)
+        _, Xt = self._transform(None, X)
         y_pred = self.estimator_.predict(Xt)
 
         padding = np.ones(fh.to_pandas().shape[0] - y_pred.shape[0]) * y_pred[0]

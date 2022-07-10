@@ -51,6 +51,8 @@ class GaussianProcessComponent(AutoSktimeRegressionAlgorithm):
         if y.ndim == 2 and y.shape[1] == 1:
             y = y.flatten()
 
+        raise ValueError('GaussianProcess disabled while pynisher is disabled by default')
+
         # noinspection PyUnresolvedReferences
         self.estimator.fit(X, y)
 

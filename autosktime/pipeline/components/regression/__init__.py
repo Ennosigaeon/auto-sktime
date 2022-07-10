@@ -24,7 +24,7 @@ class RegressorChoice(AutoSktimeChoice, AutoSktimeRegressionAlgorithm):
     def get_hyperparameter_search_space(
             self,
             dataset_properties: DatasetProperties = None,
-            default: str = 'k_nearest_neighbors',
+            default: str = 'random_forest',
             include: List[str] = None,
             exclude: List[str] = None
     ) -> ConfigurationSpace:

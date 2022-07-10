@@ -21,7 +21,7 @@ class RescalingChoice(AutoSktimeChoice, AutoSktimePreprocessingAlgorithm):
     def get_hyperparameter_search_space(
             self,
             dataset_properties: DatasetProperties = None,
-            default: str = 'robust_scaler',
+            default: str = 'standardize',
             include: List[str] = None,
             exclude: List[str] = None
     ) -> ConfigurationSpace:
