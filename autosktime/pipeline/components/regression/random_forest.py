@@ -28,9 +28,12 @@ class RandomForestComponent(AutoSktimeRegressionAlgorithm):
             max_leaf_nodes: int = None,
             min_impurity_decrease: float = 0.,
             random_state: np.random.RandomState = None,
-            n_jobs: int = 1
+            n_jobs: int = 1,
+
+            desired_iterations: int = None
     ):
         super().__init__()
+        self.n_estimators = self.get_max_iter()
         self.criterion = criterion
         self.max_features = max_features
         self.max_depth = max_depth
@@ -43,7 +46,9 @@ class RandomForestComponent(AutoSktimeRegressionAlgorithm):
         self.random_state = random_state
         self.n_jobs = n_jobs
 
-    def fit(self, X: pd.DataFrame, y: pd.Series):
+        self.desired_iterations = desired_iterations
+
+    def _set_model(self):
         from sklearn.ensemble import RandomForestRegressor
 
         self.max_depth = None if check_none(self.max_depth) else int(self.max_depth)
@@ -65,8 +70,15 @@ class RandomForestComponent(AutoSktimeRegressionAlgorithm):
             max_leaf_nodes=self.max_leaf_nodes,
             min_impurity_decrease=self.min_impurity_decrease,
             random_state=self.random_state,
-            n_jobs=self.n_jobs
+            n_jobs=self.n_jobs,
+            warm_start=True
         )
+
+    def fit(self, X: pd.DataFrame, y: pd.Series):
+        if self.desired_iterations is not None:
+            return self.update(X, y, self.desired_iterations)
+
+        self._set_model()
 
         if y.ndim == 2 and y.shape[1] == 1:
             y = y.flatten()
@@ -74,6 +86,26 @@ class RandomForestComponent(AutoSktimeRegressionAlgorithm):
         # noinspection PyUnresolvedReferences
         self.estimator.fit(X, y)
         return self
+
+    def update(self, X: pd.DataFrame, y: pd.Series, n_iter: int = 1):
+        if self.estimator is None:
+            self._set_model()
+            self.estimator.n_estimators = n_iter
+        else:
+            self.estimator.n_estimators = min(n_iter, self.n_estimators)
+
+        if y.ndim == 2 and y.shape[1] == 1:
+            y = y.flatten()
+
+        # noinspection PyUnresolvedReferences
+        self.estimator.fit(X, y)
+        return self
+
+    def get_max_iter(self):
+        return 100
+
+    def supports_iterative_fit(self) -> bool:
+        return True
 
     @staticmethod
     def get_properties(dataset_properties: DatasetProperties = None) -> COMPONENT_PROPERTIES:

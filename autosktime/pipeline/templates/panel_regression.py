@@ -2,10 +2,12 @@ from typing import Tuple, List
 
 import numpy as np
 import pandas as pd
+from sktime.forecasting.base import ForecastingHorizon
+
 from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, IGNORES_EXOGENOUS_X, SUPPORTED_INDEX_TYPES, \
     HANDLES_PANEL
 from autosktime.data import DatasetProperties
-from autosktime.pipeline.components.base import AutoSktimeComponent, COMPONENT_PROPERTIES
+from autosktime.pipeline.components.base import AutoSktimeComponent, COMPONENT_PROPERTIES, UpdatablePipeline
 from autosktime.pipeline.components.data_preprocessing import DataPreprocessingPipeline
 from autosktime.pipeline.components.downsampling.elimination import EliminationDownSampler
 from autosktime.pipeline.components.preprocessing.impute import ImputerComponent
@@ -13,8 +15,6 @@ from autosktime.pipeline.components.reduction.panel import RecursivePanelReducer
 from autosktime.pipeline.components.regression import RegressorChoice
 from autosktime.pipeline.templates.base import ConfigurableTransformedTargetForecaster
 from autosktime.pipeline.util import NotVectorizedMixin, Int64Index
-from sklearn.pipeline import Pipeline
-from sktime.forecasting.base import ForecastingHorizon
 
 
 class PanelRegressionPipeline(NotVectorizedMixin, ConfigurableTransformedTargetForecaster):
@@ -73,7 +73,7 @@ class PanelRegressionPipeline(NotVectorizedMixin, ConfigurableTransformedTargetF
         # return super()._predict(fh, X)
 
     def _get_pipeline_steps(self) -> List[Tuple[str, AutoSktimeComponent]]:
-        pipeline = Pipeline(steps=[
+        pipeline = UpdatablePipeline(steps=[
             ('preprocessing', DataPreprocessingPipeline(random_state=self.random_state)),
             ('regression', RegressorChoice(random_state=self.random_state))
         ])

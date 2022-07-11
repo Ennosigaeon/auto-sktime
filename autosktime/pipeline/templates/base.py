@@ -1,13 +1,12 @@
 import copy
 from abc import ABC
-from typing import Dict, Any, List, Tuple, Union
+from typing import Dict, Any, List, Tuple, Union, Optional
 
 import numpy as np
-from sktime.forecasting.compose import TransformedTargetForecaster, ForecastingPipeline
-
 from ConfigSpace import Configuration, ConfigurationSpace
 from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import AutoSktimeComponent, AutoSktimeChoice, AutoSktimePredictor
+from sktime.forecasting.compose import TransformedTargetForecaster, ForecastingPipeline
 
 
 class ConfigurablePipeline(ABC):
@@ -115,6 +114,19 @@ class ConfigurablePipeline(ABC):
     def _get_pipeline_steps(self) -> List[Tuple[str, AutoSktimeComponent]]:
         raise NotImplementedError()
 
+    def supports_iterative_fit(self) -> bool:
+        forecaster = self.steps[-1][1]
+        return forecaster.supports_iterative_fit()
+
+    def get_max_iter(self) -> Optional[int]:
+        forecaster = self.steps[-1][1]
+        return forecaster.get_max_iter()
+
+    def set_desired_iterations(self, iterations: int):
+        self.steps[-1][1].set_desired_iterations(iterations)
+        if hasattr(self, 'steps_'):
+            self.steps_[-1][1].set_desired_iterations(iterations)
+
 
 class ConfigurableTransformedTargetForecaster(TransformedTargetForecaster, ConfigurablePipeline, AutoSktimePredictor,
                                               ABC):
@@ -130,6 +142,9 @@ class ConfigurableTransformedTargetForecaster(TransformedTargetForecaster, Confi
     ):
         self._init(config, dataset_properties, include, exclude, random_state, init_params)
         super().__init__(self.steps)
+
+    def reset(self):
+        pass
 
     def _transform(self, X, y=None):
         # Only implemented for type checker, not actually used

@@ -1,8 +1,7 @@
-from typing import List, Union, Dict, Any, Tuple
+from typing import List, Union, Dict, Any, Tuple, Optional
 
 import numpy as np
 import pandas as pd
-from sklearn.pipeline import Pipeline
 from sktime.forecasting.base import ForecastingHorizon
 from sktime.forecasting.base._base import DEFAULT_ALPHA
 from sktime.forecasting.compose._reduce import RecursiveTabularRegressionForecaster
@@ -12,7 +11,8 @@ from ConfigSpace import ConfigurationSpace, Configuration, UniformIntegerHyperpa
 from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, HANDLES_PANEL, IGNORES_EXOGENOUS_X, \
     SUPPORTED_INDEX_TYPES
 from autosktime.data import DatasetProperties
-from autosktime.pipeline.components.base import AutoSktimeComponent, COMPONENT_PROPERTIES, AutoSktimeTransformer
+from autosktime.pipeline.components.base import AutoSktimeComponent, COMPONENT_PROPERTIES, AutoSktimeTransformer, \
+    UpdatablePipeline
 from autosktime.pipeline.templates.base import set_pipeline_configuration, get_pipeline_search_space
 from autosktime.pipeline.util import NotVectorizedMixin, ChainedPandasAssigment
 
@@ -36,7 +36,7 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
 
     def __init__(
             self,
-            estimator: Pipeline,
+            estimator: UpdatablePipeline,
             dataset_properties: DatasetProperties,
             window_length: int = 5,
             include_index: bool = True,
@@ -130,6 +130,16 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
                     X['__index__'] = fh.to_pandas()
 
             return super()._predict(fh, X)
+
+    def _update(self, y: pd.Series, X: pd.DataFrame = None, update_params: bool = True):
+        yt = y
+        Xt = X
+        for _, t in self.transformers:
+            yt, Xt = t.transform(X=yt, y=Xt)
+
+        yt, Xt = self._transform(yt, Xt)
+
+        self.estimator_.update(yt, Xt)
 
     # noinspection PyMethodOverriding
     def _get_last_window(self, X: pd.DataFrame) -> np.ndarray:
@@ -272,3 +282,20 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
             cs.add_configuration_space('transformers', transformers)
 
         return cs
+
+    def supports_iterative_fit(self) -> bool:
+        forecaster = self.estimator.steps[-1][1]
+        return forecaster.supports_iterative_fit()
+
+    def get_max_iter(self) -> Optional[int]:
+        forecaster = self.estimator.steps[-1][1]
+        return forecaster.get_max_iter()
+
+    def set_desired_iterations(self, iterations: int):
+        self.estimator.steps[-1][1].set_desired_iterations(iterations)
+        if hasattr(self.estimator, 'steps_'):
+            self.estimator.steps_[-1][1].set_desired_iterations(iterations)
+        if hasattr(self, 'estimator_'):
+            self.estimator_.steps[-1][1].set_desired_iterations(iterations)
+            if hasattr(self.estimator_, 'steps_'):
+                self.estimator_.steps_[-1][1].set_desired_iterations(iterations)

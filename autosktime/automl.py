@@ -20,7 +20,8 @@ from sktime.performance_metrics.forecasting._classes import BaseForecastingError
 from ConfigSpace import ConfigurationSpace, Configuration
 from ConfigSpace.read_and_write import json as cs_json
 from autosktime.automl_common.common.ensemble_building.abstract_ensemble import AbstractEnsemble
-from autosktime.constants import SUPPORTED_Y_TYPES, PANEL_FORECAST, MULTIVARIATE_FORECAST, UNIVARIATE_FORECAST
+from autosktime.constants import SUPPORTED_Y_TYPES, PANEL_FORECAST, MULTIVARIATE_FORECAST, UNIVARIATE_FORECAST, \
+    PANEL_TASKS
 from autosktime.data import DataManager
 from autosktime.data.splitter import BaseSplitter, splitter_types
 from autosktime.ensembles.builder import EnsembleBuilderManager
@@ -31,7 +32,7 @@ from autosktime.metrics import default_metric_for_task
 from autosktime.pipeline.templates import util
 from autosktime.pipeline.templates.base import BasePipeline
 from autosktime.pipeline.util import NotVectorizedMixin
-from autosktime.smbo import AutoMLSMBO
+from autosktime.smbo import AutoMLSMBO, SHIntensifierGenerator, SimpleIntensifierGenerator
 from autosktime.util.backend import create, Backend
 from autosktime.util.dask_single_thread_client import SingleThreadedClient
 from autosktime.util.logging_ import setup_logger
@@ -59,7 +60,7 @@ class AutoML(NotVectorizedMixin, BaseForecaster):
                  memory_limit: int = 3072,
                  include: Optional[Dict[str, List[str]]] = None,
                  exclude: Optional[Dict[str, List[str]]] = None,
-                 resampling_strategy: str = 'holdout',
+                 resampling_strategy: str = 'temporal-holdout',
                  resampling_strategy_arguments: Dict[str, Any] = None,
                  metadata_directory: str = None,
                  num_metalearning_configs: int = -1,
@@ -68,7 +69,8 @@ class AutoML(NotVectorizedMixin, BaseForecaster):
                  dask_client: Optional[dask.distributed.Client] = None,
                  logging_config: Dict[str, Any] = None,
                  metric: BaseForecastingErrorMetric = None,
-                 use_pynisher: bool = False
+                 use_pynisher: bool = False,
+                 use_multi_fidelity: bool = True
                  ):
         super(AutoML, self).__init__()
         self.configuration_space: Optional[ConfigurationSpace] = None
@@ -100,6 +102,7 @@ class AutoML(NotVectorizedMixin, BaseForecaster):
 
         self._metric = metric
         self._use_pynisher = use_pynisher
+        self._use_multi_fidelity = use_multi_fidelity
 
         self._datamanager: Optional[DataManager] = None
         self._dataset_name: Optional[str] = None
@@ -243,7 +246,8 @@ class AutoML(NotVectorizedMixin, BaseForecaster):
                 ensemble_nbest=self._ensemble_nbest,
                 splitter=splitter,
                 max_models_on_disc=self._max_models_on_disc,
-                seed=self._seed,
+                # SMAC always uses seed 0 internally
+                seed=0,
                 random_state=self._random_state
             )
             y_ens, _ = get_ensemble_targets(self._datamanager, splitter)
@@ -282,6 +286,7 @@ class AutoML(NotVectorizedMixin, BaseForecaster):
                 memory_limit=self._memory_limit,
                 metric=self._metric,
                 splitter=self._determine_resampling(),
+                intensifier_generator=self._determine_intensification(),
                 use_pynisher=self._use_pynisher,
                 seed=self._seed,
                 random_state=self._random_state,
@@ -372,6 +377,16 @@ class AutoML(NotVectorizedMixin, BaseForecaster):
             raise ValueError(f'Unable to create {type(BaseSplitter)} from = {self._resampling_strategy}')
         return splitter
 
+    def _determine_intensification(self):
+        intensifier = SimpleIntensifierGenerator
+        if self._use_multi_fidelity:
+            if self._task in PANEL_TASKS:
+                intensifier = SHIntensifierGenerator
+            else:
+                self._logger.warning('Multi-fidelity approximations are currently only available for panel '
+                                     'forecast tasks')
+        return intensifier
+
     def _fit_cleanup(self):
         if (
                 hasattr(self, '_is_dask_client_internally_created')
@@ -416,7 +431,8 @@ class AutoML(NotVectorizedMixin, BaseForecaster):
             metric=self._metric,
             stats=stats,
             memory_limit=self._memory_limit,
-            use_pynisher=self._use_pynisher
+            use_pynisher=self._use_pynisher,
+            budget_type=None
         )
 
         run_info, run_value = ta.run_wrapper(
@@ -458,7 +474,8 @@ class AutoML(NotVectorizedMixin, BaseForecaster):
         return predictions
 
     def _load_models(self) -> None:
-        ensemble_ = self._backend.load_ensemble(self._seed)
+        # SMAC always uses seed 0 internally
+        ensemble_ = self._backend.load_ensemble(0)
 
         # If no ensemble is loaded, try to get the best performing model
         if not ensemble_:

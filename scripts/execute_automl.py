@@ -1,12 +1,13 @@
 import shutil
 
+from matplotlib import pyplot as plt
+from sktime.datasets import load_airline
+from sktime.forecasting.model_selection import temporal_train_test_split
+
 from autosktime.automl import AutoML
 from autosktime.metrics import calculate_loss
 from autosktime.util import resolve_index
 from autosktime.util.plotting import plot_series
-from matplotlib import pyplot as plt
-from sktime.datasets import load_airline
-from sktime.forecasting.model_selection import temporal_train_test_split
 
 try:
     shutil.rmtree('tmp')

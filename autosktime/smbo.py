@@ -1,7 +1,7 @@
 import copy
 import logging
 import os
-from typing import Optional, Tuple, List, Dict
+from typing import Optional, Tuple, List, Dict, Type, Any
 
 import numpy as np
 import pandas as pd
@@ -16,14 +16,89 @@ from autosktime.evaluation import ExecuteTaFunc, get_cost_of_crash
 from autosktime.metalearning.meta_base import MetaBase
 from autosktime.metrics import METRIC_TO_STRING
 from autosktime.smac.prior import Prior
-
 from smac.callbacks import IncorporateRunResultCallback
 from smac.facade.smac_ac_facade import SMAC4AC
 from smac.intensification.simple_intensifier import SimpleIntensifier
+from smac.intensification.successive_halving import SuccessiveHalving
 from smac.runhistory.runhistory import RunHistory
 from smac.runhistory.runhistory2epm import RunHistory2EPM4LogCost
 from smac.scenario.scenario import Scenario
 from smac.utils.io.traj_logging import TrajEntry
+
+
+class IntensifierGenerator:
+
+    def __call__(self, *args, **kwargs) -> SMAC4AC:
+        pass
+
+
+class SimpleIntensifierGenerator(IntensifierGenerator):
+
+    def __call__(
+            self,
+            scenario: Scenario,
+            seed: int,
+            ta_kwargs: Dict,
+            initial_configurations: List[Configuration],
+            hp_priors: bool,
+            priors: Dict[str, Prior]
+    ) -> SMAC4AC:
+        return SMAC4AC(
+            scenario=scenario,
+            rng=seed,
+            runhistory2epm=RunHistory2EPM4LogCost,
+            tae_runner=ExecuteTaFunc,
+            tae_runner_kwargs=ta_kwargs,
+            run_id=seed,
+            intensifier=SimpleIntensifier,
+            initial_configurations=initial_configurations,
+            user_priors=hp_priors,
+            user_prior_kwargs={
+                'decay_beta': 10,
+                'priors': priors
+            },
+        )
+
+
+class SHIntensifierGenerator(IntensifierGenerator):
+
+    def __init__(self, budget_type: str = 'iterations', eta: float = 4.0, initial_budget: float = 5.0):
+        self.budget_type = budget_type
+        self.eta = eta
+        self.initial_budget = initial_budget
+
+    def __call__(
+            self,
+            scenario: Scenario,
+            seed: int,
+            ta_kwargs: Dict,
+            initial_configurations: List[Configuration],
+            hp_priors: bool,
+            priors: Dict[str, Prior]
+    ) -> SMAC4AC:
+        ta_kwargs['budget_type'] = self.budget_type
+
+        return SMAC4AC(
+            scenario=scenario,
+            rng=seed,
+            runhistory2epm=RunHistory2EPM4LogCost,
+            tae_runner=ExecuteTaFunc,
+            tae_runner_kwargs=ta_kwargs,
+            run_id=seed,
+            intensifier=SuccessiveHalving,
+            intensifier_kwargs={
+                'initial_budget': self.initial_budget,
+                'max_budget': 100,
+                'eta': self.eta,
+                'min_chall': 1,
+            },
+            initial_configurations=initial_configurations,
+            user_priors=hp_priors,
+            user_prior_kwargs={
+                'decay_beta': 10,
+                'priors': priors
+            },
+        )
 
 
 class AutoMLSMBO:
@@ -38,6 +113,8 @@ class AutoMLSMBO:
             memory_limit: float,
             metric: BaseForecastingErrorMetric,
             splitter: BaseSplitter,
+            intensifier_generator: Type[IntensifierGenerator] = SimpleIntensifierGenerator,
+            intensifier_generator_kwargs: Dict[str, Any] = None,
             use_pynisher: bool = True,
             seed: int = 1,
             random_state: np.random.RandomState = None,
@@ -54,6 +131,10 @@ class AutoMLSMBO:
 
         # the configuration space
         self.config_space = config_space
+
+        intensifier_generator_kwargs = {} if intensifier_generator_kwargs is None else intensifier_generator_kwargs
+        # noinspection PyArgumentList
+        self.intensifier_generator = intensifier_generator(**intensifier_generator_kwargs)
 
         # Evaluation
         self.splitter = splitter
@@ -106,6 +187,7 @@ class AutoMLSMBO:
             'run_obj': 'quality',
             'wallclock_limit': self.total_walltime_limit,
             'cost_for_crash': self.worst_possible_result,
+            'intens_min_chall': 1,
         })
 
         ta_kwargs = {
@@ -119,24 +201,10 @@ class AutoMLSMBO:
         }
 
         y = self.datamanager.y
-        initial_configurations = self.get_initial_configs(y)
+        initial_configs = self.get_initial_configs(y)
         priors = self.get_hp_priors(y)
 
-        smac = SMAC4AC(
-            scenario=scenario,
-            rng=self.seed,
-            runhistory2epm=RunHistory2EPM4LogCost,
-            tae_runner=ExecuteTaFunc,
-            tae_runner_kwargs=ta_kwargs,
-            run_id=self.seed,
-            intensifier=SimpleIntensifier,
-            initial_configurations=initial_configurations,
-            user_priors=self.hp_priors,
-            user_prior_kwargs={
-                'decay_beta': 10,
-                'priors': priors
-            },
-        )
+        smac = self.intensifier_generator(scenario, self.seed, ta_kwargs, initial_configs, self.hp_priors, priors)
 
         if self.ensemble_callback is not None:
             smac.register_callback(self.ensemble_callback)

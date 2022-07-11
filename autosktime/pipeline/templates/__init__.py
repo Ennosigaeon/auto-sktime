@@ -1,10 +1,8 @@
 from collections import OrderedDict
-from typing import Dict, Union, Any, List, Type
+from typing import Dict, Union, Any, List, Type, Optional
 
 import numpy as np
 import pandas as pd
-from sktime.forecasting.base import ForecastingHorizon
-
 from ConfigSpace import Configuration, ConfigurationSpace, CategoricalHyperparameter
 from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, IGNORES_EXOGENOUS_X, SUPPORTED_INDEX_TYPES, \
     HANDLES_PANEL, UNIVARIATE_TASKS, MULTIVARIATE_TASKS, PANEL_TASKS
@@ -15,22 +13,25 @@ from autosktime.pipeline.templates.panel_regression import PanelRegressionPipeli
 from autosktime.pipeline.templates.regression import RegressionPipeline
 from autosktime.pipeline.templates.univariate_endogenous import UnivariateEndogenousPipeline
 from autosktime.pipeline.util import sub_configuration, NotVectorizedMixin, Int64Index
+from sktime.forecasting.base import ForecastingHorizon
 
 
 class TemplateChoice(NotVectorizedMixin, AutoSktimePredictor):
 
     def __init__(
             self,
+            estimator: AutoSktimePredictor = None,
             config: Configuration = None,
             init_params: Dict[str, Any] = None,
             random_state: np.random.RandomState = None
     ):
         super().__init__()
+        self.estimator = estimator
         self.config = config
         self.init_params = init_params
         self.random_state = random_state
 
-        if config is not None:
+        if estimator is None and config is not None:
             self.set_hyperparameters(config, init_params=init_params)
 
     def set_hyperparameters(
@@ -40,7 +41,8 @@ class TemplateChoice(NotVectorizedMixin, AutoSktimePredictor):
     ):
         params = configuration.get_dictionary() if isinstance(configuration, Configuration) else configuration
         choice, sub_config = sub_configuration(params, init_params)
-        self.estimator = self.get_components()[choice](config=sub_config, random_state=self.random_state)
+        self.estimator: AutoSktimePredictor = self.get_components()[choice](config=sub_config,
+                                                                            random_state=self.random_state)
         return self
 
     def get_hyperparameter_search_space(
@@ -142,6 +144,20 @@ class TemplateChoice(NotVectorizedMixin, AutoSktimePredictor):
             raise NotImplementedError
         # noinspection PyUnresolvedReferences
         return self.estimator.fit(y, X=X, fh=fh)
+
+    def _update(self, y: pd.Series, X: pd.Series = None, update_params: bool = True):
+        if self.estimator is None:
+            raise NotImplementedError
+        return self.estimator.update(y, X=X, update_params=update_params)
+
+    def supports_iterative_fit(self) -> bool:
+        return self.estimator.supports_iterative_fit()
+
+    def get_max_iter(self) -> Optional[int]:
+        return self.estimator.get_max_iter()
+
+    def set_desired_iterations(self, iterations: int):
+        self.estimator.set_desired_iterations(iterations)
 
     @staticmethod
     def get_properties(dataset_properties: DatasetProperties = None) -> COMPONENT_PROPERTIES:
