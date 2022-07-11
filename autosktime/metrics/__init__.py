@@ -70,12 +70,20 @@ def get_cost_of_crash(metric: BaseForecastingErrorMetric) -> float:
         return 0
 
 
-class RootMeanSquaredError(BaseForecastingErrorMetric):
+class PrintableMetric(BaseForecastingErrorMetric):
+
+    def __repr__(self, N_CHAR_MAX=700):
+        # Metrics inherit from sklearn base object and try to use func in string representation which does not exist
+        # TODO remove once sktime 0.13.0 is used
+        return str(type(self))
+
+
+class RootMeanSquaredError(PrintableMetric):
     def _evaluate(self, y_true, y_pred, **kwargs):
         return mean_squared_error(y_true, y_pred, multioutput=self.multioutput, squared=False)
 
 
-class WeightedRootMeanSquaredError(BaseForecastingErrorMetric):
+class WeightedRootMeanSquaredError(PrintableMetric):
     def _evaluate(self, y_true, y_pred, **kwargs):
         # TODO how is this number known?
         t_j_eol = 1
@@ -85,19 +93,19 @@ class WeightedRootMeanSquaredError(BaseForecastingErrorMetric):
                                   squared=False)
 
 
-class MeanAbsoluteError(BaseForecastingErrorMetric):
+class MeanAbsoluteError(PrintableMetric):
     def _evaluate(self, y_true, y_pred, **kwargs):
         return mean_absolute_error(y_true, y_pred, multioutput=self.multioutput)
 
 
-class WeightedMeanAbsoluteError(BaseForecastingErrorMetric):
+class WeightedMeanAbsoluteError(PrintableMetric):
     def _evaluate(self, y_true, y_pred, **kwargs):
         sample_weights = np.power(np.arange(y_true.shape[0]) / y_true.shape[0], 3)
 
         return mean_absolute_error(y_true, y_pred, sample_weight=sample_weights, multioutput=self.multioutput)
 
 
-class MeanError(BaseForecastingErrorMetric):
+class MeanError(PrintableMetric):
     def _evaluate(self, y_true, y_pred, **kwargs):
         sample_weight = kwargs.get('sample_weight', None)
 
@@ -116,13 +124,13 @@ class MeanError(BaseForecastingErrorMetric):
         return np.average(output_errors, weights=multioutput)
 
 
-class StandardDeviationError(BaseForecastingErrorMetric):
+class StandardDeviationError(PrintableMetric):
     def _evaluate(self, y_true, y_pred, **kwargs):
         diff = np.abs(y_true - y_pred)
         return diff.std().iloc[0]
 
 
-class MeanArctangentAbsoluteRelativeError(BaseForecastingErrorMetric):
+class MeanArctangentAbsoluteRelativeError(PrintableMetric):
     def _evaluate(self, y_true, y_pred, **kwargs):
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', RuntimeWarning)
@@ -142,7 +150,7 @@ class MeanArctangentAbsoluteRelativeError(BaseForecastingErrorMetric):
             return np.average(output_errors, weights=multioutput)
 
 
-class RelativePrognosticHorizon(BaseForecastingErrorMetric):
+class RelativePrognosticHorizon(PrintableMetric):
     _tags = {
         'lower_is_better': False,
     }
@@ -179,7 +187,7 @@ class RelativePrognosticHorizon(BaseForecastingErrorMetric):
         return x.shape[0] - run_lengths[-1]
 
 
-class PrognosticHorizonRate(BaseForecastingErrorMetric):
+class PrognosticHorizonRate(PrintableMetric):
     _tags = {
         'lower_is_better': False,
     }
@@ -197,7 +205,7 @@ class PrognosticHorizonRate(BaseForecastingErrorMetric):
         return (in_bound.sum() / in_bound.shape[0]).iloc[0]
 
 
-class CumulativeRelativeAccuracy(BaseForecastingErrorMetric):
+class CumulativeRelativeAccuracy(PrintableMetric):
     _tags = {
         'lower_is_better': False,
     }

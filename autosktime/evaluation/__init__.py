@@ -142,6 +142,8 @@ class ExecuteTaFunc(AbstractTAFunc):
         self.logger.info(
             f'Starting to evaluate configuration {run_info.config.config_id}: {run_info.config.get_dictionary()}')
         info, value = super().run_wrapper(run_info=run_info)
+        self.logger.info(f'Finished evaluating configuration {run_info.config.config_id} with loss {value.cost} and '
+                         f'status {value.status}')
 
         if 'status' in value.additional_info:
             # smac treats all ta calls without an exception as a success independent of the provided status
@@ -174,10 +176,13 @@ class ExecuteTaFunc(AbstractTAFunc):
             **obj_kwargs
         )
 
+        if info is None:
+            # Execution was not successful
+            return 0, {}
+
         cost = info.loss
         additional_run_info = info.additional_run_info
         additional_run_info['configuration_origin'] = config.origin
         additional_run_info['status'] = info.status
 
-        self.logger.info(f'Finished evaluating configuration {config.config_id} with loss {cost}')
         return cost, additional_run_info
