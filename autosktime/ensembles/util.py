@@ -35,7 +35,7 @@ def _aggregate(y: SUPPORTED_Y_TYPES, aggfunc: str, weights: Optional[List[float]
     if isinstance(y, pd.Series):
         return pd.Series(y_agg, index=y.index, name=y.name)
     elif isinstance(y, pd.DataFrame):
-        return pd.DataFrame(y_agg, index=y.index, columns=y.columns)
+        return pd.DataFrame(y_agg, index=y.index, columns=y.columns[[0]])
 
 
 # TODO holdout ensemble data is messed up. Data should be set aside at start and just be reused

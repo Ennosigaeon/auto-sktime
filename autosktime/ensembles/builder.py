@@ -258,7 +258,7 @@ class EnsembleBuilder:
             metric: BaseForecastingErrorMetric,
             ensemble_size: int = 10,
             ensemble_nbest: Union[int, float] = 100,
-            max_models_on_disc: Union[int, float] = None,
+            max_models_on_disc: Union[int, float] = 10,
             seed: int = 1,
             previous_performance=np.inf,
             random_state: np.random.RandomState = None,
@@ -280,9 +280,9 @@ class EnsembleBuilder:
 
         # max_models_on_disc can be a float, in such case we need to remember the user specified Megabytes and translate
         # this to max number of ensemble models. max_resident_models keeps the maximum number of models on disc
-        if max_models_on_disc is not None and max_models_on_disc < 0:
+        if max_models_on_disc < 0:
             raise ValueError('max_models_on_disc has to be a positive number or None')
-        self.max_models_on_disc = max_models_on_disc
+        self.max_models_on_disc = max(max_models_on_disc, ensemble_nbest)
         self.max_resident_models = None
 
         self.seed = seed
