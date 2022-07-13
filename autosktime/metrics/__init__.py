@@ -70,42 +70,75 @@ def get_cost_of_crash(metric: BaseForecastingErrorMetric) -> float:
         return 0
 
 
-class PrintableMetric(BaseForecastingErrorMetric):
+class PrintableVectorizedMetric(BaseForecastingErrorMetric):
 
     def __repr__(self, N_CHAR_MAX=700):
         # Metrics inherit from sklearn base object and try to use func in string representation which does not exist
         # TODO remove once sktime 0.13.0 is used
         return str(type(self))
 
+    def evaluate(self, y_true, y_pred, **kwargs):
+        multioutput = self.multioutput
+        multilevel = self.multilevel
+        # Input checks and conversions
+        y_true_inner, y_pred_inner, multioutput, multilevel, kwargs = self._check_ys(
+            y_true, y_pred, multioutput, multilevel, **kwargs
+        )
 
-class RootMeanSquaredError(PrintableMetric):
+        if hasattr(y_true_inner, 'index') and isinstance(y_true_inner.index, pd.MultiIndex):
+            out_df = []
+            for idx in y_true_inner.index.remove_unused_levels().levels[0]:
+                y_true_inner_ = y_true_inner.loc[idx]
+                y_pred_inner_ = y_pred_inner.loc[idx]
+                out_df.append(self._evaluate(y_true=y_true_inner_, y_pred=y_pred_inner_, **kwargs))
+            return np.mean(out_df)
+        else:
+            # pass to inner function
+            out_df = self._evaluate(y_true=y_true_inner, y_pred=y_pred_inner, **kwargs)
+
+        return out_df
+
+    @staticmethod
+    def _determine_eol(y):
+        if isinstance(y, pd.Series) or isinstance(y, pd.DataFrame):
+            index = y.index.values
+            return index[-1]
+        else:
+            return y.shape[0]
+
+    @staticmethod
+    def _determine_weights(y):
+        if isinstance(y, pd.Series) or isinstance(y, pd.DataFrame):
+            index = y.index.values
+            return index / index[-1]
+        else:
+            return np.arange(y.shape[0]) / y.shape[0]
+
+
+class RootMeanSquaredError(PrintableVectorizedMetric):
     def _evaluate(self, y_true, y_pred, **kwargs):
         return mean_squared_error(y_true, y_pred, multioutput=self.multioutput, squared=False)
 
 
-class WeightedRootMeanSquaredError(PrintableMetric):
+class WeightedRootMeanSquaredError(PrintableVectorizedMetric):
     def _evaluate(self, y_true, y_pred, **kwargs):
-        # TODO how is this number known?
-        t_j_eol = 1
-        sample_weights = np.power(np.arange(y_true.shape[0]) / t_j_eol, 3)
-
+        sample_weights = np.power(self._determine_weights(y_true), 3)
         return mean_squared_error(y_true, y_pred, sample_weight=sample_weights, multioutput=self.multioutput,
                                   squared=False)
 
 
-class MeanAbsoluteError(PrintableMetric):
+class MeanAbsoluteError(PrintableVectorizedMetric):
     def _evaluate(self, y_true, y_pred, **kwargs):
         return mean_absolute_error(y_true, y_pred, multioutput=self.multioutput)
 
 
-class WeightedMeanAbsoluteError(PrintableMetric):
+class WeightedMeanAbsoluteError(PrintableVectorizedMetric):
     def _evaluate(self, y_true, y_pred, **kwargs):
-        sample_weights = np.power(np.arange(y_true.shape[0]) / y_true.shape[0], 3)
-
+        sample_weights = np.power(self._determine_weights(y_true), 3)
         return mean_absolute_error(y_true, y_pred, sample_weight=sample_weights, multioutput=self.multioutput)
 
 
-class MeanError(PrintableMetric):
+class MeanError(PrintableVectorizedMetric):
     def _evaluate(self, y_true, y_pred, **kwargs):
         sample_weight = kwargs.get('sample_weight', None)
 
@@ -124,13 +157,13 @@ class MeanError(PrintableMetric):
         return np.average(output_errors, weights=multioutput)
 
 
-class StandardDeviationError(PrintableMetric):
+class StandardDeviationError(PrintableVectorizedMetric):
     def _evaluate(self, y_true, y_pred, **kwargs):
-        diff = np.abs(y_true - y_pred)
+        diff = y_true - y_pred
         return diff.std().iloc[0]
 
 
-class MeanArctangentAbsoluteRelativeError(PrintableMetric):
+class MeanArctangentAbsoluteRelativeError(PrintableVectorizedMetric):
     def _evaluate(self, y_true, y_pred, **kwargs):
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', RuntimeWarning)
@@ -150,7 +183,7 @@ class MeanArctangentAbsoluteRelativeError(PrintableMetric):
             return np.average(output_errors, weights=multioutput)
 
 
-class RelativePrognosticHorizon(PrintableMetric):
+class RelativePrognosticHorizon(PrintableVectorizedMetric):
     _tags = {
         'lower_is_better': False,
     }
@@ -162,8 +195,10 @@ class RelativePrognosticHorizon(PrintableMetric):
     def _evaluate(self, y_true, y_pred, **kwargs):
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', RuntimeWarning)
-            upper_bound = y_true + self.alpha * y_true.shape[0]
-            lower_bound = y_true - self.alpha * y_true.shape[0]
+
+            t_eol = self._determine_eol(y_true)
+            upper_bound = y_true + self.alpha * t_eol
+            lower_bound = y_true - self.alpha * t_eol
 
             in_bound = (lower_bound <= y_pred) & (y_pred <= upper_bound)
 
@@ -178,7 +213,7 @@ class RelativePrognosticHorizon(PrintableMetric):
         # find run starts
         loc_run_start = np.empty(x.shape, dtype=bool)
         loc_run_start[0] = True
-        np.not_equal(x[:-1], x[1:], out=loc_run_start[1:])
+        np.not_equal(x.iloc[:-1].values, x.iloc[1:].values, out=loc_run_start[1:])
         run_starts = np.nonzero(loc_run_start)[0]
 
         # find run lengths
@@ -187,7 +222,7 @@ class RelativePrognosticHorizon(PrintableMetric):
         return x.shape[0] - run_lengths[-1]
 
 
-class PrognosticHorizonRate(PrintableMetric):
+class PrognosticHorizonRate(PrintableVectorizedMetric):
     _tags = {
         'lower_is_better': False,
     }
@@ -197,20 +232,30 @@ class PrognosticHorizonRate(PrintableMetric):
         self.alpha = alpha
 
     def _evaluate(self, y_true, y_pred, **kwargs):
-        upper_bound = y_true + self.alpha * y_true.shape[0]
-        lower_bound = y_true - self.alpha * y_true.shape[0]
+        t_eol = self._determine_eol(y_true)
+        upper_bound = y_true + self.alpha * t_eol
+        lower_bound = y_true - self.alpha * t_eol
 
         in_bound = (lower_bound <= y_pred) & (y_pred <= upper_bound)
 
         return (in_bound.sum() / in_bound.shape[0]).iloc[0]
 
 
-class CumulativeRelativeAccuracy(PrintableMetric):
+class CumulativeRelativeAccuracy(PrintableVectorizedMetric):
     _tags = {
         'lower_is_better': False,
     }
 
     def _evaluate(self, y_true, y_pred, **kwargs):
+        mask = pd.Series([True] * y_true.shape[0], index=y_true.index)
+        # Remove first 20% of data
+        mask.iloc[0: y_true.shape[0] // 5] = False
+        # Remove last entry
+        mask.iloc[-1] = False
+
+        y_true = y_true.loc[mask]
+        y_pred = y_pred.loc[mask]
+
         return (1 - np.abs(y_true - y_pred) / y_true).mean().iloc[0]
 
 
@@ -257,7 +302,18 @@ class MeanAbsoluteScaledError(MeanAbsoluteScaledError_):
     ) -> float:
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', FutureWarning)
-            return super().__call__(y_true, y_pred, horizon_weight=horizon_weight, **kwargs)
+            if hasattr(y_true, 'index') and isinstance(y_true.index, pd.MultiIndex):
+                out_df = []
+                y_train = kwargs.get('y_train', None)
+                for idx in y_true.index.remove_unused_levels().levels[0]:
+                    y_true_ = y_true.loc[idx]
+                    y_pred_ = y_pred.loc[idx]
+                    if y_train is not None:
+                        kwargs['y_train'] = y_train.loc[idx]
+                    out_df.append(self._evaluate(y_true=y_true_, y_pred=y_pred_, **kwargs))
+                return float(np.mean(out_df))
+            else:
+                return super().__call__(y_true, y_pred, horizon_weight=horizon_weight, **kwargs)
 
 
 class OverallWeightedAverage(BaseForecastingErrorMetric):

@@ -28,6 +28,7 @@ class RegressorChoice(AutoSktimeChoice, AutoSktimeRegressionAlgorithm):
             include: List[str] = None,
             exclude: List[str] = None
     ) -> ConfigurationSpace:
+        include = ['random_forest']
         return super().get_hyperparameter_search_space(dataset_properties, default, include, exclude)
 
     @staticmethod

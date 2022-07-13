@@ -11,7 +11,7 @@ from sktime.forecasting.base import ForecastingHorizon
 from autosktime.automl import AutoML
 from autosktime.data.benchmark.rul import load_rul
 from autosktime.data.splitter import multiindex_cross_validation
-from autosktime.metrics import calculate_loss, RootMeanSquaredError, STRING_TO_METRIC
+from autosktime.metrics import RootMeanSquaredError, STRING_TO_METRIC
 from autosktime.util import resolve_index
 from autosktime.util.plotting import plot_grouped_series
 
@@ -67,7 +67,7 @@ for fold, (y_train, y_test, X_train, X_test) in \
 
     for metric_name in performance.keys():
         metric = STRING_TO_METRIC[metric_name]
-        performance[metric_name][fold] = calculate_loss(y_test, y_pred, automl._task, metric)
+        performance[metric_name][fold] = metric(y_test, y_pred)
 
     plot_grouped_series(None, y_test, y_pred)
     plt.savefig(os.path.join(workdir, 'plot.pdf'))
