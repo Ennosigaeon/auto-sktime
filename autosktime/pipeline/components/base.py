@@ -106,7 +106,7 @@ class AutoSktimeComponent(BaseEstimator):
         return self
 
     def supports_iterative_fit(self) -> bool:
-        return False
+        return self.get_max_iter() is not None
 
     def get_max_iter(self) -> Optional[int]:
         return None

@@ -28,7 +28,9 @@ class GradientBoostingComponent(AutoSktimeRegressionAlgorithm):
             n_iter_no_change=10,
             validation_fraction: float = None,
             random_state: np.random.RandomState = None,
-            verbose: int = 0
+            verbose: int = 0,
+
+            desired_iterations: int = None
     ):
         super().__init__()
         self.loss = loss
@@ -45,7 +47,9 @@ class GradientBoostingComponent(AutoSktimeRegressionAlgorithm):
         self.random_state = random_state
         self.verbose = verbose
 
-    def fit(self, X: pd.DataFrame, y: pd.Series):
+        self.desired_iterations = desired_iterations
+
+    def _set_model(self, iterations: int):
         from sklearn.ensemble import HistGradientBoostingRegressor
 
         self.learning_rate = float(self.learning_rate)
@@ -59,6 +63,7 @@ class GradientBoostingComponent(AutoSktimeRegressionAlgorithm):
         self.verbose = int(self.verbose)
 
         self.estimator = HistGradientBoostingRegressor(
+            max_iter=iterations,
             loss=self.loss,
             learning_rate=self.learning_rate,
             min_samples_leaf=self.min_samples_leaf,
@@ -74,13 +79,28 @@ class GradientBoostingComponent(AutoSktimeRegressionAlgorithm):
             random_state=self.random_state,
         )
 
+    def fit(self, X: pd.DataFrame, y: pd.Series):
+        iterations = self.desired_iterations or self.get_max_iter()
+        self._set_model(iterations)
+        return self._fit(X, y)
+
+    def update(self, X: pd.DataFrame, y: pd.Series, n_iter: int = 1):
+        if self.estimator is None:
+            self._set_model(n_iter)
+        else:
+            self.estimator.max_iter = min(n_iter, self.estimator.max_iter)
+        return self._fit(X, y)
+
+    def _fit(self, X: pd.DataFrame, y: pd.Series):
         if y.ndim == 2 and y.shape[1] == 1:
             y = y.flatten()
 
         # noinspection PyUnresolvedReferences
         self.estimator.fit(X, y)
-
         return self
+
+    def get_max_iter(self):
+        return 100
 
     @staticmethod
     def get_properties(dataset_properties: DatasetProperties = None) -> COMPONENT_PROPERTIES:
@@ -93,7 +113,7 @@ class GradientBoostingComponent(AutoSktimeRegressionAlgorithm):
         }
 
     @staticmethod
-    def get_hyperparameter_search_space(dataset_properties=None) -> ConfigurationSpace:
+    def get_hyperparameter_search_space(dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
         cs = ConfigurationSpace()
         loss = UnParametrizedHyperparameter('loss', value='squared_error')
         learning_rate = UniformFloatHyperparameter('learning_rate', lower=0.01, upper=1, default_value=0.1, log=True)

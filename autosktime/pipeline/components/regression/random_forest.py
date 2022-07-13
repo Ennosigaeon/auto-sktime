@@ -5,7 +5,6 @@ import pandas as pd
 from ConfigSpace.configuration_space import ConfigurationSpace
 from ConfigSpace.hyperparameters import UniformFloatHyperparameter, UniformIntegerHyperparameter, \
     CategoricalHyperparameter, UnParametrizedHyperparameter
-
 from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, IGNORES_EXOGENOUS_X, SUPPORTED_INDEX_TYPES, \
     HANDLES_PANEL
 from autosktime.data import DatasetProperties
@@ -33,7 +32,6 @@ class RandomForestComponent(AutoSktimeRegressionAlgorithm):
             desired_iterations: int = None
     ):
         super().__init__()
-        self.n_estimators = self.get_max_iter()
         self.criterion = criterion
         self.max_features = max_features
         self.max_depth = max_depth
@@ -48,7 +46,7 @@ class RandomForestComponent(AutoSktimeRegressionAlgorithm):
 
         self.desired_iterations = desired_iterations
 
-    def _set_model(self):
+    def _set_model(self, iterations: int):
         from sklearn.ensemble import RandomForestRegressor
 
         self.max_depth = None if check_none(self.max_depth) else int(self.max_depth)
@@ -60,6 +58,7 @@ class RandomForestComponent(AutoSktimeRegressionAlgorithm):
         self.min_impurity_decrease = float(self.min_impurity_decrease)
 
         self.estimator = RandomForestRegressor(
+            n_estimators=iterations,
             criterion=self.criterion,
             max_features=self.max_features,
             max_depth=self.max_depth,
@@ -75,25 +74,18 @@ class RandomForestComponent(AutoSktimeRegressionAlgorithm):
         )
 
     def fit(self, X: pd.DataFrame, y: pd.Series):
-        if self.desired_iterations is not None:
-            return self.update(X, y, self.desired_iterations)
-
-        self._set_model()
-
-        if y.ndim == 2 and y.shape[1] == 1:
-            y = y.flatten()
-
-        # noinspection PyUnresolvedReferences
-        self.estimator.fit(X, y)
-        return self
+        iterations = self.desired_iterations or self.get_max_iter()
+        self._set_model(iterations)
+        return self._fit(X, y)
 
     def update(self, X: pd.DataFrame, y: pd.Series, n_iter: int = 1):
         if self.estimator is None:
-            self._set_model()
-            self.estimator.n_estimators = n_iter
+            self._set_model(n_iter)
         else:
-            self.estimator.n_estimators = min(n_iter, self.n_estimators)
+            self.estimator.n_estimators = min(n_iter, self.estimator.n_estimators)
+        return self._fit(X, y)
 
+    def _fit(self, X: pd.DataFrame, y: pd.Series):
         if y.ndim == 2 and y.shape[1] == 1:
             y = y.flatten()
 
@@ -103,9 +95,6 @@ class RandomForestComponent(AutoSktimeRegressionAlgorithm):
 
     def get_max_iter(self):
         return 100
-
-    def supports_iterative_fit(self) -> bool:
-        return True
 
     @staticmethod
     def get_properties(dataset_properties: DatasetProperties = None) -> COMPONENT_PROPERTIES:

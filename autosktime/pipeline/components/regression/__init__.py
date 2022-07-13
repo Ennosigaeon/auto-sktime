@@ -28,7 +28,6 @@ class RegressorChoice(AutoSktimeChoice, AutoSktimeRegressionAlgorithm):
             include: List[str] = None,
             exclude: List[str] = None
     ) -> ConfigurationSpace:
-        include = ['random_forest']
         return super().get_hyperparameter_search_space(dataset_properties, default, include, exclude)
 
     @staticmethod
@@ -56,5 +55,6 @@ class RegressorChoice(AutoSktimeChoice, AutoSktimeRegressionAlgorithm):
         return self.estimator.predict(X)
 
     def update(self, X: pd.DataFrame, y: pd.Series, update_params: bool = True):
+        # noinspection PyUnresolvedReferences
         self.estimator.update(X, y, n_iter=self.estimator.desired_iterations)
         return self

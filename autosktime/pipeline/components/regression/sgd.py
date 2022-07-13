@@ -28,7 +28,9 @@ class SGDComponent(AutoSktimeRegressionAlgorithm):
             eta0: float = 0.01,
             power_t: float = 0.5,
             average: bool = False,
-            random_state: np.random.RandomState = None
+            random_state: np.random.RandomState = None,
+
+            desired_iterations: int = None
     ):
         super().__init__()
         self.loss = loss
@@ -44,9 +46,10 @@ class SGDComponent(AutoSktimeRegressionAlgorithm):
         self.random_state = random_state
         self.average = average
 
+        self.desired_iterations = desired_iterations
         self.scaler = None
 
-    def fit(self, X: pd.DataFrame, y: pd.Series):
+    def _set_model(self, iterations: int):
         from sklearn.linear_model import SGDRegressor
         from sklearn.preprocessing import StandardScaler
 
@@ -59,7 +62,8 @@ class SGDComponent(AutoSktimeRegressionAlgorithm):
         self.fit_intercept = check_for_bool(self.fit_intercept)
         self.tol = float(self.tol)
 
-        self.estimator = SGDRegressor(loss=self.loss,
+        self.estimator = SGDRegressor(max_iter=iterations,
+                                      loss=self.loss,
                                       penalty=self.penalty,
                                       alpha=self.alpha,
                                       fit_intercept=self.fit_intercept,
@@ -71,14 +75,30 @@ class SGDComponent(AutoSktimeRegressionAlgorithm):
                                       power_t=self.power_t,
                                       shuffle=True,
                                       average=self.average,
-                                      random_state=self.random_state)
+                                      random_state=self.random_state,
+                                      warm_start=True)
 
         self.scaler = StandardScaler(copy=True)
+
+    def fit(self, X: pd.DataFrame, y: pd.Series):
+        iterations = self.desired_iterations or self.get_max_iter()
+        self._set_model(iterations)
 
         if y.ndim == 1:
             y = y.reshape((-1, 1))
 
-        y_scaled = self.scaler.fit_transform(y)
+        self.scaler.fit(y)
+        return self._fit(X, y)
+
+    def update(self, X: pd.DataFrame, y: pd.Series, n_iter: int = 1):
+        if self.estimator is None:
+            self._set_model(n_iter)
+        else:
+            self.estimator.max_iter = min(n_iter, self.estimator.max_iter)
+        return self._fit(X, y)
+
+    def _fit(self, X: pd.DataFrame, y: pd.Series):
+        y_scaled = self.scaler.transform(y)
 
         # Flatten: [[0], [0], [0]] -> [0, 0, 0]
         if y_scaled.ndim == 2 and y_scaled.shape[1] == 1:
@@ -97,6 +117,9 @@ class SGDComponent(AutoSktimeRegressionAlgorithm):
         tmp = self.scaler.inverse_transform(np.atleast_2d(y_pred))[0]
         return tmp
 
+    def get_max_iter(self):
+        return 1024
+
     @staticmethod
     def get_properties(dataset_properties: DatasetProperties = None) -> COMPONENT_PROPERTIES:
         return {
@@ -108,10 +131,10 @@ class SGDComponent(AutoSktimeRegressionAlgorithm):
         }
 
     @staticmethod
-    def get_hyperparameter_search_space(dataset_properties: DatasetProperties = None):
+    def get_hyperparameter_search_space(dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
         cs = ConfigurationSpace()
 
-        loss = CategoricalHyperparameter('loss', ['squared_loss', 'huber', 'squared_epsilon_insensitive',
+        loss = CategoricalHyperparameter('loss', ['squared_error', 'huber', 'squared_epsilon_insensitive',
                                                   'epsilon_insensitive'])
         penalty = CategoricalHyperparameter('penalty', ['l2', 'l1', 'elasticnet'])
         alpha = UniformFloatHyperparameter('alpha', 1e-7, 1e-1, log=True, default_value=0.0001)
@@ -132,8 +155,7 @@ class SGDComponent(AutoSktimeRegressionAlgorithm):
         epsilon_condition = InCondition(epsilon, loss, ['huber', 'epsilon_insensitive', 'squared_epsilon_insensitive'])
 
         # eta0 is only relevant if learning_rate!='optimal' according to code
-        # https://github.com/scikit-learn/scikit-learn/blob/0.19.X/sklearn/
-        # linear_model/sgd_fast.pyx#L603
+        # https://github.com/scikit-learn/scikit-learn/blob/0.19.X/sklearn/linear_model/sgd_fast.pyx#L603
         eta0_in_inv_con = InCondition(eta0, learning_rate, ['invscaling', 'constant'])
         power_t_condition = EqualsCondition(power_t, learning_rate, 'invscaling')
 
