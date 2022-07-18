@@ -2,16 +2,15 @@ from typing import Union
 
 import numpy as np
 import pandas as pd
-
-from autosktime.data import DatasetProperties
 from sktime.forecasting.base import ForecastingHorizon
+# noinspection PyProtectedMember
+from sktime.utils.validation._dependencies import _check_soft_dependencies
 
 from ConfigSpace import ConfigurationSpace, UniformIntegerHyperparameter, CategoricalHyperparameter, Constant
 from autosktime.constants import IGNORES_EXOGENOUS_X, HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, SUPPORTED_INDEX_TYPES, \
     HANDLES_PANEL
+from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import AutoSktimePredictor, COMPONENT_PROPERTIES
-# noinspection PyProtectedMember
-from sktime.utils.validation._dependencies import _check_soft_dependencies
 
 
 class ProphetComponent(AutoSktimePredictor):

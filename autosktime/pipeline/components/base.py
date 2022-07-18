@@ -5,12 +5,13 @@ import pkgutil
 import sys
 from abc import ABC
 from collections import OrderedDict
-from typing import Dict, Type, List, Any, Union
+from typing import Dict, Type, List, Any, Union, Optional
 
 import numpy as np
 import pandas as pd
 from sklearn.base import RegressorMixin, TransformerMixin
 from sklearn.exceptions import NotFittedError
+from sklearn.pipeline import Pipeline
 from sktime.base import BaseEstimator
 from sktime.forecasting.base import ForecastingHorizon, BaseForecaster
 from sktime.transformations.base import BaseTransformer
@@ -19,7 +20,7 @@ from ConfigSpace import Configuration, ConfigurationSpace, CategoricalHyperparam
 from autosktime.constants import SUPPORTED_INDEX_TYPES, UNIVARIATE_TASKS, MULTIVARIATE_TASKS, PANEL_TASKS, \
     HANDLES_PANEL, HANDLES_MULTIVARIATE, HANDLES_UNIVARIATE
 from autosktime.data import DatasetProperties
-from autosktime.pipeline.components.util import sub_configuration
+from autosktime.pipeline.util import sub_configuration
 
 COMPONENT_PROPERTIES = Any
 
@@ -84,8 +85,11 @@ class AutoSktimeComponent(BaseEstimator):
         tags.update(self._tags)
         return tags
 
-    def set_hyperparameters(self, configuration: Configuration, init_params: Dict[str, Any] = None):
-        params = configuration.get_dictionary()
+    def set_hyperparameters(self, configuration: Union[Configuration, Dict], init_params: Dict[str, Any] = None):
+        if isinstance(configuration, Configuration):
+            params = configuration.get_dictionary()
+        else:
+            params = configuration
 
         for param, value in params.items():
             if not hasattr(self, param):
@@ -100,6 +104,15 @@ class AutoSktimeComponent(BaseEstimator):
                 setattr(self, param, value)
 
         return self
+
+    def supports_iterative_fit(self) -> bool:
+        return self.get_max_iter() is not None
+
+    def get_max_iter(self) -> Optional[int]:
+        return None
+
+    def set_desired_iterations(self, iterations: int):
+        self.desired_iterations = iterations
 
 
 class AutoSktimePredictor(AutoSktimeComponent, BaseForecaster, ABC):
@@ -139,6 +152,11 @@ class AutoSktimePredictor(AutoSktimeComponent, BaseForecaster, ABC):
         if self.estimator is None:
             raise NotImplementedError
         return self.estimator.predict(fh=fh, X=X)
+
+    def _update(self, y: pd.Series, X: pd.Series = None, update_params: bool = True):
+        if self.estimator is None:
+            raise NotImplementedError
+        return self.estimator.update(y, X=X, update_params=update_params)
 
 
 class AutoSktimeTransformer(AutoSktimeComponent, BaseTransformer, ABC):
@@ -185,7 +203,7 @@ class AutoSktimeChoice(AutoSktimeComponent, ABC):
 
     def __init__(self, estimator: AutoSktimeComponent = None, random_state: np.random.RandomState = None):
         super().__init__()
-        self.estimator = estimator
+        self.estimator: AutoSktimeComponent = estimator
         self.random_state = random_state
 
     @classmethod
@@ -299,6 +317,21 @@ class AutoSktimeChoice(AutoSktimeComponent, ABC):
         self.dataset_properties = dataset_properties
         return cs
 
+    def supports_iterative_fit(self) -> bool:
+        if self.estimator is None:
+            return False
+        return self.estimator.supports_iterative_fit()
+
+    def get_max_iter(self) -> Optional[int]:
+        if self.estimator is None:
+            return None
+        return self.estimator.get_max_iter()
+
+    def set_desired_iterations(self, iterations: int):
+        if self.estimator is None:
+            return
+        self.estimator.set_desired_iterations(iterations)
+
 
 class AutoSktimeRegressionAlgorithm(AutoSktimeComponent, ABC):
     _estimator_class: Type[RegressorMixin] = None
@@ -340,3 +373,12 @@ class AutoSktimePreprocessingAlgorithm(TransformerMixin, AutoSktimeComponent, AB
     @staticmethod
     def get_hyperparameter_search_space(dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
         return ConfigurationSpace()
+
+
+class UpdatablePipeline(Pipeline):
+
+    def update(self, y: pd.Series, X: pd.DataFrame = None, update_params: bool = True):
+        Xt = X
+        for _, name, transform in self._iter(with_final=False):
+            Xt = transform.transform(Xt)
+        return self.steps[-1][1].update(Xt, y, update_params=update_params)

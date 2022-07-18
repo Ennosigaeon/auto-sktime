@@ -8,8 +8,8 @@ from ConfigSpace.hyperparameters import UniformFloatHyperparameter, UniformInteg
 from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, IGNORES_EXOGENOUS_X, SUPPORTED_INDEX_TYPES, \
     HANDLES_PANEL
 from autosktime.data import DatasetProperties
-
 from autosktime.pipeline.components.base import AutoSktimeRegressionAlgorithm, COMPONENT_PROPERTIES
+from autosktime.pipeline.util import Int64Index
 from autosktime.util.common import check_none, check_for_bool
 
 
@@ -27,7 +27,9 @@ class RandomForestComponent(AutoSktimeRegressionAlgorithm):
             max_leaf_nodes: int = None,
             min_impurity_decrease: float = 0.,
             random_state: np.random.RandomState = None,
-            n_jobs: int = 1
+            n_jobs: int = 1,
+
+            desired_iterations: int = None
     ):
         super().__init__()
         self.criterion = criterion
@@ -42,7 +44,9 @@ class RandomForestComponent(AutoSktimeRegressionAlgorithm):
         self.random_state = random_state
         self.n_jobs = n_jobs
 
-    def fit(self, X: pd.DataFrame, y: pd.Series):
+        self.desired_iterations = desired_iterations
+
+    def _set_model(self, iterations: int):
         from sklearn.ensemble import RandomForestRegressor
 
         self.max_depth = None if check_none(self.max_depth) else int(self.max_depth)
@@ -54,6 +58,7 @@ class RandomForestComponent(AutoSktimeRegressionAlgorithm):
         self.min_impurity_decrease = float(self.min_impurity_decrease)
 
         self.estimator = RandomForestRegressor(
+            n_estimators=iterations,
             criterion=self.criterion,
             max_features=self.max_features,
             max_depth=self.max_depth,
@@ -64,15 +69,32 @@ class RandomForestComponent(AutoSktimeRegressionAlgorithm):
             max_leaf_nodes=self.max_leaf_nodes,
             min_impurity_decrease=self.min_impurity_decrease,
             random_state=self.random_state,
-            n_jobs=self.n_jobs
+            n_jobs=self.n_jobs,
+            warm_start=True
         )
 
+    def fit(self, X: pd.DataFrame, y: pd.Series):
+        iterations = self.desired_iterations or self.get_max_iter()
+        self._set_model(iterations)
+        return self._fit(X, y)
+
+    def update(self, X: pd.DataFrame, y: pd.Series, n_iter: int = 1):
+        if self.estimator is None:
+            self._set_model(n_iter)
+        else:
+            self.estimator.n_estimators = min(n_iter, self.estimator.n_estimators)
+        return self._fit(X, y)
+
+    def _fit(self, X: pd.DataFrame, y: pd.Series):
         if y.ndim == 2 and y.shape[1] == 1:
             y = y.flatten()
 
         # noinspection PyUnresolvedReferences
         self.estimator.fit(X, y)
         return self
+
+    def get_max_iter(self):
+        return 100
 
     @staticmethod
     def get_properties(dataset_properties: DatasetProperties = None) -> COMPONENT_PROPERTIES:
@@ -81,13 +103,13 @@ class RandomForestComponent(AutoSktimeRegressionAlgorithm):
             HANDLES_MULTIVARIATE: True,
             HANDLES_PANEL: True,
             IGNORES_EXOGENOUS_X: False,
-            SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.DatetimeIndex, pd.PeriodIndex, pd.core.indexes.numeric.Int64Index]
+            SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.DatetimeIndex, pd.PeriodIndex, Int64Index]
         }
 
     @staticmethod
     def get_hyperparameter_search_space(dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
         cs = ConfigurationSpace()
-        criterion = CategoricalHyperparameter('criterion', ['mse', 'friedman_mse', 'mae'])
+        criterion = CategoricalHyperparameter('criterion', ['squared_error', 'absolute_error', 'poisson'])
 
         max_features = UniformFloatHyperparameter('max_features', 0.1, 1.0, default_value=1.0)
 

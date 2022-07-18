@@ -1,8 +1,12 @@
+import glob
+import os
 from typing import Optional, Tuple, List, NamedTuple
 
 import numpy as np
 import pandas as pd
 from sktime.forecasting.base import ForecastingHorizon
+# noinspection PyProtectedMember
+from sktime.performance_metrics.forecasting._classes import BaseForecastingErrorMetric
 
 from ConfigSpace import Configuration
 from autosktime.constants import SUPPORTED_Y_TYPES
@@ -11,11 +15,8 @@ from autosktime.ensembles.util import get_ensemble_targets
 from autosktime.evaluation import TaFuncResult
 # noinspection PyProtectedMember
 from autosktime.evaluation.abstract_evaluator import AbstractEvaluator, _fit_and_suppress_warnings
-from autosktime.pipeline.components.base import AutoSktimeComponent, AutoSktimePredictor
+from autosktime.pipeline.components.base import AutoSktimePredictor
 from autosktime.util.backend import Backend
-# noinspection PyProtectedMember
-from sktime.performance_metrics.forecasting._classes import BaseForecastingErrorMetric
-
 from smac.tae import StatusType
 
 EvalResult = NamedTuple('EvalResult', [
@@ -49,14 +50,14 @@ class TrainEvaluator(AbstractEvaluator):
         self.splitter = splitter
         self.ensemble_size = ensemble_size
 
-        self.models: List[AutoSktimeComponent] = []
+        self.models: List[AutoSktimePredictor] = []
         self.indices: List[Tuple[pd.Index, pd.Index]] = []
 
     def fit_predict_and_loss(self) -> TaFuncResult:
         y = self.datamanager.y
 
         n = self.splitter.get_n_splits(y)
-        self.models = [None] * n
+        self.models = self._get_resampling_models(n)
         self.indices = [None] * n
 
         # noinspection PyTypeChecker
@@ -70,16 +71,13 @@ class TrainEvaluator(AbstractEvaluator):
         test_pred: pd.Series = None  # only for mypy
         for i, (train_split, test_split) in enumerate(self.splitter.split(y)):
             if self.budget_type is None:
-                (
-                    train_pred,
-                    test_pred,
-                ) = self._fit_and_predict_fold_standard(i, train=train_split, test=test_split)
-
+                fit_and_predict = self._fit_and_predict_fold_standard
+            elif self.budget_type == 'iterations' and self.models[i].supports_iterative_fit():
+                fit_and_predict = self._fit_and_predict_fold_iterative
             else:
-                (
-                    train_pred,
-                    test_pred,
-                ) = self._fit_and_predict_fold_budget(i, train=train_split, test=test_split)
+                fit_and_predict = self._fit_and_predict_fold_budget
+
+            train_pred, test_pred = fit_and_predict(i, train=train_split, test=test_split)
 
             # Compute train loss of this fold and store it. train_loss could
             # either be a scalar or a dict of scalars with metrics as keys.
@@ -134,16 +132,27 @@ class TrainEvaluator(AbstractEvaluator):
             X_train = X.iloc[train, :]
             X_test = X.iloc[test, :]
 
-        model = self._get_model()
+        model = self.models[fold]
         _fit_and_suppress_warnings(self.logger, model, y_train, X_train, fh=None)
 
-        self.models[fold] = model
         self.indices[fold] = (y_train.index, y_test.index)
 
         train_pred = self.predict_function(y_train, X_train, model)
         test_pred = self.predict_function(y_test, X_test, model)
 
         return train_pred, test_pred
+
+    def _fit_and_predict_fold_iterative(
+            self,
+            fold: int,
+            train: np.ndarray,
+            test: np.ndarray,
+    ) -> Tuple[SUPPORTED_Y_TYPES, SUPPORTED_Y_TYPES]:
+        model = self.models[fold]
+        n_iter = int(np.ceil(self.budget / 100 * model.get_max_iter()))
+        model.set_desired_iterations(n_iter)
+
+        return self._fit_and_predict_fold_standard(fold, train, test)
 
     def _fit_and_predict_fold_budget(
             self,
@@ -162,13 +171,48 @@ class TrainEvaluator(AbstractEvaluator):
         X = self.datamanager.X
 
         model = self._get_model()
+
+        if self.budget_type == 'iterations' and model.supports_iterative_fit():
+            n_iter = int(np.ceil(self.budget / 100 * model.get_max_iter()))
+            model.set_desired_iterations(n_iter)
+
         _fit_and_suppress_warnings(self.logger, model, y, X, fh)
         self.model = model
 
-        y_test, X_test = get_ensemble_targets(self.datamanager, ensemble_size)
+        splitter = type(self.splitter)(fh=ensemble_size)
+        splitter.random_state = 42
+
+        y_test, X_test = get_ensemble_targets(self.datamanager, splitter)
         test_pred = self.predict_function(y_test, X_test, model)
 
         return model, test_pred
+
+
+class MultiFidelityTrainEvaluator(TrainEvaluator):
+
+    def _get_model(self) -> AutoSktimePredictor:
+        budget = self.__get_previous_budget()
+        if budget is None:
+            return super()._get_model()
+        else:
+            model = self.backend.load_model_by_seed_and_id_and_budget(self.seed, self.num_run, budget)
+            # noinspection PyTypeChecker
+            return model
+
+    def _get_resampling_models(self, n: int):
+        budget = self.__get_previous_budget()
+        if budget is None:
+            return super()._get_resampling_models(n)
+        else:
+            resampling_models = self.backend.load_cv_model_by_seed_and_id_and_budget(self.seed, self.num_run, budget)
+            return resampling_models
+
+    def __get_previous_budget(self) -> Optional[float]:
+        seed = self.seed
+        idx = self.num_run
+        prefix = os.path.join(self.backend.get_runs_directory(), f'{seed}_{idx}_')
+        previous_budgets = [float(path[len(prefix):]) for path in glob.glob(f'{prefix}*')]
+        return max(previous_budgets, default=None)
 
 
 def evaluate(
@@ -182,7 +226,8 @@ def evaluate(
         budget: Optional[float] = 100.0,
         budget_type: Optional[str] = None,
 ) -> TaFuncResult:
-    evaluator = TrainEvaluator(
+    instance = MultiFidelityTrainEvaluator if budget_type == 'iterations' else TrainEvaluator
+    evaluator = instance(
         backend=backend,
         metric=metric,
         configuration=config,

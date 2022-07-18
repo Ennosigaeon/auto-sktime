@@ -17,13 +17,9 @@ import pandas as pd
 import pynisher
 from distributed import Future
 from pandas.core.util.hashing import hash_pandas_object
+from sktime.forecasting.compose import EnsembleForecaster
+from sktime.forecasting.model_selection._split import BaseSplitter
 from sktime.performance_metrics.forecasting._classes import BaseForecastingErrorMetric
-
-from smac.callbacks import IncorporateRunResultCallback
-from smac.optimizer.smbo import SMBO
-from smac.runhistory.runhistory import RunInfo, RunValue
-from smac.tae.base import StatusType
-from smac.tae.dask_runner import DaskParallelRunner
 
 from autosktime.automl_common.common.utils.backend import Backend
 from autosktime.data import DataManager
@@ -31,7 +27,11 @@ from autosktime.ensembles.selection import EnsembleSelection
 from autosktime.ensembles.util import get_ensemble_train, PrefittedEnsembleForecaster
 from autosktime.metrics import calculate_loss
 from autosktime.util.dask_single_thread_client import SingleThreadedClient
-from sktime.forecasting.compose import EnsembleForecaster
+from smac.callbacks import IncorporateRunResultCallback
+from smac.optimizer.smbo import SMBO
+from smac.runhistory.runhistory import RunInfo, RunValue
+from smac.tae.base import StatusType
+from smac.tae.dask_runner import DaskParallelRunner
 
 Y_ENSEMBLE = 0
 Y_VALID = 1
@@ -51,6 +51,7 @@ class EnsembleBuilderManager(IncorporateRunResultCallback):
             metric: BaseForecastingErrorMetric,
             ensemble_size: int,
             ensemble_nbest: Union[int, float],
+            splitter: BaseSplitter,
             max_models_on_disc: Union[int, float] = None,
             seed: int = 1,
             random_state: np.random.RandomState = None,
@@ -77,7 +78,6 @@ class EnsembleBuilderManager(IncorporateRunResultCallback):
             if int: consider only the n best prediction
             if float: consider only this fraction of the best models
             Both wrt to validation predictions
-            If performance_range_threshold > 0, might return fewer models
         max_models_on_disc: int
             Defines the maximum number of models that are kept in the disc. As a consequence, it also defines an upper
             bound on the models that can be used in the ensemble.
@@ -102,6 +102,7 @@ class EnsembleBuilderManager(IncorporateRunResultCallback):
         self.metric = metric
         self.ensemble_size = ensemble_size
         self.ensemble_nbest = ensemble_nbest
+        self.splitter = splitter
         self.max_models_on_disc = max_models_on_disc
         self.seed = seed
         self.random_state = random_state
@@ -193,7 +194,7 @@ class EnsembleBuilderManager(IncorporateRunResultCallback):
             forecasters=forecasters.values(),
             weights=ensemble.weights_
         )
-        y_train, X_train = get_ensemble_train(datamanager, 0.2)
+        y_train, X_train = get_ensemble_train(datamanager, self.splitter)
         ens.fit(y_train, X=X_train)
 
         return ens
@@ -257,7 +258,7 @@ class EnsembleBuilder:
             metric: BaseForecastingErrorMetric,
             ensemble_size: int = 10,
             ensemble_nbest: Union[int, float] = 100,
-            max_models_on_disc: Union[int, float] = None,
+            max_models_on_disc: Union[int, float] = 10,
             seed: int = 1,
             previous_performance=np.inf,
             random_state: np.random.RandomState = None,
@@ -279,9 +280,9 @@ class EnsembleBuilder:
 
         # max_models_on_disc can be a float, in such case we need to remember the user specified Megabytes and translate
         # this to max number of ensemble models. max_resident_models keeps the maximum number of models on disc
-        if max_models_on_disc is not None and max_models_on_disc < 0:
+        if max_models_on_disc < 0:
             raise ValueError('max_models_on_disc has to be a positive number or None')
-        self.max_models_on_disc = max_models_on_disc
+        self.max_models_on_disc = max(max_models_on_disc, ensemble_nbest)
         self.max_resident_models = None
 
         self.seed = seed

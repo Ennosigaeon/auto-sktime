@@ -7,17 +7,16 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union, NamedTuple
 
 import numpy as np
 import pynisher
+from ConfigSpace import Configuration
+from autosktime.automl_common.common.utils.backend import Backend
+from autosktime.data.splitter import BaseSplitter
+from autosktime.metrics import get_cost_of_crash
 from sktime.performance_metrics.forecasting._classes import BaseForecastingErrorMetric
 
 from smac.runhistory.runhistory import RunInfo, RunValue
 from smac.stats.stats import Stats
 from smac.tae import StatusType
 from smac.tae.execute_func import AbstractTAFunc
-
-from ConfigSpace import Configuration
-from autosktime.automl_common.common.utils.backend import Backend
-from autosktime.data.splitter import BaseSplitter
-from autosktime.metrics import get_cost_of_crash
 
 TaFuncResult = NamedTuple('TaFuncResult', [
     ('loss', float),
@@ -29,9 +28,11 @@ TaFuncResult = NamedTuple('TaFuncResult', [
 def fit_predict_try_except_decorator(
         ta: Callable,
         cost_for_crash: float,
+        seed: int = 0,
+        budget: float = 0.0,
         **kwargs: Any) -> TaFuncResult:
     try:
-        return ta(**kwargs)
+        return ta(seed=seed, budget=budget, **kwargs)
     except Exception as e:
         if isinstance(e, (MemoryError, pynisher.TimeoutException)):
             # Re-raise the memory error to let the pynisher handle that correctly
@@ -75,7 +76,8 @@ class ExecuteTaFunc(AbstractTAFunc):
             ta=eval_function,
             cost_for_crash=self.worst_possible_result,
             splitter=splitter,
-            random_state=random_state
+            random_state=random_state,
+            budget_type=budget_type
         )
 
         super().__init__(
@@ -116,11 +118,8 @@ class ExecuteTaFunc(AbstractTAFunc):
         RunValue:
             Contains information about the status/performance of config
         """
-        if self.budget_type is None:
-            if run_info.budget != 0:
-                raise ValueError(f'If budget_type is None, budget must be.0, but is {run_info.budget}')
-        else:
-            raise NotImplementedError('budgets not supported yet')
+        if self.budget_type is None and run_info.budget != 0:
+            raise ValueError(f'If budget_type is None, budget must be 0.0, but is {run_info.budget}')
 
         remaining_time = self.stats.get_remaing_time_budget()
 
@@ -143,6 +142,8 @@ class ExecuteTaFunc(AbstractTAFunc):
         self.logger.info(
             f'Starting to evaluate configuration {run_info.config.config_id}: {run_info.config.get_dictionary()}')
         info, value = super().run_wrapper(run_info=run_info)
+        self.logger.info(f'Finished evaluating configuration {run_info.config.config_id} with loss {value.cost} and '
+                         f'status {value.status}')
 
         if 'status' in value.additional_info:
             # smac treats all ta calls without an exception as a success independent of the provided status
@@ -164,26 +165,24 @@ class ExecuteTaFunc(AbstractTAFunc):
             obj: Callable,
             config: Configuration,
             obj_kwargs: Dict[str, Union[int, str, float, None]],
-            instance: Optional[str] = None,
             cutoff: Optional[float] = None,
-            seed: int = 12345,
-            budget: float = 0.0,
-            instance_specific: Optional[str] = None,
     ) -> Tuple[float, Dict[str, Union[int, float, str, Dict, List, Tuple]]]:
         info: TaFuncResult = obj(
             config=config,
             backend=self.backend,
             metric=self.metric,
-            seed=self.seed,
             num_run=config.config_id,
-            budget=budget,
-            budget_type=self.budget_type
+            budget_type=self.budget_type,
+            **obj_kwargs
         )
+
+        if info is None:
+            # Execution was not successful
+            return 0, {}
 
         cost = info.loss
         additional_run_info = info.additional_run_info
         additional_run_info['configuration_origin'] = config.origin
         additional_run_info['status'] = info.status
 
-        self.logger.info(f'Finished evaluating configuration {config.config_id}')
         return cost, additional_run_info

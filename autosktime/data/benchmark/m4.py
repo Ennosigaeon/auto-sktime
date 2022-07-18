@@ -25,11 +25,11 @@ def _download_and_cache(filename: str, cache_dir: str):
     test_directory = os.path.join(data_directory, 'Test')
 
     if not os.path.exists(data_directory):
-        os.mkdir(data_directory)
+        os.makedirs(data_directory, exist_ok=True)
     if not os.path.exists(train_directory):
-        os.mkdir(train_directory)
+        os.makedirs(train_directory, exist_ok=True)
     if not os.path.exists(test_directory):
-        os.mkdir(test_directory)
+        os.makedirs(test_directory, exist_ok=True)
 
     filepath = os.path.join(data_directory, filename)
     if not os.path.exists(filepath):
@@ -41,7 +41,7 @@ def _download_and_cache(filename: str, cache_dir: str):
 
 def load_timeseries(
         dataset_name: Union[str, List[str]],
-        cache_dir: str = f'{Path.home()}/.cache/'
+        cache_dir: str = f'{Path.home()}/.cache/auto-sktime/'
 ) -> Union[
     Tuple[List[pd.Series], List[pd.Series]],
     Tuple[pd.Series, pd.Series]

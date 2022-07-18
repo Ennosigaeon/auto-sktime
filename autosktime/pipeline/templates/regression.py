@@ -10,8 +10,9 @@ from autosktime.pipeline.components.base import AutoSktimeComponent, COMPONENT_P
 from autosktime.pipeline.components.preprocessing.detrend import DetrendComponent
 from autosktime.pipeline.components.preprocessing.impute import ImputerComponent
 from autosktime.pipeline.components.preprocessing.outlier import HampelFilterComponent
-from autosktime.pipeline.components.reduction import ReductionComponent
+from autosktime.pipeline.components.reduction.reduction import ReductionComponent
 from autosktime.pipeline.templates.base import ConfigurableTransformedTargetForecaster
+from autosktime.pipeline.util import Int64Index
 
 
 class RegressionPipeline(ConfigurableTransformedTargetForecaster):
@@ -43,5 +44,5 @@ class RegressionPipeline(ConfigurableTransformedTargetForecaster):
             # sktime reduction can not handle multi-index as of 0.12.x
             HANDLES_PANEL: False,
             IGNORES_EXOGENOUS_X: False,
-            SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.DatetimeIndex, pd.PeriodIndex, pd.core.indexes.numeric.Int64Index]
+            SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.DatetimeIndex, pd.PeriodIndex, Int64Index]
         }

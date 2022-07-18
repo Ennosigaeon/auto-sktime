@@ -8,6 +8,7 @@ from autosktime.constants import IGNORES_EXOGENOUS_X, HANDLES_UNIVARIATE, HANDLE
     HANDLES_PANEL
 from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import COMPONENT_PROPERTIES, AutoSktimeTransformer
+from autosktime.pipeline.util import Int64Index
 
 
 class ScaledLogitComponent(AutoSktimeTransformer):
@@ -52,7 +53,7 @@ class ScaledLogitComponent(AutoSktimeTransformer):
             HANDLES_MULTIVARIATE: True,
             HANDLES_PANEL: True,
             IGNORES_EXOGENOUS_X: True,
-            SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.DatetimeIndex, pd.PeriodIndex, pd.core.indexes.numeric.Int64Index]
+            SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.DatetimeIndex, pd.PeriodIndex, Int64Index]
         }
 
     @staticmethod

@@ -8,7 +8,6 @@ from autosktime.pipeline.components.forecast.bats import BATSComponent
 from autosktime.pipeline.components.forecast.ets import ETSComponent
 from autosktime.pipeline.components.forecast.exp_smoothing import ExponentialSmoothingComponent
 from autosktime.pipeline.components.forecast.naive import NaiveForecasterComponent
-from autosktime.pipeline.components.forecast.prophet import ProphetComponent
 from autosktime.pipeline.components.forecast.tbats import TBATSComponent
 from autosktime.pipeline.components.forecast.theta import ThetaComponent
 from tests.pipeline.components.forecast.util import _test_forecaster

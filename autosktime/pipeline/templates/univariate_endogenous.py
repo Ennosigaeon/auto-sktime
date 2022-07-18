@@ -15,6 +15,7 @@ from autosktime.pipeline.components.preprocessing.impute import ImputerComponent
 from autosktime.pipeline.components.preprocessing.outlier import HampelFilterComponent
 from autosktime.pipeline.components.preprocessing.shift import ShiftTransformerComponent
 from autosktime.pipeline.templates.base import ConfigurableTransformedTargetForecaster
+from autosktime.pipeline.util import Int64Index
 
 
 class UnivariateEndogenousPipeline(ConfigurableTransformedTargetForecaster):
@@ -63,7 +64,7 @@ class UnivariateEndogenousPipeline(ConfigurableTransformedTargetForecaster):
         return {
             HANDLES_UNIVARIATE: True,
             HANDLES_MULTIVARIATE: True,
-            HANDLES_PANEL: True,
+            HANDLES_PANEL: False,
             IGNORES_EXOGENOUS_X: False,
-            SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.DatetimeIndex, pd.PeriodIndex, pd.core.indexes.numeric.Int64Index]
+            SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.DatetimeIndex, pd.PeriodIndex, Int64Index]
         }

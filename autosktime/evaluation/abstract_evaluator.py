@@ -2,7 +2,7 @@ import abc
 import logging
 import time
 import warnings
-from typing import Optional, Union, Type, TextIO
+from typing import Optional, Union, Type, TextIO, List
 
 import numpy as np
 import pandas as pd
@@ -45,8 +45,12 @@ def _fit_and_suppress_warnings(
 
     with warnings.catch_warnings():
         warnings.showwarning = send_warnings_to_log
-        # noinspection PyUnresolvedReferences
-        model.fit(y, X=X, fh=fh)
+        if model.is_fitted:
+            # noinspection PyUnresolvedReferences
+            model.update(y, X=X)
+        else:
+            # noinspection PyUnresolvedReferences
+            model.fit(y, X=X, fh=fh)
 
     return model
 
@@ -122,6 +126,9 @@ class AbstractEvaluator:
 
     def _get_model(self) -> AutoSktimePredictor:
         return TemplateChoice(config=self.configuration, random_state=self.random_state)
+
+    def _get_resampling_models(self, n: int) -> List[AutoSktimePredictor]:
+        return [self._get_model()] * n
 
     def _loss(self, y_true: SUPPORTED_Y_TYPES, y_hat: SUPPORTED_Y_TYPES, error: str = 'raise') -> float:
         try:

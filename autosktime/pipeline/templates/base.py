@@ -1,12 +1,12 @@
+import copy
 from abc import ABC
-from typing import Dict, Any, List, Tuple, Union
+from typing import Dict, Any, List, Tuple, Union, Optional
 
 import numpy as np
-from sktime.forecasting.compose import TransformedTargetForecaster
-
 from ConfigSpace import Configuration, ConfigurationSpace
 from autosktime.data import DatasetProperties
-from autosktime.pipeline.components.base import AutoSktimeComponent, AutoSktimeChoice
+from autosktime.pipeline.components.base import AutoSktimeComponent, AutoSktimeChoice, AutoSktimePredictor
+from sktime.forecasting.compose import TransformedTargetForecaster, ForecastingPipeline
 
 
 class ConfigurablePipeline(ABC):
@@ -93,33 +93,7 @@ class ConfigurablePipeline(ABC):
         if isinstance(configuration, dict):
             configuration = Configuration(self.config_space, configuration)
         self.config = configuration
-
-        for node_idx, (node_name, node) in enumerate(self.steps):
-            sub_configuration_space = node.get_hyperparameter_search_space(dataset_properties=self.dataset_properties)
-            sub_config_dict = {}
-            for param in configuration:
-                if param.startswith(f'{node_name}:'):
-                    value = configuration[param]
-                    new_name = param.replace(f'{node_name}:', '', 1)
-                    sub_config_dict[new_name] = value
-
-            sub_configuration = Configuration(sub_configuration_space, values=sub_config_dict)
-
-            if init_params is not None:
-                sub_init_params_dict = {}
-                for param in init_params:
-                    if param.startswith(f'{node_name}:'):
-                        value = init_params[param]
-                        new_name = param.replace(f'{node_name}:', '', 1)
-                        sub_init_params_dict[new_name] = value
-            else:
-                sub_init_params_dict = None
-
-            if isinstance(node, (AutoSktimeComponent, ConfigurableTransformedTargetForecaster)):
-                node.set_hyperparameters(configuration=sub_configuration, init_params=sub_init_params_dict)
-            else:
-                raise NotImplementedError('Not supported yet!')
-
+        set_pipeline_configuration(self.config, self.steps, self.dataset_properties, init_params)
         return self
 
     def get_hyperparameter_search_space(self, dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
@@ -131,35 +105,30 @@ class ConfigurablePipeline(ABC):
         """
         if not hasattr(self, 'config_space') or self.config_space is None:
             self.config_space = self._get_hyperparameter_search_space()
-        return self.config_space
+        return copy.deepcopy(self.config_space)
 
     def _get_hyperparameter_search_space(self) -> ConfigurationSpace:
-        pipeline = self.steps
-        cs = ConfigurationSpace()
-
-        for node_idx, (node_name, node) in enumerate(pipeline):
-            # If the node is a choice, we have to figure out which of its choices are actually legal choices
-            if isinstance(node, AutoSktimeChoice):
-                sub_cs = node.get_hyperparameter_search_space(
-                    self.dataset_properties,
-                    include=self.include.get(node_name), exclude=self.exclude.get(node_name)
-                )
-                cs.add_configuration_space(node_name, sub_cs)
-
-            # if the node isn't a choice we can add it immediately
-            else:
-                cs.add_configuration_space(
-                    node_name,
-                    node.get_hyperparameter_search_space(self.dataset_properties),
-                )
-
+        cs = get_pipeline_search_space(self.steps, self.include, self.exclude, self.dataset_properties)
         return cs
 
     def _get_pipeline_steps(self) -> List[Tuple[str, AutoSktimeComponent]]:
         raise NotImplementedError()
 
+    def supports_iterative_fit(self) -> bool:
+        forecaster = self.steps[-1][1]
+        return forecaster.supports_iterative_fit()
 
-class ConfigurableTransformedTargetForecaster(TransformedTargetForecaster, ConfigurablePipeline, AutoSktimeComponent,
+    def get_max_iter(self) -> Optional[int]:
+        forecaster = self.steps[-1][1]
+        return forecaster.get_max_iter()
+
+    def set_desired_iterations(self, iterations: int):
+        self.steps[-1][1].set_desired_iterations(iterations)
+        if hasattr(self, 'steps_'):
+            self.steps_[-1][1].set_desired_iterations(iterations)
+
+
+class ConfigurableTransformedTargetForecaster(TransformedTargetForecaster, ConfigurablePipeline, AutoSktimePredictor,
                                               ABC):
 
     def __init__(
@@ -174,6 +143,9 @@ class ConfigurableTransformedTargetForecaster(TransformedTargetForecaster, Confi
         self._init(config, dataset_properties, include, exclude, random_state, init_params)
         super().__init__(self.steps)
 
+    def reset(self):
+        pass
+
     def _transform(self, X, y=None):
         # Only implemented for type checker, not actually used
         return super(ConfigurableTransformedTargetForecaster, self)._transform(X, y)
@@ -187,4 +159,80 @@ class ConfigurableTransformedTargetForecaster(TransformedTargetForecaster, Confi
         return super(ConfigurableTransformedTargetForecaster, self).get_fitted_params()
 
 
+class ConfigurableForecastingPipeline(ConfigurablePipeline, ForecastingPipeline, AutoSktimePredictor, ABC):
+    def __init__(
+            self,
+            config: Union[Configuration, Dict[str, Any]] = None,
+            dataset_properties: DatasetProperties = None,
+            include: Dict[str, List[str]] = None,
+            exclude: Dict[str, List[str]] = None,
+            random_state: np.random.RandomState = None,
+            init_params: Dict[str, Any] = None
+    ):
+        self._init(config, dataset_properties, include, exclude, random_state, init_params)
+        super().__init__(self.steps)
+
+
 BasePipeline = ConfigurableTransformedTargetForecaster
+
+
+def set_pipeline_configuration(
+        configuration: Union[Dict[str, Any], Configuration],
+        steps: List[Tuple[str, AutoSktimeComponent]],
+        dataset_properties: DatasetProperties = None,
+        init_params: Dict[str, Any] = None
+):
+    for node_idx, (node_name, node) in enumerate(steps):
+        sub_configuration_space = node.get_hyperparameter_search_space(dataset_properties=dataset_properties)
+        sub_config_dict = {}
+        for param in configuration:
+            if param.startswith(f'{node_name}:'):
+                value = configuration[param]
+                new_name = param.replace(f'{node_name}:', '', 1)
+                sub_config_dict[new_name] = value
+
+        sub_configuration = Configuration(sub_configuration_space, values=sub_config_dict)
+
+        if init_params is not None:
+            sub_init_params_dict = {}
+            for param in init_params:
+                if param.startswith(f'{node_name}:'):
+                    value = init_params[param]
+                    new_name = param.replace(f'{node_name}:', '', 1)
+                    sub_init_params_dict[new_name] = value
+        else:
+            sub_init_params_dict = None
+
+        if isinstance(node, (AutoSktimeComponent, ConfigurablePipeline)):
+            node.set_hyperparameters(configuration=sub_configuration, init_params=sub_init_params_dict)
+        else:
+            raise NotImplementedError('Not supported yet!')
+
+
+def get_pipeline_search_space(
+        steps: List[Tuple[str, AutoSktimeComponent]],
+        include: Dict[str, List[str]] = None,
+        exclude: Dict[str, List[str]] = None,
+        dataset_properties: DatasetProperties = None
+):
+    include = include if include is not None else {}
+    exclude = exclude if exclude is not None else {}
+
+    cs = ConfigurationSpace()
+    for node_idx, (node_name, node) in enumerate(steps):
+        # If the node is a choice, we have to figure out which of its choices are actually legal choices
+        if isinstance(node, AutoSktimeChoice):
+            sub_cs = node.get_hyperparameter_search_space(
+                dataset_properties,
+                include=include.get(node_name), exclude=exclude.get(node_name)
+            )
+            cs.add_configuration_space(node_name, sub_cs)
+
+        # if the node isn't a choice we can add it immediately
+        else:
+            cs.add_configuration_space(
+                node_name,
+                node.get_hyperparameter_search_space(dataset_properties),
+            )
+
+    return cs

@@ -38,3 +38,6 @@ loggers:
 
   numba:
     level: WARNING
+
+  TAE:
+    level: INFO
