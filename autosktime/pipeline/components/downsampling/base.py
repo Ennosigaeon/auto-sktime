@@ -2,7 +2,6 @@ from typing import Union
 
 import numpy as np
 import pandas as pd
-from sktime.base._base import TagAliaserMixin
 from sktime.datatypes import VectorizedDF
 
 from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, HANDLES_PANEL, IGNORES_EXOGENOUS_X, \
@@ -106,10 +105,6 @@ class BaseDownSampling(AutoSktimeTransformer):
 
     def _fit(self, X: Union[pd.Series, pd.DataFrame], y: pd.Series = None):
         return self
-
-    def get_tags(self):
-        tags = super(TagAliaserMixin, self).get_tags()
-        return tags
 
     @staticmethod
     def get_properties(dataset_properties: DatasetProperties = None) -> COMPONENT_PROPERTIES:

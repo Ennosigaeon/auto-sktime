@@ -115,13 +115,13 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
 
             for idx in keys:
                 X_ = X.loc[idx]
-                original_cutoff = self.cutoff
-                self._cutoff = X_.index[-1]
+                original_cutoff = self._cutoff
+                self._set_cutoff(X_.index[[-1]])
 
                 y_pred = self._predict(fh, X_)
                 y_pred_complete.append(y_pred)
 
-                self._cutoff = original_cutoff
+                self._set_cutoff(original_cutoff)
 
             return pd.concat(y_pred_complete, keys=keys)
         else:

@@ -81,7 +81,7 @@ class AutoSktimeComponent(BaseEstimator):
             estimator = self.estimator if self.estimator is not None else self._estimator_class()
             tags = estimator.get_tags()
         except (TypeError, AttributeError):
-            tags = {}
+            tags = super(AutoSktimeComponent, self).get_tags()
         tags.update(self._tags)
         return tags
 
