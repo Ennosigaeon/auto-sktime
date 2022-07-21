@@ -15,7 +15,7 @@ from autosktime.pipeline.components.base import AutoSktimeComponent, COMPONENT_P
     UpdatablePipeline
 from autosktime.pipeline.components.downsampling import DownsamplerChoice, BaseDownSampling
 from autosktime.pipeline.templates.base import set_pipeline_configuration, get_pipeline_search_space
-from autosktime.pipeline.util import NotVectorizedMixin, ChainedPandasAssigment
+from autosktime.pipeline.util import NotVectorizedMixin
 
 
 class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForecaster, AutoSktimeComponent):
@@ -41,14 +41,12 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
             dataset_properties: DatasetProperties,
             window_length: int = 6,
             step_size: Union[int, float] = 0.5,
-            include_index: bool = False,
             concat_multiindex: bool = True,
             transformers: List[Tuple[str, AutoSktimeTransformer]] = None,
             random_state: np.random.RandomState = None
     ):
         super(NotVectorizedMixin, self).__init__(estimator, window_length, transformers)
         self.step_size = step_size
-        self.include_index = include_index
         self.concat_multiindex = concat_multiindex
         # Just to make type explicit for type checker
         self.transformers: List[Tuple[str, AutoSktimeTransformer]] = transformers
@@ -114,10 +112,6 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
             else:
                 return np.array(yt_complete), np.array(Xt_complete)
         else:
-            if X is not None and self.include_index:
-                with ChainedPandasAssigment():
-                    X['__index__'] = X.index
-
             yt, Xt = super()._transform(y, X)
             return yt[::self.step_size_], Xt[::self.step_size_, self.window_length:]
 
@@ -138,10 +132,6 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
 
             return pd.concat(y_pred_complete, keys=keys)
         else:
-            if X is not None and self.include_index:
-                with ChainedPandasAssigment():
-                    X['__index__'] = fh.to_pandas()
-
             Xt = X
             for _, t in self.transformers:
                 # Skip down-sampling for predictions

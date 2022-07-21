@@ -7,9 +7,11 @@ from sktime.forecasting.base import ForecastingHorizon
 from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, IGNORES_EXOGENOUS_X, SUPPORTED_INDEX_TYPES, \
     HANDLES_PANEL
 from autosktime.data import DatasetProperties
-from autosktime.pipeline.components.base import AutoSktimeComponent, COMPONENT_PROPERTIES, UpdatablePipeline
+from autosktime.pipeline.components.base import AutoSktimeComponent, COMPONENT_PROPERTIES, UpdatablePipeline, \
+    SwappedInput
 from autosktime.pipeline.components.data_preprocessing import DataPreprocessingPipeline
 from autosktime.pipeline.components.downsampling.elimination import EliminationDownSampler
+from autosktime.pipeline.components.index import AddIndexComponent
 from autosktime.pipeline.components.preprocessing.impute import ImputerComponent
 from autosktime.pipeline.components.reduction.panel import RecursivePanelReducer
 from autosktime.pipeline.components.regression import RegressorChoice
@@ -83,12 +85,14 @@ class PanelRegressionPipeline(NotVectorizedMixin, ConfigurableTransformedTargetF
             ('imputation', ImputerComponent(random_state=self.random_state)),
             ('reduction',
              RecursivePanelReducer(
-                 transformers=[('downsampling', EliminationDownSampler(random_state=self.random_state))],
+                 transformers=[
+                     ('add_index', SwappedInput(AddIndexComponent())),
+                     ('downsampling', EliminationDownSampler(random_state=self.random_state))
+                 ],
                  estimator=pipeline,
                  random_state=self.random_state,
                  step_size=1,
                  concat_multiindex=True,
-                 include_index=True,
                  dataset_properties=self.dataset_properties)
              ),
         ]
