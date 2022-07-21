@@ -165,19 +165,22 @@ class TrainEvaluator(AbstractEvaluator):
     def _fit_and_predict_final_model(
             self,
             ensemble_size: float = 0.2,
-            fh: ForecastingHorizon = None
+            fh: ForecastingHorizon = None,
+            refit: bool = False,
     ) -> Tuple[AutoSktimePredictor, SUPPORTED_Y_TYPES]:
-        y = self.datamanager.y
-        X = self.datamanager.X
+        if refit:
+            y = self.datamanager.y
+            X = self.datamanager.X
 
-        model = self._get_model()
+            model = self._get_model()
 
-        if self.budget_type == 'iterations' and model.supports_iterative_fit():
-            n_iter = int(np.ceil(self.budget / 100 * model.get_max_iter()))
-            model.set_desired_iterations(n_iter)
+            if self.budget_type == 'iterations' and model.supports_iterative_fit():
+                n_iter = int(np.ceil(self.budget / 100 * model.get_max_iter()))
+                model.set_desired_iterations(n_iter)
 
-        _fit_and_suppress_warnings(self.logger, model, y, X, fh)
-        self.model = model
+            _fit_and_suppress_warnings(self.logger, model, y, X, fh)
+        else:
+            model = self.models[0]
 
         splitter = type(self.splitter)(fh=ensemble_size)
         splitter.random_state = 42
