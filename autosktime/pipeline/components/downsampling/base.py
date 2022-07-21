@@ -39,7 +39,7 @@ class BaseDownSampling(AutoSktimeTransformer):
             X = kwargs.pop("X")
             y = kwargs.pop("y", None)
 
-            idx = X.get_iter_indices()
+            idx, _ = X.get_iter_indices()
             n = len(idx)
             Xs = X.as_list()
 
@@ -85,6 +85,11 @@ class BaseDownSampling(AutoSktimeTransformer):
         # if X.shape[0] < 1000:
         #     return X, y
 
+        flip = X is None and y is not None
+
+        if flip:
+            X, y = y, X
+
         # input check and conversion for X/y
         X_inner, y_inner, metadata = self._check_X_y(X=X, y=y, return_metadata=True)
 
@@ -101,6 +106,8 @@ class BaseDownSampling(AutoSktimeTransformer):
         else:
             y_out = yt
 
+        if flip:
+            X_out, y_out = y_out, X_out
         return X_out, y_out
 
     def _fit(self, X: Union[pd.Series, pd.DataFrame], y: pd.Series = None):

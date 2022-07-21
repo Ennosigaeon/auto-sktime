@@ -22,7 +22,7 @@ class EliminationDownSampler(BaseDownSampling):
 
     def _transform(self, X: Union[pd.Series, pd.DataFrame], y: pd.DataFrame = None):
         if isinstance(self.window_size, float):
-            self.window_size_ = int(X.shape[0] * self.window_size)
+            self.window_size_ = max(1, int(X.shape[0] * self.window_size))
         else:
             self.window_size_ = int(self.window_size)
         self._original_size = X.shape[0]

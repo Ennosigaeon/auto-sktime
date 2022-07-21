@@ -295,7 +295,7 @@ class AutoSktimeChoice(AutoSktimeComponent, ABC):
         if len(available_components) == 0:
             raise ValueError('No estimators found')
 
-        if default is None:
+        if default is None or default not in available_components.keys():
             for default_ in available_components.keys():
                 if include is not None and default_ not in include:
                     continue
@@ -380,5 +380,5 @@ class UpdatablePipeline(Pipeline):
     def update(self, y: pd.Series, X: pd.DataFrame = None, update_params: bool = True):
         Xt = X
         for _, name, transform in self._iter(with_final=False):
-            Xt = transform.transform(Xt)
+            Xt = transform.transform(Xt, y=y)
         return self.steps[-1][1].update(Xt, y, update_params=update_params)
