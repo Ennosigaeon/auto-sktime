@@ -199,6 +199,8 @@ class AutoMLSMBO:
             'metric': self.metric,
             'memory_limit': self.memory_limit,
             'use_pynisher': self.use_pynisher,
+            # TODO make configurable
+            'debug_log': True,
         }
 
         y = self.datamanager.y

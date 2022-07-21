@@ -6,6 +6,7 @@ from typing import Optional, Union, Type, TextIO, List
 
 import numpy as np
 import pandas as pd
+from matplotlib import pyplot as plt
 from sktime.forecasting.base import ForecastingHorizon
 from sktime.performance_metrics.forecasting._classes import BaseForecastingErrorMetric
 
@@ -17,6 +18,7 @@ from autosktime.evaluation import TaFuncResult
 from autosktime.metrics import calculate_loss, get_cost_of_crash
 from autosktime.pipeline.templates import TemplateChoice
 from autosktime.util import get_name, resolve_index
+from autosktime.util.plotting import plot_grouped_series
 from smac.tae import StatusType
 
 __all__ = [
@@ -66,6 +68,7 @@ class AbstractEvaluator:
             num_run: int = 0,
             budget: Optional[float] = None,
             budget_type: Optional[str] = None,
+            debug_log: bool = False
     ):
         self.configuration = configuration
         self.backend = backend
@@ -88,6 +91,7 @@ class AbstractEvaluator:
 
         self.budget = budget
         self.budget_type = budget_type
+        self.debug_log = debug_log
         self.starttime = time.time()
 
     def _predict_forecast(
@@ -140,6 +144,13 @@ class AbstractEvaluator:
                 return get_cost_of_crash(self.metric)
             else:
                 raise ValueError(f"Unknown exception handling '{error}' method")
+
+    def _log_progress(self, train_loss: float, val_loss: float, y_val: SUPPORTED_Y_TYPES, y_pred: SUPPORTED_Y_TYPES,
+                      plot: bool = False):
+        self.logger.debug(f'Finished fold with train loss {train_loss} and validation loss {val_loss}')
+        if plot:
+            plot_grouped_series(None, y_val, y_pred)
+            plt.show()
 
     def finish_up(
             self,
