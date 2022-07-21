@@ -10,7 +10,7 @@ from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import AutoSktimeComponent, COMPONENT_PROPERTIES, UpdatablePipeline, \
     SwappedInput
 from autosktime.pipeline.components.data_preprocessing import DataPreprocessingPipeline
-from autosktime.pipeline.components.downsampling.elimination import EliminationDownSampler
+from autosktime.pipeline.components.features import FeatureGenerationChoice
 from autosktime.pipeline.components.index import AddIndexComponent
 from autosktime.pipeline.components.preprocessing.impute import ImputerComponent
 from autosktime.pipeline.components.reduction.panel import RecursivePanelReducer
@@ -76,6 +76,7 @@ class PanelRegressionPipeline(NotVectorizedMixin, ConfigurableTransformedTargetF
 
     def _get_pipeline_steps(self) -> List[Tuple[str, AutoSktimeComponent]]:
         pipeline = UpdatablePipeline(steps=[
+            ('feature_generation', FeatureGenerationChoice(random_state=self.random_state)),
             ('preprocessing', DataPreprocessingPipeline(random_state=self.random_state)),
             ('regression', RegressorChoice(random_state=self.random_state))
         ])
@@ -86,13 +87,11 @@ class PanelRegressionPipeline(NotVectorizedMixin, ConfigurableTransformedTargetF
             ('reduction',
              RecursivePanelReducer(
                  transformers=[
-                     ('add_index', SwappedInput(AddIndexComponent())),
-                     ('downsampling', EliminationDownSampler(random_state=self.random_state))
+                     ('add_index', SwappedInput(AddIndexComponent(self.random_state), random_state=self.random_state)),
                  ],
                  estimator=pipeline,
                  random_state=self.random_state,
-                 step_size=1,
-                 concat_multiindex=True,
+                 step_size=4,
                  dataset_properties=self.dataset_properties)
              ),
         ]

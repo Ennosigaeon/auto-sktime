@@ -41,13 +41,11 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
             dataset_properties: DatasetProperties,
             window_length: int = 6,
             step_size: Union[int, float] = 0.5,
-            concat_multiindex: bool = True,
             transformers: List[Tuple[str, AutoSktimeTransformer]] = None,
             random_state: np.random.RandomState = None
     ):
         super(NotVectorizedMixin, self).__init__(estimator, window_length, transformers)
         self.step_size = step_size
-        self.concat_multiindex = concat_multiindex
         # Just to make type explicit for type checker
         self.transformers: List[Tuple[str, AutoSktimeTransformer]] = transformers
         self.dataset_properties = dataset_properties
@@ -107,13 +105,17 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
                 yt_complete.append(yt)
                 Xt_complete.append(Xt)
 
-            if self.concat_multiindex:
-                return np.concatenate(yt_complete), np.concatenate(Xt_complete)
-            else:
-                return np.array(yt_complete), np.array(Xt_complete)
+            return np.concatenate(yt_complete), np.concatenate(Xt_complete)
         else:
             yt, Xt = super()._transform(y, X)
-            return yt[::self.step_size_], Xt[::self.step_size_, self.window_length:]
+
+            # Remove encoded y data
+            Xt = Xt[:, self.window_length:]
+
+            # Reshape to (num_samples, seq_length, num_features)
+            Xt = Xt.T.reshape(X.shape[1], self.window_length, -1).T
+
+            return yt[::self.step_size_], Xt[::self.step_size_]
 
     def _predict(self, fh: ForecastingHorizon, X: pd.DataFrame = None):
         if X is not None and isinstance(X.index, pd.MultiIndex):
