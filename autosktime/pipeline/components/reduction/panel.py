@@ -13,6 +13,7 @@ from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, HANDL
 from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import AutoSktimeComponent, COMPONENT_PROPERTIES, AutoSktimeTransformer, \
     UpdatablePipeline
+from autosktime.pipeline.components.downsampling import DownsamplerChoice, BaseDownSampling
 from autosktime.pipeline.templates.base import set_pipeline_configuration, get_pipeline_search_space
 from autosktime.pipeline.util import NotVectorizedMixin, ChainedPandasAssigment
 
@@ -38,13 +39,17 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
             self,
             estimator: UpdatablePipeline,
             dataset_properties: DatasetProperties,
-            window_length: int = 5,
-            include_index: bool = True,
+            window_length: int = 6,
+            step_size: Union[int, float] = 0.5,
+            include_index: bool = False,
+            concat_multiindex: bool = True,
             transformers: List[Tuple[str, AutoSktimeTransformer]] = None,
             random_state: np.random.RandomState = None
     ):
         super(NotVectorizedMixin, self).__init__(estimator, window_length, transformers)
+        self.step_size = step_size
         self.include_index = include_index
+        self.concat_multiindex = concat_multiindex
         # Just to make type explicit for type checker
         self.transformers: List[Tuple[str, AutoSktimeTransformer]] = transformers
         self.dataset_properties = dataset_properties
@@ -65,6 +70,11 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
 
     def _fit(self, y, X=None, fh=None):
         self._target_column = y.name if isinstance(y, pd.Series) else y.columns[0]
+
+        if isinstance(self.step_size, float):
+            self.step_size_ = int(self.window_length * self.step_size)
+        else:
+            self.step_size_ = int(self.step_size)
 
         if self.transformers is None:
             return super()._fit(y, X, fh)
@@ -99,14 +109,17 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
                 yt_complete.append(yt)
                 Xt_complete.append(Xt)
 
-            return np.concatenate(yt_complete), np.concatenate(Xt_complete)
+            if self.concat_multiindex:
+                return np.concatenate(yt_complete), np.concatenate(Xt_complete)
+            else:
+                return np.array(yt_complete), np.array(Xt_complete)
         else:
             if X is not None and self.include_index:
                 with ChainedPandasAssigment():
                     X['__index__'] = X.index
 
             yt, Xt = super()._transform(y, X)
-            return yt, Xt[:, self.window_length:]
+            return yt[::self.step_size_], Xt[::self.step_size_, self.window_length:]
 
     def _predict(self, fh: ForecastingHorizon, X: pd.DataFrame = None):
         if X is not None and isinstance(X.index, pd.MultiIndex):
@@ -129,7 +142,15 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
                 with ChainedPandasAssigment():
                     X['__index__'] = fh.to_pandas()
 
-            return super()._predict(fh, X)
+            Xt = X
+            for _, t in self.transformers:
+                # Skip down-sampling for predictions
+                if isinstance(t, DownsamplerChoice) or isinstance(t, BaseDownSampling):
+                    continue
+
+                _, Xt = t.transform(X=None, y=Xt)
+
+            return super()._predict(fh, Xt)
 
     def _update(self, y: pd.Series, X: pd.DataFrame = None, update_params: bool = True):
         yt = y
@@ -218,11 +239,16 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
 
         X = X.loc[start: cutoff, :]
 
+        # noinspection PyTypeChecker
         _, Xt = self._transform(None, X)
         y_pred = self.estimator_.predict(Xt)
+        y_pred = np.repeat(y_pred, self.step_size_)
 
-        padding = np.ones(fh.to_pandas().shape[0] - y_pred.shape[0]) * y_pred[0]
-        y_pred = np.concatenate((padding, y_pred))
+        if y_pred.shape > fh.to_pandas().shape:
+            y_pred = y_pred[:fh.to_pandas().shape[0]]
+        elif y_pred.shape < fh.to_pandas().shape:
+            padding = np.ones(fh.to_pandas().shape[0] - y_pred.shape[0]) * y_pred[0]
+            y_pred = np.concatenate((padding, y_pred))
 
         if self._y_mtype_last_seen == 'pd-multiindex':
             return pd.DataFrame(y_pred, columns=self._y.columns, index=fh.to_pandas())

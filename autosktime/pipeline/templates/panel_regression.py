@@ -86,6 +86,9 @@ class PanelRegressionPipeline(NotVectorizedMixin, ConfigurableTransformedTargetF
                  transformers=[('downsampling', EliminationDownSampler(random_state=self.random_state))],
                  estimator=pipeline,
                  random_state=self.random_state,
+                 step_size=1,
+                 concat_multiindex=True,
+                 include_index=True,
                  dataset_properties=self.dataset_properties)
              ),
         ]
