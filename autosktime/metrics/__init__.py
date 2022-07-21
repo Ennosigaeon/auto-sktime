@@ -183,7 +183,7 @@ class RelativePrognosticHorizon(PrintableVectorizedMetric):
         'lower_is_better': False,
     }
 
-    def __init__(self, alpha: float = 0.05):
+    def __init__(self, alpha: float = 0.005):
         super().__init__()
         self.alpha = alpha
 
@@ -222,7 +222,7 @@ class PrognosticHorizonRate(PrintableVectorizedMetric):
         'lower_is_better': False,
     }
 
-    def __init__(self, alpha: float = 0.05):
+    def __init__(self, alpha: float = 0.005):
         super().__init__()
         self.alpha = alpha
 
