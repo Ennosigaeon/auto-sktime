@@ -24,6 +24,5 @@ class MinimalFeatureGenerator(BaseFeatureGenerator):
         peak = np.percentile(np.abs(x), pctarr, method=intep, axis=1)
         sig = x.std(axis=1)
 
-        CF = peak / sig
-        np.nan_to_num(CF, posinf=0)
+        CF = np.divide(peak, sig, out=np.zeros_like(peak), where=sig != 0)
         return CF
