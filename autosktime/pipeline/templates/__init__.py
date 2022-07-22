@@ -12,6 +12,7 @@ from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import AutoSktimePredictor, COMPONENT_PROPERTIES
 from autosktime.pipeline.templates.base import ConfigurableTransformedTargetForecaster
 from autosktime.pipeline.templates.panel_regression import PanelRegressionPipeline
+from autosktime.pipeline.templates.nn_panel_regression import NNPanelRegressionPipeline
 from autosktime.pipeline.templates.regression import RegressionPipeline
 from autosktime.pipeline.templates.univariate_endogenous import UnivariateEndogenousPipeline
 from autosktime.pipeline.util import sub_configuration, NotVectorizedMixin, Int64Index
@@ -146,7 +147,8 @@ class TemplateChoice(NotVectorizedMixin, AutoSktimePredictor):
         return {
             'linear': UnivariateEndogenousPipeline,
             'regression': RegressionPipeline,
-            'panel-regression': PanelRegressionPipeline
+            # 'panel-regression': PanelRegressionPipeline,
+            'nn-panel-regression': NNPanelRegressionPipeline,
         }
 
     def _fit(self, y: pd.Series, X: pd.DataFrame = None, fh: ForecastingHorizon = None):

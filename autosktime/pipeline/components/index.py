@@ -36,3 +36,37 @@ class AddIndexComponent(AutoSktimePreprocessingAlgorithm):
             IGNORES_EXOGENOUS_X: True,
             SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.DatetimeIndex, pd.PeriodIndex, Int64Index]
         }
+
+
+class AddSequenceComponent(AutoSktimePreprocessingAlgorithm):
+
+    def __init__(self, random_state: np.random.RandomState = None):
+        super().__init__()
+        self.random_state = random_state
+
+    def fit(self, X: pd.DataFrame, y: pd.Series):
+        return self
+
+    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
+        Xt = X.copy()
+
+        if isinstance(X.index, pd.MultiIndex):
+            Xt['__sequence__'] = X.index.droplevel(1)
+        else:
+            Xt['__sequence__'] = -1
+
+        # Replace sequence id with random number to make this feature useless for ML
+        replacements = {n: np.random.random() for n in Xt['__sequence__'].unique()}
+        Xt['__sequence__'] = Xt['__sequence__'].map(replacements)
+
+        return Xt
+
+    @staticmethod
+    def get_properties(dataset_properties: DatasetProperties = None) -> COMPONENT_PROPERTIES:
+        return {
+            HANDLES_UNIVARIATE: True,
+            HANDLES_MULTIVARIATE: True,
+            HANDLES_PANEL: True,
+            IGNORES_EXOGENOUS_X: True,
+            SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.DatetimeIndex, pd.PeriodIndex, Int64Index]
+        }
