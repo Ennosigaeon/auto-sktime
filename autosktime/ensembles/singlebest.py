@@ -38,8 +38,8 @@ class SingleBest(AbstractEnsemble):
 
         self.indices_ = [0]
         self.weights_ = [1.0]
-        id, perf = self.get_incumbent()
-        self.identifiers_ = [id]
+        id_, perf = self.get_incumbent()
+        self.identifiers_ = [id_]
         self.trajectory_ = [perf]
 
     def fit(

@@ -5,6 +5,7 @@ from typing import Optional, Dict
 import numpy as np
 import pandas as pd
 from sklearn.metrics import mean_squared_error, mean_absolute_error
+# noinspection PyProtectedMember
 from sklearn.metrics._regression import _check_reg_targets
 from sklearn.utils import check_consistent_length
 from sktime.performance_metrics.forecasting import (
@@ -35,7 +36,7 @@ def calculate_loss(
     Parameters
     ----------
     solution: Union[pd.Series, pd.DataFrame, np.ndarray, pd.Index]
-        The ground truth of the targets
+        The ground truth of the target
     prediction: Union[pd.Series, pd.DataFrame, np.ndarray, pd.Index]
         The best estimate from the model, of the given targets
     task_type: int
@@ -201,7 +202,8 @@ class RelativePrognosticHorizon(PrintableVectorizedMetric):
 
             return (y_true.shape[0] - t_j_alpha) / y_true.shape[0]
 
-    def find_longest_suffix(self, x: pd.Series):
+    @staticmethod
+    def find_longest_suffix(x: pd.Series):
         if not np.all(x.iloc[-1]):
             return x.shape[0]
 

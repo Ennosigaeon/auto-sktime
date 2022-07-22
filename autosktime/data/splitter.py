@@ -126,6 +126,16 @@ splitter_types: Dict[str, Type[BaseSplitter]] = {
 }
 
 
+def _validate_input(*dfs) -> pd.MultiIndex:
+    index = dfs[0].index
+    if not np.all([df.index == index for df in dfs]):
+        raise ValueError('All dataframes must share same index')
+
+    if not isinstance(index, pd.MultiIndex):
+        raise ValueError(f'Only {type(pd.MultiIndex)} is supported got {type(index)}')
+    return index
+
+
 def multiindex_train_test_split(
         *dfs: Union[pd.DataFrame, pd.Series],
         test_size: Union[float, int] = None,
@@ -134,13 +144,7 @@ def multiindex_train_test_split(
         shuffle: bool = True,
         stratify=None
 ):
-    index = dfs[0].index
-    if not np.all([df.index == index for df in dfs]):
-        raise ValueError('All dataframes must share same index')
-
-    if not isinstance(index, pd.MultiIndex):
-        raise ValueError(f'Only {type(pd.MultiIndex)} is supported got {type(index)}')
-
+    index = _validate_input(*dfs)
     train, test = train_test_split(index.levels[0], test_size=test_size, train_size=train_size,
                                    random_state=random_state, shuffle=shuffle, stratify=stratify)
 
@@ -156,13 +160,7 @@ def multiindex_cross_validation(
         folds: int = 5,
         random_state: Union[np.random.RandomState, int] = None
 ):
-    index = dfs[0].index
-    if not np.all([df.index == index for df in dfs]):
-        raise ValueError('All dataframes must share same index')
-
-    if not isinstance(index, pd.MultiIndex):
-        raise ValueError(f'Only {type(pd.MultiIndex)} is supported got {type(index)}')
-
+    index = _validate_input(*dfs)
     res = []
     for train, test in PanelCVSplitter(folds, random_state=random_state).split(index.levels[0]):
         res.append(list(

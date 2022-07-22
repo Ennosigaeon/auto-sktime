@@ -21,7 +21,7 @@ from sktime.datasets import load_airline
 
 class TestExecuteTAFunc(unittest.TestCase):
 
-    def _test_configuration(self, config_dict: Dict):
+    def test_configuration(self, config_dict: Dict):
         y = load_airline()
         datamanager = DataManager(UNIVARIATE_FORECAST, y, None, 'airlines')
 

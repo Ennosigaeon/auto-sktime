@@ -1,6 +1,7 @@
 from typing import Hashable
 
 import pandas as pd
+# noinspection PyProtectedMember
 from sktime.forecasting.model_selection._split import ACCEPTED_Y_TYPES
 
 

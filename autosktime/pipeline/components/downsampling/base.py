@@ -1,3 +1,4 @@
+from abc import ABC
 from typing import Union
 
 import numpy as np
@@ -21,7 +22,7 @@ def fix_size(arr: np.array, original_size: int) -> np.ndarray:
     return arrt
 
 
-class BaseDownSampling(AutoSktimeTransformer):
+class BaseDownSampling(AutoSktimeTransformer, ABC):
     _tags = {
         'capability:inverse_transform': True,
         'fit_is_empty': True,
@@ -34,6 +35,7 @@ class BaseDownSampling(AutoSktimeTransformer):
         Uses transformers_ attribute to store one forecaster per loop index.
         """
 
+        # noinspection PyShadowingNames
         def unwrap(kwargs):
             """Unwrap kwargs to X, y, and reusable results of some method calls."""
             X = kwargs.pop("X")

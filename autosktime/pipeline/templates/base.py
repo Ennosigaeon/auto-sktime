@@ -148,10 +148,12 @@ class ConfigurableTransformedTargetForecaster(TransformedTargetForecaster, Confi
 
     def _transform(self, X, y=None):
         # Only implemented for type checker, not actually used
+        # noinspection PyProtectedMember,PyUnresolvedReferences
         return super(ConfigurableTransformedTargetForecaster, self)._transform(X, y)
 
     def _inverse_transform(self, X, y=None):
         # Only implemented for type checker, not actually used
+        # noinspection PyProtectedMember,PyUnresolvedReferences
         return super(ConfigurableTransformedTargetForecaster, self)._inverse_transform(X, y)
 
     def get_fitted_params(self):

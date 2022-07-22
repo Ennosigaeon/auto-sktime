@@ -73,7 +73,7 @@ class EnsembleBuilderManager(IncorporateRunResultCallback):
         metric: str
             name of metric to compute the loss of the given predictions
         ensemble_size: int
-            maximal size of ensemble (passed to autosklearn.ensemble.ensemble_selection)
+            maximal size of ensemble (passed to autosktime.ensemble.ensemble_selection)
         ensemble_nbest: int/float
             if int: consider only the n best prediction
             if float: consider only this fraction of the best models
@@ -469,7 +469,7 @@ class EnsembleBuilder:
 
                 n_read_files += 1
 
-            except Exception:
+            except FileNotFoundError:
                 self.logger.warning(f'Error loading {y_ens_fn}: {traceback.format_exc()}')
                 self.read_losses[y_ens_fn].ens_loss = np.inf
 

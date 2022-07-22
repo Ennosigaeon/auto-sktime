@@ -11,6 +11,7 @@ from ConfigSpace import Configuration
 from autosktime.automl_common.common.utils.backend import Backend
 from autosktime.data.splitter import BaseSplitter
 from autosktime.metrics import get_cost_of_crash
+# noinspection PyProtectedMember
 from sktime.performance_metrics.forecasting._classes import BaseForecastingErrorMetric
 
 from smac.runhistory.runhistory import RunInfo, RunValue
@@ -126,6 +127,7 @@ class ExecuteTaFunc(AbstractTAFunc):
         remaining_time = self.stats.get_remaing_time_budget()
 
         if remaining_time - 5 < run_info.cutoff:
+            # noinspection PyProtectedMember
             run_info = run_info._replace(cutoff=int(remaining_time - 5))
 
         if run_info.cutoff < 1.0:
@@ -139,6 +141,7 @@ class ExecuteTaFunc(AbstractTAFunc):
                 endtime=time.time(),
             )
         elif run_info.cutoff != int(np.ceil(run_info.cutoff)) and not isinstance(run_info.cutoff, int):
+            # noinspection PyProtectedMember
             run_info = run_info._replace(cutoff=int(np.ceil(run_info.cutoff)))
 
         self.logger.info(

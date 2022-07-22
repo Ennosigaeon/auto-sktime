@@ -34,7 +34,7 @@ class SlidingWindowDownSampler(BaseDownSampling):
 
         self._original_size = X.shape[0]
 
-        Xt = self._window(X, 50, self.overlap)
+        Xt = self._window(X, n, self.overlap)
 
         index = X.index
         if isinstance(index, pd.PeriodIndex):

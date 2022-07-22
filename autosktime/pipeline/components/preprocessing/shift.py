@@ -24,9 +24,9 @@ class ShiftTransformerComponent(AutoSktimeTransformer):
         self.random_state = random_state
 
     def _fit(self, X: Union[pd.Series, pd.DataFrame], y: pd.Series = None):
-        min = X.min()
-        if np.any(min < self.lower_bound):
-            self.offest_ = np.clip(min - self.lower_bound, -np.inf, 0) * -self.padding
+        min_ = X.min()
+        if np.any(min_ < self.lower_bound):
+            self.offest_ = np.clip(min_ - self.lower_bound, -np.inf, 0) * -self.padding
         else:
             self.offest_ = 0
 

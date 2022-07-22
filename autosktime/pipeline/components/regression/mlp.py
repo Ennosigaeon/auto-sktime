@@ -81,8 +81,7 @@ class MLPClassifier(AutoSktimeRegressionAlgorithm):
         self.max_iter = int(self.max_iter)
         self.hidden_layer_depth = int(self.hidden_layer_depth)
         self.num_nodes_per_layer = int(self.num_nodes_per_layer)
-        self.hidden_layer_sizes = tuple(self.num_nodes_per_layer
-                                        for i in range(self.hidden_layer_depth))
+        self.hidden_layer_sizes = tuple(self.num_nodes_per_layer for _ in range(self.hidden_layer_depth))
         self.activation = str(self.activation)
         self.alpha = float(self.alpha)
         self.learning_rate_init = float(self.learning_rate_init)

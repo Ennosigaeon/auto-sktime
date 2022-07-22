@@ -28,20 +28,20 @@ class ScaledLogitComponent(AutoSktimeTransformer):
         self.random_state = random_state
 
     def _fit(self, X: Union[pd.Series, pd.DataFrame], y: pd.Series = None):
-        min = X.min()
-        max = X.max()
+        min_ = X.min()
+        max_ = X.max()
 
-        if min < 0:
+        if min_ < 0:
             lower_bound = 2 - self.lower_bound
         else:
             lower_bound = self.lower_bound
 
-        if max < 0:
+        if max_ < 0:
             upper_bound = 2 - self.upper_bound
         else:
             upper_bound = self.upper_bound
 
-        self.estimator = self._estimator_class(lower_bound=lower_bound * min, upper_bound=upper_bound * max)
+        self.estimator = self._estimator_class(lower_bound=lower_bound * min_, upper_bound=upper_bound * max_)
 
         self.estimator.fit(X=X, y=y)
         return self

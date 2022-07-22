@@ -165,7 +165,7 @@ class TrainEvaluator(AbstractEvaluator):
             train: np.ndarray,
             test: np.ndarray,
     ) -> Tuple[SUPPORTED_Y_TYPES, SUPPORTED_Y_TYPES]:
-        raise NotImplementedError('Budgets not supported yet')
+        raise ValueError('Budgets not supported yet')
 
     def _fit_and_predict_final_model(
             self,

@@ -346,7 +346,7 @@ class AutoSktimeRegressionAlgorithm(AutoSktimeComponent, ABC):
 
 class AutoSktimePreprocessingAlgorithm(TransformerMixin, AutoSktimeComponent, ABC):
     _estimator_class: Type[TransformerMixin] = None
-    estimator: TransformerMixin = None
+    estimator: Union[TransformerMixin, str] = None
 
     def __init__(self, random_state: np.random.RandomState = None):
         super().__init__()
@@ -389,7 +389,7 @@ class SwappedInput(AutoSktimePreprocessingAlgorithm, AutoSktimeTransformer):
     estimator: AutoSktimePreprocessingAlgorithm = None
 
     def __init__(self, estimator: AutoSktimePreprocessingAlgorithm, random_state: np.random.RandomState = None):
-        super().__init__()
+        super().__init__(random_state)
         self.estimator = estimator
 
     def transform(self, X, y=None, **fit_params):

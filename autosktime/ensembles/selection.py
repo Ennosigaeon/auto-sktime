@@ -186,8 +186,8 @@ class EnsembleSelection(AbstractEnsemble):
         self.weights_ = weights
 
     def __str__(self) -> str:
-        trajectory_str = ' '.join([f'{id}: {perf:.5f}' for id, perf in enumerate(self.trajectory_)])
-        identifiers_str = ' '.join([f'{id}' for idx, id in enumerate(self.identifiers_) if self.weights_[idx] > 0])
+        trajectory_str = ' '.join([f'{id_}: {perf:.5f}' for id_, perf in enumerate(self.trajectory_)])
+        identifiers_str = ' '.join([f'{id_}' for idx, id_ in enumerate(self.identifiers_) if self.weights_[idx] > 0])
         return ('Ensemble Selection:\n'
                 f'\tTrajectory: {trajectory_str}\n'
                 f'\tMembers: {self.indices_}\n'

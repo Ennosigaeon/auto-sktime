@@ -16,7 +16,7 @@ class Backend(Backend_):
         filepath = self._get_targets_ensemble_filename()
 
         # Try to open the file without locking it, this will reduce the
-        # number of times where we erroneously keep a lock on the ensemble
+        # number of times when we erroneously keep a lock on the ensemble
         # targets file although the process already was killed
         try:
             existing_targets = pd.read_pickle(filepath)
@@ -24,7 +24,7 @@ class Backend(Backend_):
                     existing_targets.shape == targets.shape and np.allclose(existing_targets, targets)
             ):
                 return filepath
-        except Exception:
+        except FileNotFoundError:
             pass
 
         with tempfile.NamedTemporaryFile("wb", dir=os.path.dirname(filepath), delete=False) as fh_w:

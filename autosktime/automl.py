@@ -138,6 +138,9 @@ class AutoML(NotVectorizedMixin, BaseForecaster):
     def _supports_task_type(cls, task_type: str) -> bool:
         raise NotImplementedError
 
+    def get_fitted_params(self):
+        raise NotImplementedError
+
     def reset(self):
         self.models_ = None
         self.ensemble_ = None
@@ -352,7 +355,7 @@ class AutoML(NotVectorizedMixin, BaseForecaster):
                     # We use the temporal directory to save the
                     # dask workers, because deleting workers
                     # more time than deleting backend directories
-                    # This prevent an error saying that the worker
+                    # This prevents an error saying that the worker
                     # file was deleted, so the client could not close
                     # the worker properly
                     local_directory=tempfile.gettempdir(),
@@ -447,7 +450,7 @@ class AutoML(NotVectorizedMixin, BaseForecaster):
         )
 
         if run_value.status == StatusType.SUCCESS:
-            if self._resampling_strategy in ('sliding-window'):
+            if self._resampling_strategy in ['sliding-window']:
                 load_function = self._backend.load_cv_model_by_seed_and_id_and_budget
             else:
                 load_function = self._backend.load_model_by_seed_and_id_and_budget

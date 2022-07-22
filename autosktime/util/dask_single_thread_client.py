@@ -73,7 +73,7 @@ class SingleThreadedClient(dask.distributed.Client):
         """
         Note
         ----
-        The keyword arguments caught in `dask.distributed.Client` need to be specified here so they don't get passed in
+        The keyword arguments caught in `dask.distributed.Client` need to be specified here, so they don't get passed in
         as ``**kwargs`` to the ``func``.
         """
         return DummyFuture(func(*args, **kwargs))
