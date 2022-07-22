@@ -54,12 +54,14 @@ for fold, (y_train, y_test, X_train, X_test) in \
         per_run_time_limit=60,
         ensemble_size=5,
         ensemble_nbest=20,
+        n_jobs=1,
         temporary_directory=workdir,
         metric=RootMeanSquaredError(),
         resampling_strategy='panel-holdout',
         resampling_strategy_arguments={'fh': 5},
         delete_tmp_folder_after_terminate=False,
-        use_pynisher=False
+        use_pynisher=True,
+        use_multi_fidelity=True
     )
 
     automl.fit(y_train, X_train, dataset_name='rul', task=PANEL_INDIRECT_FORECAST)

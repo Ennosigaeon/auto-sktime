@@ -186,7 +186,8 @@ class AutoML(NotVectorizedMixin, BaseForecaster):
 
         # If no dask client was provided, we create one, so that we can start an ensemble process in parallel to SMBO
         if self._dask_client is None:
-            self._create_dask_client()
+            self._dask_client = self._create_dask_client()
+            self._is_dask_client_internally_created = True
         else:
             self._is_dask_client_internally_created = False
 
@@ -289,6 +290,8 @@ class AutoML(NotVectorizedMixin, BaseForecaster):
                 total_walltime_limit=time_left_for_smac,
                 func_eval_time_limit=per_run_time_limit,
                 memory_limit=self._memory_limit,
+                n_jobs=self._n_jobs,
+                dask_client=self._dask_client,
                 metric=self._metric,
                 splitter=self._determine_resampling(),
                 intensifier_generator=self._determine_intensification(),
@@ -347,20 +350,16 @@ class AutoML(NotVectorizedMixin, BaseForecaster):
             delete_output_folder_after_terminate=self._delete_tmp_folder_after_terminate
         )
 
-    def _create_dask_client(self):
-        self._is_dask_client_internally_created = True
-        if self._n_jobs > 1 and self._ensemble_size > 1:
-            self._dask_client = dask.distributed.Client(
+    def _create_dask_client(self) -> Optional[dask.distributed.Client]:
+        if self._n_jobs > 1:
+            return dask.distributed.Client(
                 dask.distributed.LocalCluster(
                     n_workers=self._n_jobs,
                     processes=False,
                     threads_per_worker=1,
-                    # We use the temporal directory to save the
-                    # dask workers, because deleting workers
-                    # more time than deleting backend directories
-                    # This prevents an error saying that the worker
-                    # file was deleted, so the client could not close
-                    # the worker properly
+                    # Use a tempdir to save the dask workers, because deleting workers takes more time than deleting
+                    # backend directories. This prevents an error saying that the worker file was deleted, so the
+                    # client could not close the worker properly
                     local_directory=tempfile.gettempdir(),
                     # Memory is handled by the pynisher, not by the dask worker/nanny
                     memory_limit=0,
@@ -369,7 +368,8 @@ class AutoML(NotVectorizedMixin, BaseForecaster):
                 heartbeat_interval=10000,
             )
         else:
-            self._dask_client = SingleThreadedClient()
+            return None
+            # return SingleThreadedClient()
 
     def _determine_resampling(self) -> BaseSplitter:
         # Determine Resampling strategy
@@ -400,12 +400,10 @@ class AutoML(NotVectorizedMixin, BaseForecaster):
                 and self._dask_client
         ):
             self._logger.info('Closing the dask infrastructure')
-            self._dask_client.shutdown()
             self._dask_client.close()
+            self._dask_client.shutdown()
             del self._dask_client
             self._dask_client = None
-            self._is_dask_client_internally_created = False
-            del self._is_dask_client_internally_created
             self._logger.info('Finished closing the dask infrastructure')
 
         # Clean up the backend

@@ -3,6 +3,7 @@ import logging
 import os
 from typing import Optional, Tuple, List, Dict, Type, Any
 
+import dask.distributed
 import numpy as np
 import pandas as pd
 from sktime.performance_metrics.forecasting._classes import BaseForecastingErrorMetric
@@ -39,6 +40,8 @@ class SimpleIntensifierGenerator(IntensifierGenerator):
             scenario: Scenario,
             seed: int,
             ta_kwargs: Dict,
+            n_jobs: int,
+            dask_client: dask.distributed.Client,
             initial_configurations: List[Configuration],
             hp_priors: bool,
             priors: Dict[str, Prior]
@@ -50,6 +53,8 @@ class SimpleIntensifierGenerator(IntensifierGenerator):
             tae_runner=ExecuteTaFunc,
             tae_runner_kwargs=ta_kwargs,
             run_id=seed,
+            dask_client=dask_client,
+            n_jobs=n_jobs,
             intensifier=SimpleIntensifier,
             initial_configurations=initial_configurations,
             user_priors=hp_priors,
@@ -73,6 +78,8 @@ class SHIntensifierGenerator(IntensifierGenerator):
             scenario: Scenario,
             seed: int,
             ta_kwargs: Dict,
+            n_jobs: int,
+            dask_client: dask.distributed.Client,
             initial_configurations: List[Configuration],
             hp_priors: bool,
             priors: Dict[str, Prior]
@@ -86,6 +93,8 @@ class SHIntensifierGenerator(IntensifierGenerator):
             tae_runner=ExecuteTaFunc,
             tae_runner_kwargs=ta_kwargs,
             run_id=seed,
+            dask_client=dask_client,
+            n_jobs=n_jobs,
             intensifier=SuccessiveHalving,
             intensifier_kwargs={
                 'initial_budget': self.initial_budget,
@@ -112,6 +121,8 @@ class AutoMLSMBO:
             total_walltime_limit: float,
             func_eval_time_limit: float,
             memory_limit: float,
+            n_jobs: int,
+            dask_client: dask.distributed.Client,
             metric: BaseForecastingErrorMetric,
             splitter: BaseSplitter,
             intensifier_generator: Type[IntensifierGenerator] = SimpleIntensifierGenerator,
@@ -137,6 +148,10 @@ class AutoMLSMBO:
         intensifier_generator_kwargs = {} if intensifier_generator_kwargs is None else intensifier_generator_kwargs
         # noinspection PyArgumentList
         self.intensifier_generator = intensifier_generator(**intensifier_generator_kwargs)
+
+        # Parallelization
+        self.n_jobs = n_jobs
+        self.dask_client = dask_client
 
         # Evaluation
         self.splitter = splitter
@@ -208,7 +223,16 @@ class AutoMLSMBO:
         initial_configs = self.get_initial_configs(y)
         priors = self.get_hp_priors(y)
 
-        smac = self.intensifier_generator(scenario, self.seed, ta_kwargs, initial_configs, self.hp_priors, priors)
+        smac = self.intensifier_generator(
+            scenario=scenario,
+            seed=self.seed,
+            ta_kwargs=ta_kwargs,
+            n_jobs=self.n_jobs,
+            dask_client=self.dask_client,
+            initial_configurations=initial_configs,
+            hp_priors=self.hp_priors,
+            priors=priors
+        )
 
         if self.ensemble_callback is not None:
             smac.register_callback(self.ensemble_callback)
