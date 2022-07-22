@@ -32,7 +32,7 @@ class TransformerChoice(AutoSktimeChoice, AutoSktimeTransformer):
     def get_components(cls) -> Dict[str, Type[AutoSktimeComponent]]:
         components: Dict[str, Type[AutoSktimeComponent]] = OrderedDict()
         components.update(_transformers)
-        components['noop'] = IdentityComponent
+        components['none'] = IdentityComponent
         return components
 
     def _fit(self, X: Union[pd.Series, pd.DataFrame], y: pd.Series = None):

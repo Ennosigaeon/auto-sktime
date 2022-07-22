@@ -1,6 +1,6 @@
 import os
 from collections import OrderedDict
-from typing import List
+from typing import List, Type, Dict
 
 import pandas as pd
 
@@ -9,7 +9,8 @@ from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, IGNOR
     HANDLES_PANEL
 from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import AutoSktimeChoice, find_components, AutoSktimePreprocessingAlgorithm, \
-    COMPONENT_PROPERTIES
+    COMPONENT_PROPERTIES, AutoSktimeComponent
+from autosktime.pipeline.components.identity import IdentityComponent
 from autosktime.pipeline.util import Int64Index
 
 classifier_directory = os.path.split(__file__)[0]
@@ -29,8 +30,9 @@ class ReductionChoice(AutoSktimeChoice, AutoSktimePreprocessingAlgorithm):
 
     @classmethod
     def get_components(cls):
-        components = OrderedDict()
+        components: Dict[str, Type[AutoSktimeComponent]] = OrderedDict()
         components.update(_preprocessors)
+        components['none'] = IdentityComponent
         return components
 
     @staticmethod

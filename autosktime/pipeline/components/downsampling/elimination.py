@@ -48,10 +48,10 @@ class EliminationDownSampler(BaseDownSampling):
 
     @staticmethod
     def get_hyperparameter_search_space(dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
-        # window_size = UniformFloatHyperparameter('window_size', 0.01, 0.1, default_value=0.05)
+        window_size = UniformFloatHyperparameter('window_size', 0.001, 0.1, default_value=0.01)
 
         cs = ConfigurationSpace()
-        # cs.add_hyperparameters([window_size])
+        cs.add_hyperparameters([window_size])
         return cs
 
     @staticmethod

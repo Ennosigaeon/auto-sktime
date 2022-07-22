@@ -28,13 +28,13 @@ class SlidingWindowDownSampler(BaseDownSampling):
 
     def _transform(self, X: Union[pd.Series, pd.DataFrame], y: pd.DataFrame = None):
         if isinstance(self.window_size, float):
-            n = int(X.shape[0] * self.window_size)
+            self.window_size_ = int(X.shape[0] * self.window_size)
         else:
-            n = int(self.window_size)
+            self.window_size_ = int(self.window_size)
 
         self._original_size = X.shape[0]
 
-        Xt = self._window(X, n, self.overlap)
+        Xt = self._window(X, self.window_size_, self.overlap)
 
         index = X.index
         if isinstance(index, pd.PeriodIndex):
@@ -71,11 +71,11 @@ class SlidingWindowDownSampler(BaseDownSampling):
             return view
 
     def _inverse_transform(self, X: Union[pd.Series, pd.DataFrame], y: pd.Series = None):
-        Xt = np.repeat(X.values, self._X_filter.shape[0])
+        Xt = np.repeat(X.values, self.window_size_)
         Xt = fix_size(Xt, self._original_size)
 
         if y is not None:
-            yt = np.repeat(y.values, self._y_filter.shape[0])
+            yt = np.repeat(y.values, self.window_size_)
             yt = fix_size(yt, self._original_size)
         else:
             yt = None

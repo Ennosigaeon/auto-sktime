@@ -26,7 +26,7 @@ class FeatureGenerationChoice(AutoSktimeChoice, AutoSktimePreprocessingAlgorithm
             include: List[str] = None,
             exclude: List[str] = None
     ) -> ConfigurationSpace:
-        return super().get_hyperparameter_search_space(dataset_properties, default, ['minimal'], exclude)
+        return super().get_hyperparameter_search_space(dataset_properties, default, include, exclude)
 
     @staticmethod
     def get_properties(dataset_properties: DatasetProperties = None):

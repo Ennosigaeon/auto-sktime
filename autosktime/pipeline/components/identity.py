@@ -7,7 +7,8 @@ from ConfigSpace import ConfigurationSpace
 from autosktime.constants import IGNORES_EXOGENOUS_X, HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, SUPPORTED_INDEX_TYPES, \
     HANDLES_PANEL
 from autosktime.data import DatasetProperties
-from autosktime.pipeline.components.base import COMPONENT_PROPERTIES, AutoSktimeTransformer
+from autosktime.pipeline.components.base import COMPONENT_PROPERTIES, AutoSktimeTransformer, \
+    AutoSktimePreprocessingAlgorithm
 from autosktime.pipeline.util import Int64Index
 
 
@@ -43,3 +44,24 @@ class IdentityComponent(AutoSktimeTransformer):
     def get_hyperparameter_search_space(dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
         cs = ConfigurationSpace()
         return cs
+
+
+class IdentityPreprocessing(AutoSktimePreprocessingAlgorithm):
+
+    def fit(self, X: pd.DataFrame, y: pd.Series = None):
+        # noinspection PyTypeChecker
+        self.estimator = 'passthrough'
+        return self
+
+    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
+        return X
+
+    @staticmethod
+    def get_properties(dataset_properties: DatasetProperties = None) -> COMPONENT_PROPERTIES:
+        return {
+            HANDLES_UNIVARIATE: True,
+            HANDLES_MULTIVARIATE: True,
+            HANDLES_PANEL: True,
+            IGNORES_EXOGENOUS_X: False,
+            SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.DatetimeIndex, pd.PeriodIndex, Int64Index]
+        }

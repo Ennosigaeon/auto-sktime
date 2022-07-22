@@ -10,6 +10,7 @@ from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, HANDL
 from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import find_components, AutoSktimeChoice, AutoSktimePreprocessingAlgorithm, \
     AutoSktimeComponent, COMPONENT_PROPERTIES
+from autosktime.pipeline.components.identity import IdentityPreprocessing
 from autosktime.pipeline.util import Int64Index
 
 rescaling_directory = os.path.split(__file__)[0]
@@ -29,8 +30,9 @@ class RescalingChoice(AutoSktimeChoice, AutoSktimePreprocessingAlgorithm):
 
     @classmethod
     def get_components(cls) -> Dict[str, Type[AutoSktimeComponent]]:
-        components = OrderedDict()
+        components: Dict[str, Type[AutoSktimeComponent]] = OrderedDict()
         components.update(_rescalers)
+        components['none'] = IdentityPreprocessing
         return components
 
     @staticmethod

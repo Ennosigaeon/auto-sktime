@@ -7,7 +7,7 @@ from sktime.forecasting.base._base import DEFAULT_ALPHA
 from sktime.forecasting.compose._reduce import RecursiveTabularRegressionForecaster
 from sktime.utils.datetime import _shift
 
-from ConfigSpace import ConfigurationSpace, Configuration, UniformIntegerHyperparameter
+from ConfigSpace import ConfigurationSpace, Configuration, UniformIntegerHyperparameter, UniformFloatHyperparameter
 from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, HANDLES_PANEL, IGNORES_EXOGENOUS_X, \
     SUPPORTED_INDEX_TYPES, PANEL_INDIRECT_FORECAST
 from autosktime.data import DatasetProperties
@@ -39,8 +39,8 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
             self,
             estimator: UpdatablePipeline,
             dataset_properties: DatasetProperties,
-            window_length: int = 6,
-            step_size: Union[int, float] = 0.5,
+            window_length: int = 10,
+            step_size: float = 0.5,
             transformers: List[Tuple[str, AutoSktimeTransformer]] = None,
             random_state: np.random.RandomState = None
     ):
@@ -65,12 +65,7 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
         pass
 
     def _fit(self, y, X=None, fh=None):
-        self._target_column = y.name if isinstance(y, pd.Series) else y.columns[0]
-
-        if isinstance(self.step_size, float):
-            self.step_size_ = int(self.window_length * self.step_size)
-        else:
-            self.step_size_ = int(self.step_size)
+        self.step_size_ = max(1, int(self.window_length * self.step_size))
 
         if self.transformers is None:
             return super()._fit(y, X, fh)
@@ -287,11 +282,13 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
 
     def get_hyperparameter_search_space(self, dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
         # RecursiveReducer is a hybrid between Component and Pipeline which makes Configuration handling a bit messy
-        window_length = UniformIntegerHyperparameter('window_length', lower=3, upper=20, default_value=5)
+        window_length = UniformIntegerHyperparameter('window_length', lower=1, upper=100, default_value=10, log=True)
+        step_size = UniformFloatHyperparameter('step_size', lower=0.1, upper=1, default_value=0.5, log=True)
+
         estimator = get_pipeline_search_space(self.estimator.steps, dataset_properties=dataset_properties)
 
         cs = ConfigurationSpace()
-        cs.add_hyperparameters([window_length])
+        cs.add_hyperparameters([window_length, step_size])
         cs.add_configuration_space('estimator', estimator)
 
         if self.transformers is not None:

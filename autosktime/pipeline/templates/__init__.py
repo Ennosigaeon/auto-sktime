@@ -84,6 +84,7 @@ class TemplateChoice(NotVectorizedMixin, AutoSktimePredictor):
         for comp_name in available_components_.keys():
             comp_cs = available_components_[comp_name].get_hyperparameter_search_space()
             parent_hyperparameter = {'parent': estimator, 'value': comp_name}
+            # noinspection PyTypeChecker
             cs.add_configuration_space(comp_name, comp_cs, parent_hyperparameter=parent_hyperparameter)
 
         self.config_space = cs

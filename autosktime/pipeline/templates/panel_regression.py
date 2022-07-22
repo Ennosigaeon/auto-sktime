@@ -91,7 +91,6 @@ class PanelRegressionPipeline(NotVectorizedMixin, ConfigurableTransformedTargetF
                  ],
                  estimator=pipeline,
                  random_state=self.random_state,
-                 step_size=4,
                  dataset_properties=self.dataset_properties)
              ),
         ]

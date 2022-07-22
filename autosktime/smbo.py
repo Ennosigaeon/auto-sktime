@@ -62,8 +62,8 @@ class SimpleIntensifierGenerator(IntensifierGenerator):
 
 class SHIntensifierGenerator(IntensifierGenerator):
 
-    # TODO reset eta and initial_budget to (4.0, 5.0)
-    def __init__(self, budget_type: str = 'iterations', eta: float = 2.0, initial_budget: float = 50.0):
+    # Use eta and initial_budget as (2.0, 50.0) for 2 candidates per iteration with 50% elimination
+    def __init__(self, budget_type: str = 'iterations', eta: float = 4.0, initial_budget: float = 5.0):
         self.budget_type = budget_type
         self.eta = eta
         self.initial_budget = initial_budget

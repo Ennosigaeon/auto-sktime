@@ -305,6 +305,7 @@ class AutoSktimeChoice(AutoSktimeComponent, ABC):
         for comp_name in available_components.keys():
             comp_cs = available_components[comp_name].get_hyperparameter_search_space(dataset_properties)
             parent_hyperparameter = {'parent': estimator, 'value': comp_name}
+            # noinspection PyTypeChecker
             cs.add_configuration_space(comp_name, comp_cs, parent_hyperparameter=parent_hyperparameter)
 
         self.config_space = cs
