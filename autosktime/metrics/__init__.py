@@ -72,11 +72,6 @@ def get_cost_of_crash(metric: BaseForecastingErrorMetric) -> float:
 
 class PrintableVectorizedMetric(BaseForecastingErrorMetric):
 
-    def __repr__(self, N_CHAR_MAX=700):
-        # Metrics inherit from sklearn base object and try to use func in string representation which does not exist
-        # TODO remove once sktime 0.13.0 is used
-        return str(type(self))
-
     def evaluate(self, y_true, y_pred, **kwargs):
         multioutput = self.multioutput
         multilevel = self.multilevel
@@ -188,7 +183,7 @@ class RelativePrognosticHorizon(PrintableVectorizedMetric):
         'lower_is_better': False,
     }
 
-    def __init__(self, alpha: float = 0.05):
+    def __init__(self, alpha: float = 0.005):
         super().__init__()
         self.alpha = alpha
 
@@ -227,7 +222,7 @@ class PrognosticHorizonRate(PrintableVectorizedMetric):
         'lower_is_better': False,
     }
 
-    def __init__(self, alpha: float = 0.05):
+    def __init__(self, alpha: float = 0.005):
         super().__init__()
         self.alpha = alpha
 

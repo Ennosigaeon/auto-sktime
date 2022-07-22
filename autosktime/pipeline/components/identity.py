@@ -2,7 +2,6 @@ from typing import Union
 
 import numpy as np
 import pandas as pd
-from sktime.base._base import TagAliaserMixin
 
 from ConfigSpace import ConfigurationSpace
 from autosktime.constants import IGNORES_EXOGENOUS_X, HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, SUPPORTED_INDEX_TYPES, \
@@ -29,10 +28,6 @@ class IdentityComponent(AutoSktimeTransformer):
 
     def _inverse_transform(self, X: Union[pd.Series, pd.DataFrame], y: pd.Series = None):
         return X
-
-    def get_tags(self):
-        tags = super(TagAliaserMixin, self).get_tags()
-        return tags
 
     @staticmethod
     def get_properties(dataset_properties: DatasetProperties = None) -> COMPONENT_PROPERTIES:

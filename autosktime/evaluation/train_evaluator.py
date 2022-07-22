@@ -45,8 +45,9 @@ class TrainEvaluator(AbstractEvaluator):
             ensemble_size: float = 0.2,
             budget: Optional[float] = None,
             budget_type: Optional[str] = None,
+            debug_log: bool = False,
     ):
-        super().__init__(backend, metric, configuration, seed, random_state, num_run, budget, budget_type)
+        super().__init__(backend, metric, configuration, seed, random_state, num_run, budget, budget_type, debug_log)
         self.splitter = splitter
         self.ensemble_size = ensemble_size
 
@@ -94,6 +95,10 @@ class TrainEvaluator(AbstractEvaluator):
                 test_pred,
                 error='raise'
             )
+
+            if self.debug_log:
+                self._log_progress(train_losses[i], test_loss[i], y.iloc[train_split], train_pred, plot=True)
+
             test_weights[i] = len(test_split)
 
         train_weights /= train_weights.sum()
@@ -165,19 +170,22 @@ class TrainEvaluator(AbstractEvaluator):
     def _fit_and_predict_final_model(
             self,
             ensemble_size: float = 0.2,
-            fh: ForecastingHorizon = None
+            fh: ForecastingHorizon = None,
+            refit: bool = False,
     ) -> Tuple[AutoSktimePredictor, SUPPORTED_Y_TYPES]:
-        y = self.datamanager.y
-        X = self.datamanager.X
+        if refit:
+            y = self.datamanager.y
+            X = self.datamanager.X
 
-        model = self._get_model()
+            model = self._get_model()
 
-        if self.budget_type == 'iterations' and model.supports_iterative_fit():
-            n_iter = int(np.ceil(self.budget / 100 * model.get_max_iter()))
-            model.set_desired_iterations(n_iter)
+            if self.budget_type == 'iterations' and model.supports_iterative_fit():
+                n_iter = int(np.ceil(self.budget / 100 * model.get_max_iter()))
+                model.set_desired_iterations(n_iter)
 
-        _fit_and_suppress_warnings(self.logger, model, y, X, fh)
-        self.model = model
+            _fit_and_suppress_warnings(self.logger, model, y, X, fh)
+        else:
+            model = self.models[0]
 
         splitter = type(self.splitter)(fh=ensemble_size)
         splitter.random_state = 42
@@ -225,6 +233,7 @@ def evaluate(
         splitter: BaseSplitter,
         budget: Optional[float] = 100.0,
         budget_type: Optional[str] = None,
+        debug_log: bool = False,
 ) -> TaFuncResult:
     instance = MultiFidelityTrainEvaluator if budget_type == 'iterations' else TrainEvaluator
     evaluator = instance(
@@ -237,6 +246,7 @@ def evaluate(
         num_run=num_run,
         budget=budget,
         budget_type=budget_type,
+        debug_log=debug_log,
     )
     result = evaluator.fit_predict_and_loss()
     return result

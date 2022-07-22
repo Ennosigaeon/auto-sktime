@@ -81,7 +81,7 @@ class AutoSktimeComponent(BaseEstimator):
             estimator = self.estimator if self.estimator is not None else self._estimator_class()
             tags = estimator.get_tags()
         except (TypeError, AttributeError):
-            tags = {}
+            tags = super(AutoSktimeComponent, self).get_tags()
         tags.update(self._tags)
         return tags
 
@@ -295,7 +295,7 @@ class AutoSktimeChoice(AutoSktimeComponent, ABC):
         if len(available_components) == 0:
             raise ValueError('No estimators found')
 
-        if default is None:
+        if default is None or default not in available_components.keys():
             for default_ in available_components.keys():
                 if include is not None and default_ not in include:
                     continue
@@ -380,5 +380,38 @@ class UpdatablePipeline(Pipeline):
     def update(self, y: pd.Series, X: pd.DataFrame = None, update_params: bool = True):
         Xt = X
         for _, name, transform in self._iter(with_final=False):
-            Xt = transform.transform(Xt)
+            Xt = transform.transform(Xt, y=y)
         return self.steps[-1][1].update(Xt, y, update_params=update_params)
+
+
+class SwappedInput(AutoSktimePreprocessingAlgorithm, AutoSktimeTransformer):
+    _estimator_class: Type[AutoSktimePreprocessingAlgorithm] = None
+    estimator: AutoSktimePreprocessingAlgorithm = None
+
+    def __init__(self, estimator: AutoSktimePreprocessingAlgorithm, random_state: np.random.RandomState = None):
+        super().__init__()
+        self.estimator = estimator
+
+    def transform(self, X, y=None, **fit_params):
+        yt = super(SwappedInput, self).transform(y)
+
+        if isinstance(y, pd.Series) and not isinstance(yt, pd.Series):
+            yt = pd.Series(yt, index=y.index, name=y.name)
+        elif isinstance(y, pd.DataFrame) and not isinstance(yt, pd.DataFrame):
+            yt = pd.DataFrame(yt, index=y.index, columns=y.columns)
+
+        return X, yt
+
+    def fit_transform(self, X, y=None, **fit_params):
+        return self.fit(y, X).transform(X, y)
+
+    def _fit(self, X: Union[pd.Series, pd.DataFrame], y: pd.Series = None):
+        return
+
+    @staticmethod
+    def get_properties(dataset_properties: DatasetProperties = None) -> COMPONENT_PROPERTIES:
+        return SwappedInput._estimator_class.get_properties(dataset_properties)
+
+    @staticmethod
+    def get_hyperparameter_search_space(dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
+        return ConfigurationSpace()

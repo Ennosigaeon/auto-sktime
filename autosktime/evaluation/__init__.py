@@ -64,6 +64,7 @@ class ExecuteTaFunc(AbstractTAFunc):
             budget_type: Optional[str] = None,
             use_pynisher: bool = True,
             ta: Optional[Callable] = None,
+            debug_log: bool = False,
             **kwargs
     ):
         from autosktime.evaluation.train_evaluator import evaluate
@@ -77,7 +78,8 @@ class ExecuteTaFunc(AbstractTAFunc):
             cost_for_crash=self.worst_possible_result,
             splitter=splitter,
             random_state=random_state,
-            budget_type=budget_type
+            budget_type=budget_type,
+            debug_log=debug_log,
         )
 
         super().__init__(

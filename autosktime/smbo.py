@@ -62,7 +62,8 @@ class SimpleIntensifierGenerator(IntensifierGenerator):
 
 class SHIntensifierGenerator(IntensifierGenerator):
 
-    def __init__(self, budget_type: str = 'iterations', eta: float = 4.0, initial_budget: float = 5.0):
+    # TODO reset eta and initial_budget to (4.0, 5.0)
+    def __init__(self, budget_type: str = 'iterations', eta: float = 2.0, initial_budget: float = 50.0):
         self.budget_type = budget_type
         self.eta = eta
         self.initial_budget = initial_budget
@@ -198,6 +199,8 @@ class AutoMLSMBO:
             'metric': self.metric,
             'memory_limit': self.memory_limit,
             'use_pynisher': self.use_pynisher,
+            # TODO make configurable
+            'debug_log': True,
         }
 
         y = self.datamanager.y

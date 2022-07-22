@@ -146,7 +146,7 @@ class AutoMLTest(unittest.TestCase):
         y, X = load_longley()
 
         _, loss = fit_and_predict(y, X)
-        self.assertAlmostEqual(0.010168705176617804, loss)
+        self.assertAlmostEqual(0.014263033367200383, loss)
 
     @unittest.skip('Panel without exogenous data not supported')
     def test_panel_endogenous(self):
@@ -175,7 +175,7 @@ class AutoMLTest(unittest.TestCase):
         )
         automl, loss = fit_and_predict(y, X, panel=True)
 
-        self.assertAlmostEqual(0.2023553231208388, loss)
+        self.assertAlmostEqual(0.31632010197592714, loss)
 
     @unittest.skip('Panel without exogenous data not supported')
     def test_panel_relative_forecast_horizon(self):
