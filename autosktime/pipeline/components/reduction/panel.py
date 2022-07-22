@@ -9,7 +9,7 @@ from sktime.utils.datetime import _shift
 
 from ConfigSpace import ConfigurationSpace, Configuration, UniformIntegerHyperparameter
 from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, HANDLES_PANEL, IGNORES_EXOGENOUS_X, \
-    SUPPORTED_INDEX_TYPES
+    SUPPORTED_INDEX_TYPES, PANEL_INDIRECT_FORECAST
 from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import AutoSktimeComponent, COMPONENT_PROPERTIES, AutoSktimeTransformer, \
     UpdatablePipeline
@@ -109,8 +109,9 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
         else:
             yt, Xt = super()._transform(y, X)
 
-            # Remove encoded y data
-            Xt = Xt[:, self.window_length:]
+            if self.dataset_properties.task == PANEL_INDIRECT_FORECAST:
+                # Remove encoded y data
+                Xt = Xt[:, self.window_length:]
 
             # Reshape to (num_samples, seq_length, num_features)
             Xt = Xt.T.reshape(X.shape[1], self.window_length, -1).T

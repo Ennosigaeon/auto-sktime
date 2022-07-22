@@ -22,12 +22,14 @@ class TemplateChoice(NotVectorizedMixin, AutoSktimePredictor):
             self,
             estimator: AutoSktimePredictor = None,
             config: Configuration = None,
+            dataset_properties: DatasetProperties = None,
             init_params: Dict[str, Any] = None,
             random_state: np.random.RandomState = None
     ):
         super().__init__()
         self.estimator = estimator
         self.config = config
+        self.dataset_properties = dataset_properties
         self.init_params = init_params
         self.random_state = random_state
 
@@ -41,8 +43,11 @@ class TemplateChoice(NotVectorizedMixin, AutoSktimePredictor):
     ):
         params = configuration.get_dictionary() if isinstance(configuration, Configuration) else configuration
         choice, sub_config = sub_configuration(params, init_params)
-        self.estimator: AutoSktimePredictor = self.get_components()[choice](config=sub_config,
-                                                                            random_state=self.random_state)
+        self.estimator: AutoSktimePredictor = self.get_components()[choice](
+            config=sub_config,
+            dataset_properties=self.dataset_properties,
+            random_state=self.random_state
+        )
         return self
 
     def get_hyperparameter_search_space(

@@ -129,7 +129,11 @@ class AbstractEvaluator:
         raise NotImplementedError()
 
     def _get_model(self) -> AutoSktimePredictor:
-        return TemplateChoice(config=self.configuration, random_state=self.random_state)
+        return TemplateChoice(
+            config=self.configuration,
+            dataset_properties=self.datamanager.dataset_properties,
+            random_state=self.random_state
+        )
 
     def _get_resampling_models(self, n: int) -> List[AutoSktimePredictor]:
         return [self._get_model()] * n

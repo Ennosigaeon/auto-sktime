@@ -9,6 +9,7 @@ from matplotlib import pyplot as plt
 from sktime.forecasting.base import ForecastingHorizon
 
 from autosktime.automl import AutoML
+from autosktime.constants import PANEL_INDIRECT_FORECAST
 from autosktime.data.benchmark.rul import load_rul
 from autosktime.data.splitter import multiindex_cross_validation
 from autosktime.metrics import RootMeanSquaredError, STRING_TO_METRIC
@@ -61,7 +62,7 @@ for fold, (y_train, y_test, X_train, X_test) in \
         use_pynisher=False
     )
 
-    automl.fit(y_train, X_train, dataset_name='rul')
+    automl.fit(y_train, X_train, dataset_name='rul', task=PANEL_INDIRECT_FORECAST)
 
     y_pred = automl.predict(ForecastingHorizon(resolve_index(y_test.index), is_relative=False), X_test)
 
