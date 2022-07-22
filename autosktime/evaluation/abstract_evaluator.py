@@ -2,7 +2,7 @@ import abc
 import logging
 import time
 import warnings
-from typing import Optional, Union, Type, TextIO, List
+from typing import Optional, Union, Type, TextIO, List, Hashable
 
 import numpy as np
 import pandas as pd
@@ -17,7 +17,7 @@ from autosktime.data import DataManager
 from autosktime.evaluation import TaFuncResult
 from autosktime.metrics import calculate_loss, get_cost_of_crash
 from autosktime.pipeline.templates import TemplateChoice
-from autosktime.util import get_name, resolve_index
+from autosktime.util import resolve_index
 from autosktime.util.plotting import plot_grouped_series
 from smac.tae import StatusType
 
@@ -114,13 +114,21 @@ class AbstractEvaluator:
             warnings.showwarning = send_warnings_to_log
 
             fh = ForecastingHorizon(resolve_index(y.index), is_relative=False)
-            name = get_name(y)
+            name = self._get_name(y)
 
             y_pred = model.predict(fh, X=X)
             y_pred.name = name
 
             assert y_pred.shape == y.shape, 'Shape of predictions does not match input data. This should never happen'
             return y_pred
+
+    @staticmethod
+    def _get_name(y: SUPPORTED_Y_TYPES) -> Hashable:
+        if isinstance(y, pd.Series):
+            return y.name
+        elif isinstance(y, pd.DataFrame) and len(y.columns) == 1:
+            return y.columns[0]
+        return ''
 
     @abc.abstractmethod
     def fit_predict_and_loss(self) -> None:
@@ -177,12 +185,11 @@ class AbstractEvaluator:
         return TaFuncResult(loss=loss, additional_run_info=additional_run_info, status=status)
 
     def file_output(self, y_pred: SUPPORTED_Y_TYPES, y_ens: SUPPORTED_Y_TYPES) -> None:
-        # noinspection PyTypeChecker
         self.backend.save_numrun_to_dir(
             seed=self.seed,
             idx=self.num_run,
             budget=self.budget,
-            model=self.model,  # TODO type does not match
+            model=self.model,
             cv_model=self.models if hasattr(self, 'models') else None,
             test_predictions=y_pred,
             valid_predictions=None,

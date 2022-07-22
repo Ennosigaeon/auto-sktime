@@ -122,6 +122,7 @@ class AutoMLSMBO:
             metadata_directory: str = None,
             num_metalearning_configs: int = -1,
             hp_priors: bool = False,
+            verbose: bool = False,
             ensemble_callback: Optional[IncorporateRunResultCallback] = None,
             trials_callback: Optional[IncorporateRunResultCallback] = None
     ):
@@ -157,6 +158,7 @@ class AutoMLSMBO:
         self.ensemble_callback = ensemble_callback
         self.trials_callback = trials_callback
 
+        self.verbose = verbose
         self.logger = logging.getLogger(__name__)
 
     def optimize(self) -> Tuple[RunHistory, List[TrajEntry]]:
@@ -199,8 +201,7 @@ class AutoMLSMBO:
             'metric': self.metric,
             'memory_limit': self.memory_limit,
             'use_pynisher': self.use_pynisher,
-            # TODO make configurable
-            'debug_log': True,
+            'debug_log': self.verbose,
         }
 
         y = self.datamanager.y

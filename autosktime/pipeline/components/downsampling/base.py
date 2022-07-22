@@ -82,11 +82,6 @@ class BaseDownSampling(AutoSktimeTransformer, ABC):
         # check whether is fitted
         self.check_is_fitted()
 
-        # Skip down-sampling if input data is small
-        # TODO move to choice and use dataset_properties to only include identity
-        # if X.shape[0] < 1000:
-        #     return X, y
-
         flip = X is None and y is not None
 
         if flip:

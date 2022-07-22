@@ -70,7 +70,8 @@ class AutoML(NotVectorizedMixin, BaseForecaster):
                  logging_config: Dict[str, Any] = None,
                  metric: BaseForecastingErrorMetric = None,
                  use_pynisher: bool = False,
-                 use_multi_fidelity: bool = True
+                 use_multi_fidelity: bool = True,
+                 verbose: bool = False
                  ):
         super(AutoML, self).__init__()
         self.configuration_space: Optional[ConfigurationSpace] = None
@@ -103,6 +104,7 @@ class AutoML(NotVectorizedMixin, BaseForecaster):
         self._metric = metric
         self._use_pynisher = use_pynisher
         self._use_multi_fidelity = use_multi_fidelity
+        self._verbose = verbose
 
         self._datamanager: Optional[DataManager] = None
         self._dataset_name: Optional[str] = None
@@ -296,6 +298,7 @@ class AutoML(NotVectorizedMixin, BaseForecaster):
                 metadata_directory=self._metadata_directory,
                 num_metalearning_configs=self._num_metalearning_configs,
                 hp_priors=self._hp_priors,
+                verbose=self._verbose,
                 ensemble_callback=proc_ensemble,
             )
 

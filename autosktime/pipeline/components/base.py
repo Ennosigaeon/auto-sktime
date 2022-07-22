@@ -26,8 +26,6 @@ COMPONENT_PROPERTIES = Any
 
 
 class AutoSktimeComponent(BaseEstimator):
-    # TODO check which methods really have to be wrapped
-
     _estimator_class: Type[BaseEstimator] = None
     estimator: BaseEstimator = None
 
@@ -116,8 +114,6 @@ class AutoSktimeComponent(BaseEstimator):
 
 
 class AutoSktimePredictor(AutoSktimeComponent, BaseForecaster, ABC):
-    # TODO check which methods really have to be wrapped
-
     _estimator_class: Type[BaseForecaster] = None
     estimator: BaseForecaster = None
 
@@ -160,8 +156,6 @@ class AutoSktimePredictor(AutoSktimeComponent, BaseForecaster, ABC):
 
 
 class AutoSktimeTransformer(AutoSktimeComponent, BaseTransformer, ABC):
-    # TODO check which methods really have to be wrapped
-
     _estimator_class: Type[BaseTransformer] = None
     estimator: BaseTransformer = None
 

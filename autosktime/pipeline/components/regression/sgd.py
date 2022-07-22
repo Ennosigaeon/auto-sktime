@@ -150,7 +150,6 @@ class SGDComponent(AutoSktimeRegressionAlgorithm):
         cs.add_hyperparameters([loss, penalty, alpha, l1_ratio, fit_intercept, tol, epsilon, learning_rate, eta0,
                                 power_t, average])
 
-        # TODO add passive/aggressive here, although not properly documented?
         elasticnet = EqualsCondition(l1_ratio, penalty, 'elasticnet')
         epsilon_condition = InCondition(epsilon, loss, ['huber', 'epsilon_insensitive', 'squared_epsilon_insensitive'])
 

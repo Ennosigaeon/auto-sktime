@@ -108,7 +108,6 @@ class TrainEvaluator(AbstractEvaluator):
         test_loss = np.average(test_loss, weights=test_loss)
 
         # Retrain model on complete data
-        # TODO is this really the correct place? Maybe only retrain well-performing models?
         self.model, y_ens = self._fit_and_predict_final_model(self.ensemble_size)
 
         return self.finish_up(
