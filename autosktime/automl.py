@@ -121,7 +121,7 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
             raise ValueError(f'per_run_time_limit not of type integer, but {type(self._per_run_time_limit)}')
 
         # Tracks how many runs have been launched. It can be seen as an identifier for each configuration saved to disk
-        self.num_run: int = 0
+        self.num_run_: int = 0
 
     def _get_logger(self, name: str) -> logging.Logger:
         setup_logger(
@@ -332,7 +332,12 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
         self._load_models()
         self._logger.info('Finished loading models...')
 
-        self.num_run = len(self.runhistory_.data)
+        msg = ['Final weighted ensemble:']
+        for weight, model in self.models_:
+            msg.append(f'{weight}: {model.config}')
+        self._logger.info('\n'.join(msg))
+
+        self.num_run_ = len(self.runhistory_.data)
         self._fit_cleanup()
 
         return self
@@ -412,10 +417,10 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
             config: Union[Configuration, Dict[str, Union[str, float, int]]],
             stats: Optional[Stats] = None
     ) -> Tuple[Optional[BasePipeline], RunInfo, RunValue]:
-        self.num_run += 1
+        self.num_run_ += 1
         if isinstance(config, dict):
             config = Configuration(self.configuration_space, config)
-        config.config_id = self.num_run
+        config.config_id = self.num_run_
 
         if stats is None:
             scenario_mock = unittest.mock.Mock()
@@ -473,7 +478,7 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
         predictions = self.ensemble_.predict(fh=fh, X=X)
         return predictions
 
-    def  _load_models(self) -> None:
+    def _load_models(self) -> None:
         # SMAC always uses seed 0 internally
         ensemble_ = self._backend.load_ensemble(0)
 
@@ -483,15 +488,15 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
 
         if ensemble_:
             identifiers = ensemble_.get_selected_model_identifiers()
-            self.models_ = self._backend.load_models_by_identifiers(identifiers)
+            models_ = self._backend.load_models_by_identifiers(identifiers)
 
-            if len(self.models_) == 0:
+            if len(models_) == 0:
                 raise ValueError('No models fitted!')
 
             # AbstractEnsemble expects string identifiers, but we use PIPELINE_IDENTIFIER
             # noinspection PyTypeChecker
-            weighted_models = ensemble_.get_models_with_weights(self.models_)
-            weights, models = tuple(map(list, zip(*weighted_models)))
+            self.models_ = ensemble_.get_models_with_weights(models_)
+            weights, models = tuple(map(list, zip(*self.models_)))
             self.ensemble_ = PrefittedEnsembleForecaster(forecasters=models, weights=weights)
             self.ensemble_.fit(self._datamanager.y, self._datamanager.X)
         else:
