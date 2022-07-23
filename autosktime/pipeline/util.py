@@ -18,12 +18,14 @@ class NotVectorizedMixin:
         ALLOWED_SCITYPES = ["Series", "Panel", "Hierarchical"]
 
         # checking X
-        X_valid, _, X_metadata = check_is_scitype(
-            X, scitype=ALLOWED_SCITYPES, return_metadata=True, var_name="X"
-        )
-        metadata["_X_mtype_last_seen"] = X_metadata['mtype']
-        metadata["_X_input_scitype"] = X_metadata['scitype']
-        metadata["_convert_case"] = "case 1: scitype supported"
+        if X is not None:
+            X_valid, _, X_metadata = check_is_scitype(
+                X, scitype=ALLOWED_SCITYPES, return_metadata=True, var_name="X"
+            )
+
+            metadata["_X_mtype_last_seen"] = X_metadata['mtype']
+            metadata["_X_input_scitype"] = X_metadata['scitype']
+            metadata["_convert_case"] = "case 1: scitype supported"
 
         # checking y
         if y is not None:

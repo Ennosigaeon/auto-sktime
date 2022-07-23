@@ -22,19 +22,19 @@ from ConfigSpace.read_and_write import json as cs_json
 from autosktime.automl_common.common.ensemble_building.abstract_ensemble import AbstractEnsemble
 from autosktime.constants import SUPPORTED_Y_TYPES, PANEL_FORECAST, MULTIVARIATE_FORECAST, UNIVARIATE_FORECAST, \
     PANEL_TASKS
-from autosktime.data import DataManager
+from autosktime.data import DataManager, DatasetProperties
 from autosktime.data.splitter import BaseSplitter, splitter_types
 from autosktime.ensembles.builder import EnsembleBuilderManager
 from autosktime.ensembles.singlebest import SingleBest
 from autosktime.ensembles.util import PrefittedEnsembleForecaster, get_ensemble_targets
 from autosktime.evaluation import ExecuteTaFunc
 from autosktime.metrics import default_metric_for_task
+from autosktime.pipeline.components.base import AutoSktimePredictor, COMPONENT_PROPERTIES
 from autosktime.pipeline.templates import util
 from autosktime.pipeline.templates.base import BasePipeline
 from autosktime.pipeline.util import NotVectorizedMixin
 from autosktime.smbo import AutoMLSMBO, SHIntensifierGenerator, SimpleIntensifierGenerator
 from autosktime.util.backend import create, Backend
-from autosktime.util.dask_single_thread_client import SingleThreadedClient
 from autosktime.util.logging_ import setup_logger
 from autosktime.util.stopwatch import StopWatch
 from smac.runhistory.runhistory import RunInfo, RunValue
@@ -42,7 +42,7 @@ from smac.stats.stats import Stats
 from smac.tae import StatusType
 
 
-class AutoML(NotVectorizedMixin, BaseForecaster):
+class AutoML(NotVectorizedMixin, AutoSktimePredictor):
     _tags = {
         'requires-fh-in-fit': False,
         'X-y-must-have-same-index': True
@@ -223,7 +223,7 @@ class AutoML(NotVectorizedMixin, BaseForecaster):
             raise ValueError(f'Metric must be instance of {type(BaseForecastingErrorMetric)}')
 
         # Create a search space
-        self.configuration_space = self._create_search_space()
+        self.configuration_space = self.get_hyperparameter_search_space()
 
         # Prepare ensemble builder
         elapsed_time = self._stopwatch.wall_elapsed(self._dataset_name)
@@ -315,7 +315,7 @@ class AutoML(NotVectorizedMixin, BaseForecaster):
                 self._logger.exception(e)
                 raise
 
-        self._logger.info('Shuting down...')
+        self._logger.info('Shutting down...')
         # Wait until the ensemble process is finished to avoid shutting down while it tries to access the data
         if proc_ensemble is not None:
             if proc_ensemble.pending_future is not None:
@@ -477,7 +477,7 @@ class AutoML(NotVectorizedMixin, BaseForecaster):
         predictions = self.ensemble_.predict(fh=fh, X=X)
         return predictions
 
-    def _load_models(self) -> None:
+    def  _load_models(self) -> None:
         # SMAC always uses seed 0 internally
         ensemble_ = self._backend.load_ensemble(0)
 
@@ -569,7 +569,7 @@ class AutoML(NotVectorizedMixin, BaseForecaster):
             })
         return pd.DataFrame(performance_list)
 
-    def _create_search_space(self) -> ConfigurationSpace:
+    def get_hyperparameter_search_space(self, dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
         task_name = 'CreateConfigSpace'
 
         self._stopwatch.start_task(task_name)
@@ -585,6 +585,10 @@ class AutoML(NotVectorizedMixin, BaseForecaster):
         self._stopwatch.stop_task(task_name)
 
         return configuration_space
+
+    @staticmethod
+    def get_properties(dataset_properties: DatasetProperties = None) -> COMPONENT_PROPERTIES:
+        return {}
 
     def __getstate__(self) -> Dict[str, Any]:
         # Cannot serialize a client!

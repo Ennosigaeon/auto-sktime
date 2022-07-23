@@ -11,14 +11,14 @@ from ConfigSpace import ConfigurationSpace, Configuration, UniformIntegerHyperpa
 from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, HANDLES_PANEL, IGNORES_EXOGENOUS_X, \
     SUPPORTED_INDEX_TYPES, PANEL_INDIRECT_FORECAST
 from autosktime.data import DatasetProperties
-from autosktime.pipeline.components.base import AutoSktimeComponent, COMPONENT_PROPERTIES, AutoSktimeTransformer, \
-    UpdatablePipeline
+from autosktime.pipeline.components.base import COMPONENT_PROPERTIES, AutoSktimeTransformer, \
+    UpdatablePipeline, AutoSktimePredictor
 from autosktime.pipeline.components.downsampling import DownsamplerChoice, BaseDownSampling
 from autosktime.pipeline.templates.base import set_pipeline_configuration, get_pipeline_search_space
 from autosktime.pipeline.util import NotVectorizedMixin
 
 
-class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForecaster, AutoSktimeComponent):
+class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForecaster, AutoSktimePredictor):
     configspace: ConfigurationSpace = None
 
     _tags = {

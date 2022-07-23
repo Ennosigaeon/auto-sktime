@@ -21,6 +21,7 @@ from autosktime.constants import SUPPORTED_INDEX_TYPES, UNIVARIATE_TASKS, MULTIV
     HANDLES_PANEL, HANDLES_MULTIVARIATE, HANDLES_UNIVARIATE
 from autosktime.data import DatasetProperties
 from autosktime.pipeline.util import sub_configuration
+from autosktime.sktime_._utilities import get_cutoff
 
 COMPONENT_PROPERTIES = Any
 
@@ -153,6 +154,11 @@ class AutoSktimePredictor(AutoSktimeComponent, BaseForecaster, ABC):
         if self.estimator is None:
             raise NotImplementedError
         return self.estimator.update(y, X=X, update_params=update_params)
+
+    def _set_cutoff_from_y(self, y):
+        # Use own patched version
+        cutoff_idx = get_cutoff(y, self.cutoff, return_index=True)
+        self._cutoff = cutoff_idx
 
 
 class AutoSktimeTransformer(AutoSktimeComponent, BaseTransformer, ABC):

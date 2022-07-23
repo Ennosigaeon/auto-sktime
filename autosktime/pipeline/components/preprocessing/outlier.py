@@ -27,6 +27,17 @@ class HampelFilterComponent(AutoSktimeTransformer):
         self.estimator.fit(X=X, y=y)
         return self
 
+    def _transform(self, X: Union[pd.Series, pd.DataFrame], y: pd.Series = None):
+        if self.estimator is None:
+            raise NotImplementedError
+
+        # hampel filter implementation uses integers to access index
+        index = X.index
+        X.index = pd.RangeIndex(start=0, stop=len(index))
+        res = self.estimator.transform(X, y=y)
+        res.index = index
+        return res
+
     @staticmethod
     def get_properties(dataset_properties: DatasetProperties = None) -> COMPONENT_PROPERTIES:
         return {

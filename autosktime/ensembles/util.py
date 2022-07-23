@@ -8,11 +8,12 @@ from sktime.forecasting.compose._ensemble import _check_aggfunc
 from autosktime.constants import SUPPORTED_Y_TYPES
 from autosktime.data import DataManager
 from autosktime.data.splitter import BaseSplitter
+from autosktime.pipeline.components.base import AutoSktimePredictor
 from autosktime.pipeline.util import NotVectorizedMixin
 
 
 # noinspection PyAbstractClass
-class PrefittedEnsembleForecaster(NotVectorizedMixin, EnsembleForecaster):
+class PrefittedEnsembleForecaster(NotVectorizedMixin, EnsembleForecaster, AutoSktimePredictor):
 
     def _fit(self, y, X=None, fh=None):
         self.forecasters_ = self.forecasters
