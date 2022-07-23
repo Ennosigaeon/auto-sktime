@@ -381,7 +381,7 @@ class UpdatablePipeline(Pipeline):
     def update(self, y: pd.Series, X: pd.DataFrame = None, update_params: bool = True):
         Xt = X
         for _, name, transform in self._iter(with_final=False):
-            Xt = transform.transform(Xt, y=y)
+            Xt = transform.transform(Xt)
         return self.steps[-1][1].update(Xt, y, update_params=update_params)
 
 

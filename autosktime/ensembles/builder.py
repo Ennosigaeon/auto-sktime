@@ -465,7 +465,7 @@ class EnsembleBuilder:
 
                 n_read_files += 1
 
-            except FileNotFoundError:
+            except (FileNotFoundError, ValueError, IndexError, MemoryError):
                 self.logger.warning(f'Error loading {y_ens_fn}: {traceback.format_exc()}')
                 self.read_losses[y_ens_fn].ens_loss = np.inf
 
