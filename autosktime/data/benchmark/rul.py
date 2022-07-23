@@ -57,3 +57,13 @@ def _read_single_experiment(file_name: str, overview: pd.DataFrame) -> pd.DataFr
     result = pd.concat([df, const_data], sort=False, axis=1)
     result.index = pd.MultiIndex.from_tuples([(no, k) for k in result.index], names=['experiment', 'timestamp'])
     return result.infer_objects()
+
+
+def load_rul_splits(base_dir: str, count: int, ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    data_directory = os.path.join(base_dir, 'splits')
+
+    train = pd.read_csv(os.path.join(data_directory, f'idx_train_{count}x.csv'), header=None)
+    val = pd.read_csv(os.path.join(data_directory, f'idx_val_{count}x.csv'), header=None)
+    test = pd.read_csv(os.path.join(data_directory, f'idx_test_{count}x.csv'), header=None)
+
+    return train, val, test

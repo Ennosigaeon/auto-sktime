@@ -118,11 +118,31 @@ class PanelCVSplitter(PanelSplitter):
         pass
 
 
+class PreSplittedPanelSplitter(PanelSplitter):
+
+    def __init__(self, train_ids: List[pd.Series], test_ids: List[pd.Series],
+                 random_state: Union[np.random.RandomState, int] = None):
+        super().__init__(1)
+        self.train_ids = train_ids
+        self.test_ids = test_ids
+        self.random_state = random_state
+
+    def _split(self, y: pd.Index) -> SPLIT_GENERATOR_TYPE:
+        return map(lambda t: (t[0].values, t[1].values), zip(self.train_ids, self.test_ids))
+
+    def get_n_splits(self, y: Optional[ACCEPTED_Y_TYPES] = None) -> int:
+        return len(self.train_ids)
+
+    def get_cutoffs(self, y: Optional[ACCEPTED_Y_TYPES] = None) -> np.ndarray:
+        pass
+
+
 splitter_types: Dict[str, Type[BaseSplitter]] = {
     'temporal-holdout': TemporalHoldoutSplitter,
     'sliding-window': SlidingWindowSplitter,
     'panel-holdout': PanelHoldoutSplitter,
     'panel-cv': PanelCVSplitter,
+    'panel-pre': PreSplittedPanelSplitter,
 }
 
 
@@ -136,18 +156,11 @@ def _validate_input(*dfs) -> pd.MultiIndex:
     return index
 
 
-def multiindex_train_test_split(
+def multiindex_split(
         *dfs: Union[pd.DataFrame, pd.Series],
-        test_size: Union[float, int] = None,
-        train_size: Union[float, int] = None,
-        random_state: Union[int, np.random.RandomState] = None,
-        shuffle: bool = True,
-        stratify=None
+        train: pd.Series,
+        test: pd.Series,
 ):
-    index = _validate_input(*dfs)
-    train, test = train_test_split(index.levels[0], test_size=test_size, train_size=train_size,
-                                   random_state=random_state, shuffle=shuffle, stratify=stratify)
-
     return list(
         chain.from_iterable(
             (_safe_index(a, train), _safe_index(a, test)) for a in dfs

@@ -7,6 +7,7 @@ from autosktime.pipeline.components.features.base import BaseFeatureGenerator
 class MinimalFeatureGenerator(BaseFeatureGenerator):
 
     def transform(self, X: np.ndarray) -> np.ndarray:
+        # TODO calculating gradient fails if X has shape (n x m x 1), i.e. panel-regression:reduction:window_length == 1
         features = [
             X.mean(axis=1),
             X.std(axis=1),
