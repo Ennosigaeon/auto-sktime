@@ -11,7 +11,6 @@ from sktime.performance_metrics.forecasting._classes import BaseForecastingError
 from ConfigSpace import Configuration
 from autosktime.constants import SUPPORTED_Y_TYPES
 from autosktime.data.splitter import BaseSplitter
-from autosktime.ensembles.util import get_ensemble_targets
 from autosktime.evaluation import TaFuncResult
 # noinspection PyProtectedMember
 from autosktime.evaluation.abstract_evaluator import AbstractEvaluator, _fit_and_suppress_warnings
@@ -42,14 +41,12 @@ class TrainEvaluator(AbstractEvaluator):
             seed: int = 1,
             random_state: np.random.RandomState = None,
             num_run: int = 0,
-            ensemble_size: float = 0.2,
             budget: Optional[float] = None,
             budget_type: Optional[str] = None,
             debug_log: bool = False,
     ):
         super().__init__(backend, metric, configuration, seed, random_state, num_run, budget, budget_type, debug_log)
         self.splitter = splitter
-        self.ensemble_size = ensemble_size
 
         self.models: List[AutoSktimePredictor] = []
         self.indices: List[Tuple[pd.Index, pd.Index]] = []
@@ -108,7 +105,7 @@ class TrainEvaluator(AbstractEvaluator):
         test_loss = np.average(test_loss, weights=test_loss)
 
         # Retrain model on complete data
-        self.model, y_ens = self._fit_and_predict_final_model(self.ensemble_size)
+        self.model, y_ens = self._fit_and_predict_final_model()
 
         return self.finish_up(
             loss=test_loss,
@@ -168,7 +165,6 @@ class TrainEvaluator(AbstractEvaluator):
 
     def _fit_and_predict_final_model(
             self,
-            ensemble_size: float = 0.2,
             fh: ForecastingHorizon = None,
             refit: bool = False,
     ) -> Tuple[AutoSktimePredictor, SUPPORTED_Y_TYPES]:
@@ -186,11 +182,7 @@ class TrainEvaluator(AbstractEvaluator):
         else:
             model = self.models[0]
 
-        splitter = type(self.splitter)(fh=ensemble_size)
-        splitter.random_state = 42
-
-        y_test, X_test = get_ensemble_targets(self.datamanager, splitter)
-        test_pred = self.predict_function(y_test, X_test, model)
+        test_pred = self.predict_function(self.datamanager.y_ens, self.datamanager.X_ens, model)
 
         return model, test_pred
 

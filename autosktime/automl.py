@@ -23,10 +23,10 @@ from autosktime.automl_common.common.ensemble_building.abstract_ensemble import 
 from autosktime.constants import SUPPORTED_Y_TYPES, PANEL_FORECAST, MULTIVARIATE_FORECAST, UNIVARIATE_FORECAST, \
     PANEL_TASKS
 from autosktime.data import DataManager, DatasetProperties
-from autosktime.data.splitter import BaseSplitter, splitter_types
+from autosktime.data.splitter import BaseSplitter, splitter_types, get_ensemble_data
 from autosktime.ensembles.builder import EnsembleBuilderManager
 from autosktime.ensembles.singlebest import SingleBest
-from autosktime.ensembles.util import PrefittedEnsembleForecaster, get_ensemble_targets
+from autosktime.ensembles.util import PrefittedEnsembleForecaster
 from autosktime.evaluation import ExecuteTaFunc
 from autosktime.metrics import default_metric_for_task
 from autosktime.pipeline.components.base import AutoSktimePredictor, COMPONENT_PROPERTIES
@@ -111,7 +111,7 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
         self._stopwatch = StopWatch()
         self._task = None
 
-        self.models_: List[BasePipeline] = []
+        self.models_: List[Tuple[float, BasePipeline]] = []
         self.ensemble_: Optional[BaseForecaster] = None
 
         self._time_for_task = time_left_for_this_task
@@ -201,9 +201,12 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
         self._logger.debug('  Mac version: %s', platform.mac_ver())
         self._logger.debug('Done printing environment information')
 
-        # Prepare training data
+        # Prepare training and ensemble data
         self._stopwatch.start_task(self._dataset_name)
-        self._datamanager = DataManager(self._task, y, X, self._dataset_name)
+        splitter = self._determine_resampling()
+        y_ens, X_ens = get_ensemble_data(y, X, splitter)
+        self._backend.save_targets_ensemble(y_ens)
+        self._datamanager = DataManager(self._task, y, X, y_ens, X_ens, self._dataset_name)
         self._backend.save_datamanager(self._datamanager)
         time_for_load_data = self._stopwatch.wall_elapsed(self._dataset_name)
 
@@ -237,10 +240,6 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
         else:
             self._logger.info(f'Start Ensemble with {time_left_for_ensembles:5.2f}sec time left')
 
-            splitter = self._determine_resampling()
-            splitter.random_state = 42
-            splitter.fh_ = 0.2
-
             proc_ensemble = EnsembleBuilderManager(
                 start_time=time.time(),
                 time_left_for_ensembles=time_left_for_ensembles,
@@ -250,14 +249,11 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
                 metric=self._metric,
                 ensemble_size=self._ensemble_size,
                 ensemble_nbest=self._ensemble_nbest,
-                splitter=splitter,
                 max_models_on_disc=self._max_models_on_disc,
                 # SMAC always uses seed 0 internally
                 seed=0,
                 random_state=self._random_state
             )
-            y_ens, _ = get_ensemble_targets(self._datamanager, splitter)
-            self._backend.save_targets_ensemble(y_ens)
 
         # Run SMAC
         smac_task_name = 'runSMAC'
@@ -293,7 +289,7 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
                 n_jobs=self._n_jobs,
                 dask_client=self._dask_client,
                 metric=self._metric,
-                splitter=self._determine_resampling(),
+                splitter=splitter,
                 intensifier_generator=self._determine_intensification(),
                 use_pynisher=self._use_pynisher,
                 seed=self._seed,

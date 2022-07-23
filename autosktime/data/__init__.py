@@ -45,10 +45,20 @@ class DatasetProperties(MutableMapping):
 
 class DataManager:
 
-    def __init__(self, task: int, y: pd.Series, X: Optional[pd.DataFrame] = None, dataset_name: str = ''):
+    def __init__(
+            self,
+            task: int,
+            y: pd.Series,
+            X: Optional[pd.DataFrame] = None,
+            y_ens: Optional[pd.Series] = None,
+            X_ens: Optional[pd.DataFrame] = None,
+            dataset_name: str = ''
+    ):
         self._data = {
             'y_train': y,
-            'X_train': X
+            'X_train': X,
+            'y_ens': y_ens,
+            'X_ens': X_ens
         }
         self._info = {
             'task': task
@@ -71,6 +81,14 @@ class DataManager:
     @property
     def X(self) -> Optional[pd.DataFrame]:
         return self._data['X_train']
+
+    @property
+    def y_ens(self) -> pd.Series:
+        return self._data['y_ens']
+
+    @property
+    def X_ens(self) -> Optional[pd.DataFrame]:
+        return self._data['X_ens']
 
     @property
     def info(self) -> Dict[str, Any]:

@@ -18,13 +18,12 @@ import pynisher
 from distributed import Future
 from pandas.core.util.hashing import hash_pandas_object
 from sktime.forecasting.compose import EnsembleForecaster
-from sktime.forecasting.model_selection._split import BaseSplitter
 from sktime.performance_metrics.forecasting._classes import BaseForecastingErrorMetric
 
 from autosktime.automl_common.common.utils.backend import Backend
 from autosktime.data import DataManager
 from autosktime.ensembles.selection import EnsembleSelection
-from autosktime.ensembles.util import get_ensemble_train, PrefittedEnsembleForecaster
+from autosktime.ensembles.util import PrefittedEnsembleForecaster
 from autosktime.metrics import calculate_loss
 from autosktime.util.dask_single_thread_client import SingleThreadedClient
 from smac.callbacks import IncorporateRunResultCallback
@@ -51,7 +50,6 @@ class EnsembleBuilderManager(IncorporateRunResultCallback):
             metric: BaseForecastingErrorMetric,
             ensemble_size: int,
             ensemble_nbest: Union[int, float],
-            splitter: BaseSplitter,
             max_models_on_disc: Union[int, float] = None,
             seed: int = 1,
             random_state: np.random.RandomState = None,
@@ -102,7 +100,6 @@ class EnsembleBuilderManager(IncorporateRunResultCallback):
         self.metric = metric
         self.ensemble_size = ensemble_size
         self.ensemble_nbest = ensemble_nbest
-        self.splitter = splitter
         self.max_models_on_disc = max_models_on_disc
         self.seed = seed
         self.random_state = random_state
@@ -194,8 +191,7 @@ class EnsembleBuilderManager(IncorporateRunResultCallback):
             forecasters=forecasters.values(),
             weights=ensemble.weights_
         )
-        y_train, X_train = get_ensemble_train(datamanager, self.splitter)
-        ens.fit(y_train, X=X_train)
+        ens.fit(datamanager.y_ens, X=datamanager.X_ens)
 
         return ens
 

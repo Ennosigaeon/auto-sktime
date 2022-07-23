@@ -1,6 +1,6 @@
 from abc import ABC
 from itertools import chain
-from typing import Optional, Dict, Type, Union
+from typing import Optional, Dict, Type, Union, List, Tuple
 
 import numpy as np
 import pandas as pd
@@ -155,23 +155,22 @@ def multiindex_train_test_split(
     )
 
 
-def multiindex_cross_validation(
-        *dfs: pd.DataFrame,
-        folds: int = 5,
-        random_state: Union[np.random.RandomState, int] = None
-):
-    index = _validate_input(*dfs)
-    res = []
-    for train, test in PanelCVSplitter(folds, random_state=random_state).split(index.levels[0]):
-        res.append(list(
-            chain.from_iterable(
-                (_safe_index(a, train), _safe_index(a, test)) for a in dfs
-            )
-        ))
-    return res
-
-
-def _safe_index(df: pd.DataFrame, idx):
-    sub_df = df.loc[idx]
+def _safe_index(df: Union[pd.DataFrame, pd.Series], idx) -> Union[pd.DataFrame, pd.Series]:
+    try:
+        sub_df = df.loc[idx]
+    except KeyError:
+        sub_df = df.iloc[idx]
     sub_df.index = sub_df.index.remove_unused_levels()
     return sub_df
+
+
+def get_ensemble_data(y: pd.Series, X: pd.DataFrame, splitter: BaseSplitter) -> Tuple[pd.Series, pd.DataFrame]:
+    _, ens = next(splitter.split(y))
+
+    y_idx = _safe_index(y, ens)
+    if X is None:
+        X_idx = None
+    else:
+        X_idx = _safe_index(X, ens)
+
+    return y_idx, X_idx

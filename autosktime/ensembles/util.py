@@ -1,4 +1,4 @@
-from typing import Tuple, Optional, List
+from typing import Optional, List
 
 import numpy as np
 import pandas as pd
@@ -6,8 +6,6 @@ from sktime.forecasting.compose import EnsembleForecaster
 from sktime.forecasting.compose._ensemble import _check_aggfunc
 
 from autosktime.constants import SUPPORTED_Y_TYPES
-from autosktime.data import DataManager
-from autosktime.data.splitter import BaseSplitter
 from autosktime.pipeline.components.base import AutoSktimePredictor
 from autosktime.pipeline.util import NotVectorizedMixin
 
@@ -37,26 +35,3 @@ def _aggregate(y: SUPPORTED_Y_TYPES, aggfunc: str, weights: Optional[List[float]
         return pd.Series(y_agg, index=y.index, name=y.name)
     elif isinstance(y, pd.DataFrame):
         return pd.DataFrame(y_agg, index=y.index, columns=y.columns[[0]])
-
-
-# TODO holdout ensemble data is messed up. Data should be set aside at start and just be reused
-def get_ensemble_targets(datamanager: DataManager, splitter: BaseSplitter) -> Tuple[pd.Series, pd.DataFrame]:
-    y = datamanager.y
-    _, test = next(splitter.split(y))
-    return _get_by_index(y, datamanager.X, test)
-
-
-def get_ensemble_train(datamanager: DataManager, splitter: BaseSplitter) -> Tuple[pd.Series, pd.DataFrame]:
-    y = datamanager.y
-    train, _ = next(splitter.split(y))
-    return _get_by_index(y, datamanager.X, train)
-
-
-def _get_by_index(y: SUPPORTED_Y_TYPES, X: Optional[pd.DataFrame], idx: np.ndarray):
-    y_idx = y.iloc[idx]
-    if X is None:
-        X_idx = None
-    else:
-        X_idx = X.iloc[idx, :]
-
-    return y_idx, X_idx
