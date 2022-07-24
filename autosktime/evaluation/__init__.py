@@ -58,18 +58,21 @@ class ExecuteTaFunc(AbstractTAFunc):
             backend: Backend,
             seed: int,
             random_state: np.random.RandomState,
-            splitter: BaseSplitter,
+            splitter: Optional[BaseSplitter],
             metric: BaseForecastingErrorMetric,
             stats: Stats,
             memory_limit: Optional[int] = None,
             budget_type: Optional[str] = None,
             use_pynisher: bool = True,
             ta: Optional[Callable] = None,
-            debug_log: bool = False,
+            verbose: bool = False,
             **kwargs
     ):
-        from autosktime.evaluation.train_evaluator import evaluate
-        eval_function = evaluate
+        if ta is None:
+            from autosktime.evaluation.train_evaluator import evaluate
+            eval_function = evaluate
+        else:
+            eval_function = ta
 
         self.worst_possible_result = get_cost_of_crash(metric)
 
@@ -80,7 +83,7 @@ class ExecuteTaFunc(AbstractTAFunc):
             splitter=splitter,
             random_state=random_state,
             budget_type=budget_type,
-            debug_log=debug_log,
+            verbose=verbose,
         )
 
         super().__init__(

@@ -57,6 +57,7 @@ for fold, ((_, train), (_, val), (_, test)) in enumerate(
         ensemble_size=5,
         ensemble_nbest=20,
         n_jobs=1,
+        seed=fold,
         temporary_directory=workdir,
         metric=RootMeanSquaredError(),
         resampling_strategy='panel-pre',

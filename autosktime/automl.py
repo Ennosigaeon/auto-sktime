@@ -17,6 +17,7 @@ import pandas as pd
 from sktime.forecasting.base import BaseForecaster, ForecastingHorizon
 from sktime.performance_metrics.forecasting._classes import BaseForecastingErrorMetric
 
+import autosktime.evaluation.test_evaluator
 from ConfigSpace import ConfigurationSpace, Configuration
 from ConfigSpace.read_and_write import json as cs_json
 from autosktime.automl_common.common.ensemble_building.abstract_ensemble import AbstractEnsemble
@@ -30,14 +31,13 @@ from autosktime.ensembles.util import PrefittedEnsembleForecaster
 from autosktime.evaluation import ExecuteTaFunc
 from autosktime.metrics import default_metric_for_task
 from autosktime.pipeline.components.base import AutoSktimePredictor, COMPONENT_PROPERTIES
-from autosktime.pipeline.templates import util
-from autosktime.pipeline.templates.base import BasePipeline
+from autosktime.pipeline.templates import util, TemplateChoice
 from autosktime.pipeline.util import NotVectorizedMixin
 from autosktime.smbo import AutoMLSMBO, SHIntensifierGenerator, SimpleIntensifierGenerator
 from autosktime.util.backend import create, Backend
 from autosktime.util.logging_ import setup_logger
 from autosktime.util.stopwatch import StopWatch
-from smac.runhistory.runhistory import RunInfo, RunValue
+from smac.runhistory.runhistory import RunInfo
 from smac.stats.stats import Stats
 from smac.tae import StatusType
 
@@ -100,6 +100,7 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
         self._seed = seed
 
         self.logging_config: Dict[str, Any] = logging_config
+        self._logger: Optional[logging.Logger] = None
 
         self._metric = metric
         self._use_pynisher = use_pynisher
@@ -111,7 +112,7 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
         self._stopwatch = StopWatch()
         self._task = None
 
-        self.models_: List[Tuple[float, BasePipeline]] = []
+        self.models_: List[Tuple[float, TemplateChoice]] = []
         self.ensemble_: Optional[BaseForecaster] = None
 
         self._time_for_task = time_left_for_this_task
@@ -153,8 +154,12 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
             X: pd.DataFrame = None,
             fh: ForecastingHorizon = None,
             task: Optional[int] = None,
-            dataset_name: Optional[str] = None
+            dataset_name: Optional[str] = None,
+            configs: List[Tuple[float, float, Union[Configuration, Dict[str, Union[str, float, int]]]]] = None
     ):
+        if isinstance(y.index, pd.MultiIndex):
+            assert len(y.index.levels) == 2, 'auto-sktime currently only supports at most two different index levels'
+
         if dataset_name is None:
             dataset_name = str(uuid.uuid1(clock_seq=os.getpid()))
         self._dataset_name = dataset_name
@@ -170,12 +175,8 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
             task += X is not None
         self._task = task
 
-        if isinstance(y.index, pd.MultiIndex):
-            assert len(y.index.levels) == 2, 'auto-sktime currently only supports at most two different index levels'
+        self._metric = self._determine_metric()
 
-        super().fit(y, X, fh)
-
-    def _fit(self, y: SUPPORTED_Y_TYPES, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
         # Create the backend
         self._backend = self._create_backend()
         self._backend.save_start_time(str(self._seed))
@@ -183,6 +184,17 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
         self._backend._make_internals_directory()
 
         self._logger = self._get_logger(self._dataset_name)
+
+        # sktime does not allow to pass additional parameter to fit(), use self to store them instead
+        self.__configs = configs
+        return super().fit(y, X, fh)
+
+    def _fit(self, y: SUPPORTED_Y_TYPES, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
+        # Check if specific configs should be fitted instead of searching for optimal configuration
+        if self.__configs is not None:
+            res = self._fit_configs(self.__configs, y, X)
+            del self.__configs
+            return res
 
         # If no dask client was provided, we create one, so that we can start an ensemble process in parallel to SMBO
         if self._dask_client is None:
@@ -212,18 +224,6 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
 
         time_left = max(0., self._time_for_task - time_for_load_data)
         self._logger.debug(f'Remaining time after reading {self._dataset_name} {time_left:5.2f} sec')
-
-        # Get the task if it doesn't exist
-        if self._task is None:
-            self._task = self._datamanager.info['task']
-
-        # Assign a metric if it doesnt exist
-        if self._metric is None:
-            self._metric = default_metric_for_task[self._task]
-        if self._metric is None:
-            raise ValueError('No metric given.')
-        if not isinstance(self._metric, BaseForecastingErrorMetric):
-            raise ValueError(f'Metric must be instance of {type(BaseForecastingErrorMetric)}')
 
         # Create a search space
         self.configuration_space = self.get_hyperparameter_search_space()
@@ -334,7 +334,7 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
 
         msg = ['Final weighted ensemble:']
         for weight, model in self.models_:
-            msg.append(f'{weight}: {model.config}')
+            msg.append(f'({weight}, {model.budget}, {model.config.get_dictionary()})')
         self._logger.info('\n'.join(msg))
 
         self.num_run_ = len(self.runhistory_.data)
@@ -371,6 +371,16 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
         else:
             return None
             # return SingleThreadedClient()
+
+    def _determine_metric(self) -> BaseForecastingErrorMetric:
+        metric = self._metric
+        if metric is None:
+            metric = default_metric_for_task[self._task]
+        if metric is None:
+            raise ValueError('No metric given.')
+        if not isinstance(metric, BaseForecastingErrorMetric):
+            raise ValueError(f'Metric must be instance of {type(BaseForecastingErrorMetric)}')
+        return metric
 
     def _determine_resampling(self) -> BaseSplitter:
         # Determine Resampling strategy
@@ -412,59 +422,76 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
             self._backend.context.delete_directories(force=False)
         return
 
-    def fit_config(
+    def _fit_configs(
             self,
-            config: Union[Configuration, Dict[str, Union[str, float, int]]],
+            configs: List[Tuple[float, float, Union[Configuration, Dict[str, Union[str, float, int]]]]],
+            y: SUPPORTED_Y_TYPES,
+            X: pd.DataFrame = None,
             stats: Optional[Stats] = None
-    ) -> Tuple[Optional[BasePipeline], RunInfo, RunValue]:
-        self.num_run_ += 1
-        if isinstance(config, dict):
-            config = Configuration(self.configuration_space, config)
-        config.config_id = self.num_run_
+    ):
+        self._logger.info(f'Creating ensemble of {len(configs)} provided configurations. No optimization performed.')
 
-        if stats is None:
-            scenario_mock = unittest.mock.Mock()
-            scenario_mock.wallclock_limit = self._time_for_task
-            stats = Stats(scenario_mock)
+        self._datamanager = DataManager(self._task, y, X, y, X, self._dataset_name)
+        self._backend.save_datamanager(self._datamanager)
 
-        # Fit a pipeline, which will be stored on disk which we can later load via the backend
-        ta = ExecuteTaFunc(
-            backend=self._backend,
-            seed=self._seed,
-            random_state=self._random_state,
-            splitter=self._determine_resampling(),
-            metric=self._metric,
-            stats=stats,
-            memory_limit=self._memory_limit,
-            use_pynisher=self._use_pynisher,
-            budget_type=None,
-        )
+        # Create a search space
+        self.configuration_space = self.get_hyperparameter_search_space()
 
-        run_info, run_value = ta.run_wrapper(
-            RunInfo(
-                config=config,
-                instance=None,
-                instance_specific='',
+        self.models_ = []
+
+        for weight, budget, config in configs:
+            self.num_run_ += 1
+            if isinstance(config, dict):
+                config = Configuration(self.configuration_space, config)
+            config.config_id = self.num_run_
+
+            if stats is None:
+                scenario_mock = unittest.mock.Mock()
+                scenario_mock.wallclock_limit = self._time_for_task
+                stats = Stats(scenario_mock)
+
+            # Fit a pipeline, which will be stored on disk which we can later load via the backend
+            ta = ExecuteTaFunc(
+                ta=autosktime.evaluation.test_evaluator.evaluate,
+                backend=self._backend,
                 seed=self._seed,
-                cutoff=self._per_run_time_limit,
-                capped=False,
+                random_state=self._random_state,
+                splitter=None,
+                metric=self._metric,
+                stats=stats,
+                memory_limit=self._memory_limit,
+                use_pynisher=self._use_pynisher,
+                budget_type=None,
             )
-        )
 
-        if run_value.status == StatusType.SUCCESS:
-            if self._resampling_strategy in ['sliding-window']:
-                load_function = self._backend.load_cv_model_by_seed_and_id_and_budget
-            else:
-                load_function = self._backend.load_model_by_seed_and_id_and_budget
-            pipeline = load_function(
+            run_info, run_value = ta.run_wrapper(
+                RunInfo(
+                    config=config,
+                    instance=None,
+                    instance_specific='',
+                    seed=self._seed,
+                    budget=budget,
+                    cutoff=self._per_run_time_limit,
+                    capped=False,
+                )
+            )
+
+            if run_value.status != StatusType.SUCCESS:
+                raise ValueError(
+                    f'Failed to fit configuration {config} with {run_value.status}: {run_value.additional_info}')
+
+            pipeline = self._backend.load_model_by_seed_and_id_and_budget(
                 seed=self._seed,
                 idx=run_info.config.config_id,
                 budget=run_info.budget,
             )
-        else:
-            pipeline = None
+            self.models_.append((weight, pipeline))
 
-        return pipeline, run_info, run_value
+        weights, models = tuple(map(list, zip(*self.models_)))
+        self.ensemble_ = PrefittedEnsembleForecaster(forecasters=models, weights=weights)
+        self.ensemble_.fit(self._datamanager.y, self._datamanager.X)
+
+        return self
 
     def _predict(self, fh: ForecastingHorizon = None, X: pd.DataFrame = None):
         if self.models_ is None or len(self.models_) == 0 or self.ensemble_ is None:

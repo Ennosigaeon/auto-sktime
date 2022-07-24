@@ -68,7 +68,7 @@ class AbstractEvaluator:
             num_run: int = 0,
             budget: Optional[float] = None,
             budget_type: Optional[str] = None,
-            debug_log: bool = False
+            verbose: bool = False
     ):
         self.configuration = configuration
         self.backend = backend
@@ -91,7 +91,7 @@ class AbstractEvaluator:
 
         self.budget = budget
         self.budget_type = budget_type
-        self.debug_log = debug_log
+        self.verbose = verbose
         self.starttime = time.time()
 
     def _predict_forecast(
@@ -136,15 +136,16 @@ class AbstractEvaluator:
         holdout (both iterative and non-iterative)"""
         raise NotImplementedError()
 
-    def _get_model(self) -> AutoSktimePredictor:
+    def _get_model(self) -> TemplateChoice:
         return TemplateChoice(
             config=self.configuration,
+            budget=self.budget,
             dataset_properties=self.datamanager.dataset_properties,
             random_state=self.random_state
         )
 
-    def _get_resampling_models(self, n: int) -> List[AutoSktimePredictor]:
-        return [self._get_model()] * n
+    def _get_resampling_models(self, n: int) -> List[TemplateChoice]:
+        return [self._get_model() for _ in range(n)]
 
     def _loss(self, y_true: SUPPORTED_Y_TYPES, y_hat: SUPPORTED_Y_TYPES, error: str = 'raise') -> float:
         try:

@@ -216,7 +216,7 @@ class AutoMLSMBO:
             'metric': self.metric,
             'memory_limit': self.memory_limit,
             'use_pynisher': self.use_pynisher,
-            'debug_log': self.verbose,
+            'verbose': self.verbose,
         }
 
         y = self.datamanager.y

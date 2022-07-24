@@ -43,9 +43,9 @@ class TrainEvaluator(AbstractEvaluator):
             num_run: int = 0,
             budget: Optional[float] = None,
             budget_type: Optional[str] = None,
-            debug_log: bool = False,
+            verbose: bool = False,
     ):
-        super().__init__(backend, metric, configuration, seed, random_state, num_run, budget, budget_type, debug_log)
+        super().__init__(backend, metric, configuration, seed, random_state, num_run, budget, budget_type, verbose)
         self.splitter = splitter
 
         self.models: List[AutoSktimePredictor] = []
@@ -68,6 +68,9 @@ class TrainEvaluator(AbstractEvaluator):
         # noinspection PyTypeChecker
         test_pred: pd.Series = None  # only for mypy
         for i, (train_split, test_split) in enumerate(self.splitter.split(y)):
+            if self.splitter.get_n_splits() > 1:
+                self.logger.debug(f'Processing fold {i}')
+
             if self.budget_type is None:
                 fit_and_predict = self._fit_and_predict_fold_standard
             elif self.budget_type == 'iterations' and self.models[i].supports_iterative_fit():
@@ -93,7 +96,7 @@ class TrainEvaluator(AbstractEvaluator):
                 error='raise'
             )
 
-            if self.debug_log:
+            if self.verbose:
                 self._log_progress(train_losses[i], test_loss[i], y.iloc[train_split], train_pred, plot=True)
 
             test_weights[i] = len(test_split)
@@ -224,7 +227,7 @@ def evaluate(
         splitter: BaseSplitter,
         budget: Optional[float] = 100.0,
         budget_type: Optional[str] = None,
-        debug_log: bool = False,
+        verbose: bool = False,
 ) -> TaFuncResult:
     instance = MultiFidelityTrainEvaluator if budget_type == 'iterations' else TrainEvaluator
     evaluator = instance(
@@ -237,7 +240,7 @@ def evaluate(
         num_run=num_run,
         budget=budget,
         budget_type=budget_type,
-        debug_log=debug_log,
+        verbose=verbose,
     )
     result = evaluator.fit_predict_and_loss()
     return result
