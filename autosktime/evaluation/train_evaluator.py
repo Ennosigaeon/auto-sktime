@@ -15,6 +15,7 @@ from autosktime.evaluation import TaFuncResult
 # noinspection PyProtectedMember
 from autosktime.evaluation.abstract_evaluator import AbstractEvaluator, _fit_and_suppress_warnings
 from autosktime.pipeline.components.base import AutoSktimePredictor
+from autosktime.pipeline.templates import TemplateChoice
 from autosktime.util.backend import Backend
 from smac.tae import StatusType
 
@@ -48,7 +49,7 @@ class TrainEvaluator(AbstractEvaluator):
         super().__init__(backend, metric, configuration, seed, random_state, num_run, budget, budget_type, verbose)
         self.splitter = splitter
 
-        self.models: List[AutoSktimePredictor] = []
+        self.models: List[TemplateChoice] = []
         self.indices: List[Tuple[pd.Index, pd.Index]] = []
 
     def fit_predict_and_loss(self) -> TaFuncResult:
@@ -155,6 +156,7 @@ class TrainEvaluator(AbstractEvaluator):
         model = self.models[fold]
         n_iter = int(np.ceil(self.budget / 100 * model.get_max_iter()))
         model.set_desired_iterations(n_iter)
+        model.budget = self.budget
 
         return self._fit_and_predict_fold_standard(fold, train, test)
 
