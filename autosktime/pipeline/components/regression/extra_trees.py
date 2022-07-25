@@ -48,7 +48,7 @@ class ExtraTreesRegressorComponent(AutoSktimeRegressionAlgorithm):
         self.desired_iterations = desired_iterations
 
     def get_max_iter(self):
-        return 100
+        return 256
 
     def _set_model(self, iterations: int):
         from sklearn.ensemble import ExtraTreesRegressor
@@ -117,7 +117,7 @@ class ExtraTreesRegressorComponent(AutoSktimeRegressionAlgorithm):
         criterion = CategoricalHyperparameter('criterion', ['squared_error', 'absolute_error'])
         max_features = UniformFloatHyperparameter('max_features', 0.1, 1.0, default_value=1)
 
-        max_depth = UnParametrizedHyperparameter(name='max_depth', value='None')
+        max_depth = UnParametrizedHyperparameter(name='max_depth', value=15)
         min_weight_fraction_leaf = UnParametrizedHyperparameter('min_weight_fraction_leaf', 0.)
         max_leaf_nodes = UnParametrizedHyperparameter('max_leaf_nodes', 'None')
 

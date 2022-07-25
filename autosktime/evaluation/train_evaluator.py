@@ -15,6 +15,7 @@ from autosktime.evaluation import TaFuncResult
 # noinspection PyProtectedMember
 from autosktime.evaluation.abstract_evaluator import AbstractEvaluator, _fit_and_suppress_warnings
 from autosktime.pipeline.components.base import AutoSktimePredictor
+from autosktime.pipeline.templates import TemplateChoice
 from autosktime.util.backend import Backend
 from smac.tae import StatusType
 
@@ -43,12 +44,12 @@ class TrainEvaluator(AbstractEvaluator):
             num_run: int = 0,
             budget: Optional[float] = None,
             budget_type: Optional[str] = None,
-            debug_log: bool = False,
+            verbose: bool = False,
     ):
-        super().__init__(backend, metric, configuration, seed, random_state, num_run, budget, budget_type, debug_log)
+        super().__init__(backend, metric, configuration, seed, random_state, num_run, budget, budget_type, verbose)
         self.splitter = splitter
 
-        self.models: List[AutoSktimePredictor] = []
+        self.models: List[TemplateChoice] = []
         self.indices: List[Tuple[pd.Index, pd.Index]] = []
 
     def fit_predict_and_loss(self) -> TaFuncResult:
@@ -93,8 +94,11 @@ class TrainEvaluator(AbstractEvaluator):
                 error='raise'
             )
 
-            if self.debug_log:
-                self._log_progress(train_losses[i], test_loss[i], y.iloc[train_split], train_pred, plot=True)
+            if self.verbose:
+                self._log_progress(train_losses[i], test_loss[i],
+                                   y.iloc[train_split], train_pred,
+                                   y.iloc[test_split], test_pred,
+                                   plot=False)
 
             test_weights[i] = len(test_split)
 
@@ -152,6 +156,7 @@ class TrainEvaluator(AbstractEvaluator):
         model = self.models[fold]
         n_iter = int(np.ceil(self.budget / 100 * model.get_max_iter()))
         model.set_desired_iterations(n_iter)
+        model.budget = self.budget
 
         return self._fit_and_predict_fold_standard(fold, train, test)
 
@@ -224,7 +229,7 @@ def evaluate(
         splitter: BaseSplitter,
         budget: Optional[float] = 100.0,
         budget_type: Optional[str] = None,
-        debug_log: bool = False,
+        verbose: bool = False,
 ) -> TaFuncResult:
     instance = MultiFidelityTrainEvaluator if budget_type == 'iterations' else TrainEvaluator
     evaluator = instance(
@@ -237,7 +242,7 @@ def evaluate(
         num_run=num_run,
         budget=budget,
         budget_type=budget_type,
-        debug_log=debug_log,
+        verbose=verbose,
     )
     result = evaluator.fit_predict_and_loss()
     return result

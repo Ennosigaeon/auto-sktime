@@ -36,7 +36,7 @@ class PassiveAggressiveComponent(AutoSktimeRegressionAlgorithm):
         self.desired_iterations = desired_iterations
 
     def get_max_iter(self):
-        return 1024
+        return 2048
 
     def _set_model(self, iterations: int):
         from sklearn.linear_model import PassiveAggressiveRegressor

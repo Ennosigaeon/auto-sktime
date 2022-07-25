@@ -23,6 +23,7 @@ class TemplateChoice(NotVectorizedMixin, AutoSktimePredictor):
             self,
             estimator: AutoSktimePredictor = None,
             config: Configuration = None,
+            budget: float = None,
             dataset_properties: DatasetProperties = None,
             init_params: Dict[str, Any] = None,
             random_state: np.random.RandomState = None
@@ -30,6 +31,7 @@ class TemplateChoice(NotVectorizedMixin, AutoSktimePredictor):
         super().__init__()
         self.estimator = estimator
         self.config = config
+        self.budget = budget
         self.dataset_properties = dataset_properties
         self.init_params = init_params
         self.random_state = random_state

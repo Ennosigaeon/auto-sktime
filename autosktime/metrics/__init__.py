@@ -73,6 +73,10 @@ def get_cost_of_crash(metric: BaseForecastingErrorMetric) -> float:
 
 class PrintableVectorizedMetric(BaseForecastingErrorMetric):
 
+    def __init__(self, start: int = 0):
+        super().__init__()
+        self.start = start
+
     def evaluate(self, y_true, y_pred, **kwargs):
         multioutput = self.multioutput
         multilevel = self.multilevel
@@ -84,8 +88,8 @@ class PrintableVectorizedMetric(BaseForecastingErrorMetric):
         if hasattr(y_true_inner, 'index') and isinstance(y_true_inner.index, pd.MultiIndex):
             out_df = []
             for idx in y_true_inner.index.remove_unused_levels().levels[0]:
-                y_true_inner_ = y_true_inner.loc[idx]
-                y_pred_inner_ = y_pred_inner.loc[idx]
+                y_true_inner_ = y_true_inner.loc[idx].iloc[self.start:]
+                y_pred_inner_ = y_pred_inner.loc[idx].iloc[self.start:]
                 out_df.append(self._evaluate(y_true=y_true_inner_, y_pred=y_pred_inner_, **kwargs))
             return np.mean(out_df)
         else:
@@ -184,8 +188,8 @@ class RelativePrognosticHorizon(PrintableVectorizedMetric):
         'lower_is_better': False,
     }
 
-    def __init__(self, alpha: float = 0.005):
-        super().__init__()
+    def __init__(self, alpha: float = 0.005, start: int = 0):
+        super().__init__(start)
         self.alpha = alpha
 
     def _evaluate(self, y_true, y_pred, **kwargs):
@@ -224,8 +228,8 @@ class PrognosticHorizonRate(PrintableVectorizedMetric):
         'lower_is_better': False,
     }
 
-    def __init__(self, alpha: float = 0.005):
-        super().__init__()
+    def __init__(self, alpha: float = 0.005, start: int = 0):
+        super().__init__(start)
         self.alpha = alpha
 
     def _evaluate(self, y_true, y_pred, **kwargs):
@@ -347,21 +351,21 @@ default_metric_for_task: Dict[int, BaseForecastingErrorMetric] = {
 }
 
 STRING_TO_METRIC = {
-    'rmse': RootMeanSquaredError(),
-    'wrmse': WeightedRootMeanSquaredError(),
-    'mae': MeanAbsoluteError(),
-    'wmae': WeightedMeanAbsoluteError(),
-    'me': MeanError(),
-    'std': StandardDeviationError(),
-    'maare': MeanArctangentAbsoluteRelativeError(),
-    'relph': RelativePrognosticHorizon(),
-    'phrate': PrognosticHorizonRate(),
-    'cra': CumulativeRelativeAccuracy(),
+    'rmse': RootMeanSquaredError,
+    'wrmse': WeightedRootMeanSquaredError,
+    'mae': MeanAbsoluteError,
+    'wmae': WeightedMeanAbsoluteError,
+    'me': MeanError,
+    'std': StandardDeviationError,
+    'maare': MeanArctangentAbsoluteRelativeError,
+    'relph': RelativePrognosticHorizon,
+    'phrate': PrognosticHorizonRate,
+    'cra': CumulativeRelativeAccuracy,
 
-    'mape': MeanAbsolutePercentageError(),
-    'mdape': MedianAbsolutePercentageError(),
-    'mase': MeanAbsoluteScaledError(),
-    'owa': OverallWeightedAverage(),
+    'mape': MeanAbsolutePercentageError,
+    'mdape': MedianAbsolutePercentageError,
+    'mase': MeanAbsoluteScaledError,
+    'owa': OverallWeightedAverage,
 
 }
 METRIC_TO_STRING = {type(value): key for key, value in STRING_TO_METRIC.items()}

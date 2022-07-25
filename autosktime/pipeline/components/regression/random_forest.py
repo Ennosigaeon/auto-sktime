@@ -94,7 +94,7 @@ class RandomForestComponent(AutoSktimeRegressionAlgorithm):
         return self
 
     def get_max_iter(self):
-        return 100
+        return 128
 
     @staticmethod
     def get_properties(dataset_properties: DatasetProperties = None) -> COMPONENT_PROPERTIES:
@@ -113,7 +113,7 @@ class RandomForestComponent(AutoSktimeRegressionAlgorithm):
 
         max_features = UniformFloatHyperparameter('max_features', 0.1, 1.0, default_value=1.0)
 
-        max_depth = UnParametrizedHyperparameter('max_depth', 'None')
+        max_depth = UnParametrizedHyperparameter('max_depth', 15)
         min_samples_split = UniformIntegerHyperparameter('min_samples_split', 2, 20, default_value=2)
         min_samples_leaf = UniformIntegerHyperparameter('min_samples_leaf', 1, 20, default_value=1)
         min_weight_fraction_leaf = UnParametrizedHyperparameter('min_weight_fraction_leaf', 0.)

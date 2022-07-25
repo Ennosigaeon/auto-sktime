@@ -68,7 +68,7 @@ class AbstractEvaluator:
             num_run: int = 0,
             budget: Optional[float] = None,
             budget_type: Optional[str] = None,
-            debug_log: bool = False
+            verbose: bool = False
     ):
         self.configuration = configuration
         self.backend = backend
@@ -91,7 +91,7 @@ class AbstractEvaluator:
 
         self.budget = budget
         self.budget_type = budget_type
-        self.debug_log = debug_log
+        self.verbose = verbose
         self.starttime = time.time()
 
     def _predict_forecast(
@@ -136,15 +136,16 @@ class AbstractEvaluator:
         holdout (both iterative and non-iterative)"""
         raise NotImplementedError()
 
-    def _get_model(self) -> AutoSktimePredictor:
+    def _get_model(self) -> TemplateChoice:
         return TemplateChoice(
             config=self.configuration,
+            budget=self.budget,
             dataset_properties=self.datamanager.dataset_properties,
             random_state=self.random_state
         )
 
-    def _get_resampling_models(self, n: int) -> List[AutoSktimePredictor]:
-        return [self._get_model()] * n
+    def _get_resampling_models(self, n: int) -> List[TemplateChoice]:
+        return [self._get_model() for _ in range(n)]
 
     def _loss(self, y_true: SUPPORTED_Y_TYPES, y_hat: SUPPORTED_Y_TYPES, error: str = 'raise') -> float:
         try:
@@ -157,11 +158,13 @@ class AbstractEvaluator:
             else:
                 raise ValueError(f"Unknown exception handling '{error}' method")
 
-    def _log_progress(self, train_loss: float, val_loss: float, y_val: SUPPORTED_Y_TYPES, y_pred: SUPPORTED_Y_TYPES,
-                      plot: bool = False):
+    def _log_progress(self, train_loss: float, val_loss: float, y_val: SUPPORTED_Y_TYPES, y_val_pred: SUPPORTED_Y_TYPES,
+                      y_train: SUPPORTED_Y_TYPES, y_train_pred: SUPPORTED_Y_TYPES, plot: bool = False):
         self.logger.debug(f'Finished fold with train loss {train_loss} and validation loss {val_loss}')
         if plot:
-            plot_grouped_series(None, y_val, y_pred)
+            plot_grouped_series(None, y_val, y_val_pred)
+            plt.show()
+            plot_grouped_series(None, y_train, y_train_pred)
             plt.show()
 
     def finish_up(

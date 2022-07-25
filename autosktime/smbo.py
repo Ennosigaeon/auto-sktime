@@ -68,7 +68,7 @@ class SimpleIntensifierGenerator(IntensifierGenerator):
 class SHIntensifierGenerator(IntensifierGenerator):
 
     # Use eta and initial_budget as (2.0, 50.0) for 2 candidates per iteration with 50% elimination
-    def __init__(self, budget_type: str = 'iterations', eta: float = 4.0, initial_budget: float = 5.0):
+    def __init__(self, budget_type: str = 'iterations', eta: float = 4.0, initial_budget: float = 25.0):
         self.budget_type = budget_type
         self.eta = eta
         self.initial_budget = initial_budget
@@ -216,7 +216,7 @@ class AutoMLSMBO:
             'metric': self.metric,
             'memory_limit': self.memory_limit,
             'use_pynisher': self.use_pynisher,
-            'debug_log': self.verbose,
+            'verbose': self.verbose,
         }
 
         y = self.datamanager.y

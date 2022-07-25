@@ -57,8 +57,9 @@ for fold, ((_, train), (_, val), (_, test)) in enumerate(
         ensemble_size=5,
         ensemble_nbest=20,
         n_jobs=1,
+        seed=fold,
         temporary_directory=workdir,
-        metric=RootMeanSquaredError(),
+        metric=RootMeanSquaredError(start=50),
         resampling_strategy='panel-pre',
         resampling_strategy_arguments={'train_ids': [train], 'test_ids': [val]},
         delete_tmp_folder_after_terminate=False,
@@ -71,7 +72,7 @@ for fold, ((_, train), (_, val), (_, test)) in enumerate(
     y_pred = automl.predict(ForecastingHorizon(resolve_index(y_test.index), is_relative=False), X_test)
 
     for metric_name in performance.keys():
-        metric = STRING_TO_METRIC[metric_name]
+        metric = STRING_TO_METRIC[metric_name](start=50)
         performance[metric_name][fold] = metric(y_test, y_pred)
 
     plot_grouped_series(None, y_test, y_pred)

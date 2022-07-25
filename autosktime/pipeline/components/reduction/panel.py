@@ -230,7 +230,15 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
         # noinspection PyTypeChecker
         _, Xt = self._transform(None, X)
         y_pred = self.estimator_.predict(Xt)
-        y_pred = np.repeat(y_pred, self.step_size_)
+
+        if self.step_size_ > 1:
+            # Fill missing values with linear interpolation between adjacent values
+            diff = np.diff(y_pred)
+            diff = np.repeat(diff, self.step_size_) * np.tile(
+                np.linspace(0, (self.step_size_ - 1) / self.step_size_, num=self.step_size_), diff.shape[0]
+            )
+            diff = np.append(diff, np.zeros(self.step_size_))
+            y_pred = np.repeat(y_pred, self.step_size_) + diff
 
         if y_pred.shape > fh.to_pandas().shape:
             y_pred = y_pred[:fh.to_pandas().shape[0]]
