@@ -158,11 +158,13 @@ class AbstractEvaluator:
             else:
                 raise ValueError(f"Unknown exception handling '{error}' method")
 
-    def _log_progress(self, train_loss: float, val_loss: float, y_val: SUPPORTED_Y_TYPES, y_pred: SUPPORTED_Y_TYPES,
-                      plot: bool = False):
+    def _log_progress(self, train_loss: float, val_loss: float, y_val: SUPPORTED_Y_TYPES, y_val_pred: SUPPORTED_Y_TYPES,
+                      y_train: SUPPORTED_Y_TYPES, y_train_pred: SUPPORTED_Y_TYPES, plot: bool = False):
         self.logger.debug(f'Finished fold with train loss {train_loss} and validation loss {val_loss}')
         if plot:
-            plot_grouped_series(None, y_val, y_pred)
+            plot_grouped_series(None, y_val, y_val_pred)
+            plt.show()
+            plot_grouped_series(None, y_train, y_train_pred)
             plt.show()
 
     def finish_up(

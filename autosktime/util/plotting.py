@@ -59,7 +59,7 @@ def plot_grouped_series(
         labels = [['y', None, None]]
 
     if ax is None:
-        fig, ax = plt.subplots(1, figsize=plt.figaspect(0.25))
+        fig, ax = plt.subplots(1, figsize=plt.figaspect(0.25), dpi=300)
 
     colors = sns.color_palette("colorblind", n_colors=len(series))
 

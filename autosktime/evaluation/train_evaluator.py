@@ -68,9 +68,6 @@ class TrainEvaluator(AbstractEvaluator):
         # noinspection PyTypeChecker
         test_pred: pd.Series = None  # only for mypy
         for i, (train_split, test_split) in enumerate(self.splitter.split(y)):
-            if self.splitter.get_n_splits() > 1:
-                self.logger.debug(f'Processing fold {i}')
-
             if self.budget_type is None:
                 fit_and_predict = self._fit_and_predict_fold_standard
             elif self.budget_type == 'iterations' and self.models[i].supports_iterative_fit():
@@ -97,7 +94,10 @@ class TrainEvaluator(AbstractEvaluator):
             )
 
             if self.verbose:
-                self._log_progress(train_losses[i], test_loss[i], y.iloc[train_split], train_pred, plot=True)
+                self._log_progress(train_losses[i], test_loss[i],
+                                   y.iloc[train_split], train_pred,
+                                   y.iloc[test_split], test_pred,
+                                   plot=False)
 
             test_weights[i] = len(test_split)
 

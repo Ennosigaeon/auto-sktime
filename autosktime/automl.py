@@ -461,7 +461,7 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
                 stats=stats,
                 memory_limit=self._memory_limit,
                 use_pynisher=self._use_pynisher,
-                budget_type=None,
+                budget_type='iterations',
             )
 
             run_info, run_value = ta.run_wrapper(
