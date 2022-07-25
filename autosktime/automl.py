@@ -332,10 +332,10 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
         self._load_models()
         self._logger.info('Finished loading models...')
 
-        msg = ['Final weighted ensemble:']
+        self.ensemble_configurations_ = []
         for weight, model in self.models_:
-            msg.append(f'({weight}, {model.budget}, {model.config.get_dictionary()})')
-        self._logger.info('\n'.join(msg))
+            self.ensemble_configurations_.append((weight, model.budget, model.config.get_dictionary()))
+        self._logger.info(f'Final weighted ensemble: {self.ensemble_configurations_}')
 
         self.num_run_ = len(self.runhistory_.data)
         self._fit_cleanup()
