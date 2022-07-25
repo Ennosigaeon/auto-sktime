@@ -118,7 +118,7 @@ class SGDComponent(AutoSktimeRegressionAlgorithm):
         return tmp
 
     def get_max_iter(self):
-        return 1024
+        return 2048
 
     @staticmethod
     def get_properties(dataset_properties: DatasetProperties = None) -> COMPONENT_PROPERTIES:

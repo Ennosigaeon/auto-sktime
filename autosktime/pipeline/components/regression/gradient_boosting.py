@@ -100,7 +100,7 @@ class GradientBoostingComponent(AutoSktimeRegressionAlgorithm):
         return self
 
     def get_max_iter(self):
-        return 100
+        return 256
 
     @staticmethod
     def get_properties(dataset_properties: DatasetProperties = None) -> COMPONENT_PROPERTIES:
@@ -119,7 +119,7 @@ class GradientBoostingComponent(AutoSktimeRegressionAlgorithm):
         learning_rate = UniformFloatHyperparameter('learning_rate', lower=0.01, upper=1, default_value=0.1, log=True)
         min_samples_leaf = UniformIntegerHyperparameter('min_samples_leaf', lower=1, upper=200, default_value=20,
                                                         log=True)
-        max_depth = UnParametrizedHyperparameter('max_depth', value='None')
+        max_depth = UnParametrizedHyperparameter('max_depth', value=15)
         max_leaf_nodes = UniformIntegerHyperparameter('max_leaf_nodes', lower=3, upper=2047, default_value=31, log=True)
         max_bins = Constant('max_bins', 255)
         l2_regularization = UniformFloatHyperparameter('l2_regularization', lower=1E-10, upper=1, default_value=1E-10,
