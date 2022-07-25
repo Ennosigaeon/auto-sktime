@@ -290,8 +290,8 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
 
     def get_hyperparameter_search_space(self, dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
         # RecursiveReducer is a hybrid between Component and Pipeline which makes Configuration handling a bit messy
-        window_length = UniformIntegerHyperparameter('window_length', lower=1, upper=100, default_value=10, log=True)
-        step_size = UniformFloatHyperparameter('step_size', lower=0.1, upper=1, default_value=0.5, log=True)
+        window_length = UniformIntegerHyperparameter('window_length', lower=1, upper=100, default_value=10)
+        step_size = UniformFloatHyperparameter('step_size', lower=0.01, upper=1, default_value=0.1, log=True)
 
         estimator = get_pipeline_search_space(self.estimator.steps, dataset_properties=dataset_properties)
 
