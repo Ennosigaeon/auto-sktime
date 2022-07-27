@@ -243,8 +243,10 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
         if y_pred.shape > fh.to_pandas().shape:
             y_pred = y_pred[:fh.to_pandas().shape[0]]
         elif y_pred.shape < fh.to_pandas().shape:
-            padding = np.ones(fh.to_pandas().shape[0] - y_pred.shape[0]) * y_pred[0]
-            y_pred = np.concatenate((padding, y_pred))
+            tail_length = X.shape[0] % self.step_size_ if X.shape[0] % self.step_size_ != 0 else self.step_size_
+            tail_padding = np.ones(tail_length) * y_pred[-1]
+            head_padding = np.ones(fh.to_pandas().shape[0] - y_pred.shape[0] - tail_length) * y_pred[0]
+            y_pred = np.concatenate((head_padding, y_pred, tail_padding))
 
         if self._y_mtype_last_seen == 'pd-multiindex':
             return pd.DataFrame(y_pred, columns=self._y.columns, index=fh.to_pandas())
