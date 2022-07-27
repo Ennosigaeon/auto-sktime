@@ -57,7 +57,7 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
                  ensemble_nbest: int = 1,
                  max_models_on_disc: int = 1,
                  seed: int = None,
-                 memory_limit: int = 3072,
+                 memory_limit: int = None,
                  include: Optional[Dict[str, List[str]]] = None,
                  exclude: Optional[Dict[str, List[str]]] = None,
                  resampling_strategy: str = 'temporal-holdout',
