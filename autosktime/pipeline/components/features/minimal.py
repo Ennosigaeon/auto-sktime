@@ -7,18 +7,19 @@ from autosktime.pipeline.components.features.base import BaseFeatureGenerator
 class MinimalFeatureGenerator(BaseFeatureGenerator):
 
     def transform(self, X: np.ndarray) -> np.ndarray:
+        X_feat = self._get_features(X)
         if X.shape[1] == 1:
             gradient = np.zeros((X.shape[0], X.shape[2]))
         else:
-            gradient = np.gradient(X, axis=1).sum(axis=1) / X.shape[1]
+            gradient = np.gradient(X_feat, axis=1).sum(axis=1) / X_feat.shape[1]
 
         features = [
-            X.mean(axis=1),
-            X.std(axis=1),
+            X_feat.mean(axis=1),
+            X_feat.std(axis=1),
             gradient,
-            kurtosis(X, axis=1),
-            skew(X, axis=1),
-            self._crest(X),
+            kurtosis(X_feat, axis=1),
+            skew(X_feat, axis=1),
+            self._crest(X_feat),
             X[:, -1, :]
         ]
         Xt = np.concatenate(features, axis=1)

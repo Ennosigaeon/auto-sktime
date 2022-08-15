@@ -74,7 +74,7 @@ class DataLoaderComponent(AutoSktimeComponent):
         # By convention the last column contains the sequence id
         splits = np.where(X[:-1, -1] != X[1:, -1])[0] + 1
 
-        xs = np.split(X, splits)
+        xs = np.split(X[:, :-1], splits)
         X = np.concatenate([self._generate_lookback(x_, self.window_length) for x_ in xs])
 
         if y is None:

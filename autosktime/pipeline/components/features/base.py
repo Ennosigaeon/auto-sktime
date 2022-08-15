@@ -18,6 +18,10 @@ class BaseFeatureGenerator(AutoSktimePreprocessingAlgorithm, ABC):
     def transform(self, X: np.ndarray) -> np.ndarray:
         raise NotImplementedError
 
+    def _get_features(self, X: np.ndarray) -> np.ndarray:
+        # By convention, the last column contains an artificial feature index that should be excluded
+        return X[:, :, :-1]
+
     @staticmethod
     def get_properties(dataset_properties: DatasetProperties = None) -> COMPONENT_PROPERTIES:
         return {

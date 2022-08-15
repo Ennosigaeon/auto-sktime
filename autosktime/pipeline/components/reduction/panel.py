@@ -97,6 +97,9 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
                 y_ = y.loc[idx]
 
                 yt, Xt = self._transform(y_, X_)
+                # Add index column
+                Xt = np.concatenate((Xt, np.ones((Xt.shape[0], Xt.shape[1], 1)) * idx), -1)
+
                 yt_complete.append(yt)
                 Xt_complete.append(Xt)
 
@@ -229,6 +232,9 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
 
         # noinspection PyTypeChecker
         _, Xt = self._transform(None, X)
+        # Add index column
+        Xt = np.concatenate((Xt, np.ones((Xt.shape[0], Xt.shape[1], 1)) * -1), -1)
+
         y_pred = self.estimator_.predict(Xt)
 
         if self.step_size_ > 1:
