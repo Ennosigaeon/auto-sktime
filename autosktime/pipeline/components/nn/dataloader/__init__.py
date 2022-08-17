@@ -106,7 +106,7 @@ class DataLoaderComponent(AutoSktimeComponent):
 
     @staticmethod
     def get_hyperparameter_search_space(dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
-        batch_size = CategoricalHyperparameter('batch_size', [1, 2, 4, 8, 16, 32, 64, 128], default_value=8)
+        batch_size = CategoricalHyperparameter('batch_size', [16, 32, 64, 128, 256, 512], default_value=512)
         window_length = UniformIntegerHyperparameter('window_length', lower=10, upper=50, default_value=25)
 
         cs = ConfigurationSpace()

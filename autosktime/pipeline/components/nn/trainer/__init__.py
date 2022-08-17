@@ -8,7 +8,7 @@ from sklearn.utils import check_random_state
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader
 
-from ConfigSpace import ConfigurationSpace
+from ConfigSpace import ConfigurationSpace, UniformIntegerHyperparameter, UniformFloatHyperparameter
 from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, HANDLES_PANEL, IGNORES_EXOGENOUS_X, \
     SUPPORTED_INDEX_TYPES
 from autosktime.data import DatasetProperties
@@ -22,8 +22,8 @@ class TrainerComponent(AutoSktimeComponent):
 
     def __init__(
             self,
-            patience: int = 2,
-            tol: float = 1e-7,
+            patience: int = 3,
+            tol: float = 1e-4,
             random_state: np.random.RandomState = None,
             desired_iterations: int = None
     ):
@@ -86,9 +86,6 @@ class TrainerComponent(AutoSktimeComponent):
         self.estimator.train()
 
         for step, (data, targets) in enumerate(train_loader):
-            if step % 1000 == 0:
-                self.logger.debug(f'Batch {step} / {len(train_loader)}')
-
             loss, outputs = self._train_step(data, targets)
 
             batch_size = data.size(0)
@@ -146,7 +143,12 @@ class TrainerComponent(AutoSktimeComponent):
 
     @staticmethod
     def get_hyperparameter_search_space(dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
-        return ConfigurationSpace()
+        patience = UniformIntegerHyperparameter('patience', lower=1, upper=5, default_value=3)
+        tol = UniformFloatHyperparameter('tol', 1e-5, 1e-1, default_value=1e-4, log=True)
+
+        cs = ConfigurationSpace()
+        cs.add_hyperparameters([patience, tol])
+        return cs
 
     def get_max_iter(self) -> Optional[int]:
         return 16

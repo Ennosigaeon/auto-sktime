@@ -46,11 +46,11 @@ for (_, train), (_, val), (_, test) in zip(train_folds.iterrows(), val_folds.ite
     # Create train and test dataset
     torch.manual_seed(101)
 
-    batch_size = 128
-    sequence_length = 50
-    train_data = DataLoaderComponent(batch_size=batch_size, window_length=sequence_length, validation_size=0) \
+    batch_size = 512
+    window_length = 50
+    train_data = DataLoaderComponent(batch_size=batch_size, window_length=window_length, validation_size=0) \
         .fit({'X': df_train[features].values, 'y': df_train[target].values})
-    test_data = DataLoaderComponent(batch_size=batch_size, window_length=sequence_length, validation_size=0) \
+    test_data = DataLoaderComponent(batch_size=batch_size, window_length=window_length, validation_size=0) \
         .fit({'X': df_test[features].values, 'y': df_test[target].values})
 
     X, y = next(iter(train_data.train_loader_))
@@ -64,9 +64,9 @@ for (_, train), (_, val), (_, test) in zip(train_folds.iterrows(), val_folds.ite
         num_layers=2,
         dropout=0.3
     ).fit({'X': df_train[features].values})
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+    optimizer = torch.optim.Adam(model.parameters(), lr=5e-3)
 
-    trainer = TrainerComponent(desired_iterations=8)
+    trainer = TrainerComponent(desired_iterations=32, patience=5)
 
     trainer.fit({
         'train_data_loader': train_data.train_loader_,
