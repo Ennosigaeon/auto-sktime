@@ -3,7 +3,6 @@ from collections import OrderedDict
 from typing import Dict, Type, List
 
 import pandas as pd
-from torch import nn
 
 from ConfigSpace import ConfigurationSpace
 from autosktime.constants import SUPPORTED_INDEX_TYPES, HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, IGNORES_EXOGENOUS_X, \
@@ -11,16 +10,17 @@ from autosktime.constants import SUPPORTED_INDEX_TYPES, HANDLES_UNIVARIATE, HAND
 from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import AutoSktimeComponent, find_components, AutoSktimeChoice, \
     AutoSktimeRegressionAlgorithm
+from autosktime.pipeline.components.nn.network.base import BaseNetwork
 from autosktime.pipeline.components.nn.util import NN_DATA
 from autosktime.pipeline.util import Int64Index
 
 _nn_directory = os.path.split(__file__)[0]
-_nns = find_components(__package__, _nn_directory, nn.Module)
+_nns = find_components(__package__, _nn_directory, BaseNetwork)
 
 
 class NeuralNetworkChoice(AutoSktimeChoice, AutoSktimeRegressionAlgorithm):
-    _estimator_class: Type[nn.Module] = None
-    estimator: nn.Module = None
+    _estimator_class: Type[BaseNetwork] = None
+    estimator: BaseNetwork = None
 
     def get_hyperparameter_search_space(
             self,

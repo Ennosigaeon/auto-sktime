@@ -11,15 +11,9 @@ from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, HANDL
     SUPPORTED_INDEX_TYPES
 from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import AutoSktimeComponent
+from autosktime.pipeline.components.nn.network.base import BaseNetwork
 from autosktime.pipeline.components.nn.util import NN_DATA
 from autosktime.pipeline.util import Int64Index
-
-
-class BaseNetwork(nn.Module):
-
-    def transform(self, X: NN_DATA) -> NN_DATA:
-        X.update({'network': self})
-        return X
 
 
 class RecurrentNetwork(BaseNetwork, AutoSktimeComponent):
@@ -43,8 +37,6 @@ class RecurrentNetwork(BaseNetwork, AutoSktimeComponent):
         self.output_size = output_size
         self.random_state = random_state
 
-        self.num_features: Optional[int] = None
-
     def fit(self, data: NN_DATA, y: Any = None):
         if self.cell_type == 'lstm':
             rnn_class = nn.LSTM
@@ -55,7 +47,7 @@ class RecurrentNetwork(BaseNetwork, AutoSktimeComponent):
 
         self.num_features_ = data['X'].shape[1] - 1
 
-        self.rnn = rnn_class(
+        self.network_ = rnn_class(
             input_size=self.num_features_,
             hidden_size=self.hidden_size,
             num_layers=self.num_layers,
@@ -64,7 +56,7 @@ class RecurrentNetwork(BaseNetwork, AutoSktimeComponent):
             batch_first=True,
         )
 
-        self.output_projector = nn.Linear(self.hidden_size, self.output_size)
+        self.output_projector_ = nn.Linear(self.hidden_size, self.output_size)
 
         return self
 
@@ -74,11 +66,11 @@ class RecurrentNetwork(BaseNetwork, AutoSktimeComponent):
 
         if self.cell_type == 'lstm':
             c0 = torch.zeros(self.num_layers, batch_size, self.hidden_size).requires_grad_().to(device)
-            _, (hn, _) = self.rnn(x, (h0, c0))
+            _, (hn, _) = self.network_(x, (h0, c0))
         else:
-            ula, hn = self.rnn(x, h0)
+            ula, hn = self.network_(x, h0)
 
-        out = self.output_projector(hn[0]).flatten()
+        out = self.output_projector_(hn[0]).flatten()
 
         return out
 
