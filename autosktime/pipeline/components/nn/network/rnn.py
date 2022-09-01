@@ -45,7 +45,7 @@ class RecurrentNetwork(BaseNetwork, AutoSktimeComponent):
         else:
             raise ValueError(f'RNN type {self.cell_type} is not supported. supported: [lstm, gru]')
 
-        self.num_features_ = data['X'].shape[1] - 1
+        self.num_features_ = data['X'].shape[1]
 
         self.network_ = rnn_class(
             input_size=self.num_features_,

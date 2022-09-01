@@ -87,12 +87,15 @@ class ConfigContext:
             self.store[id] = dict()
         self.store[id].update(config)
 
-    def get_config(self, id: ConfigId, key: str = None) -> Union[Any, Dict[str, Any]]:
+    def get_config(self, id: ConfigId, key: str = None, default: Any = None) -> Union[Any, Dict[str, Any]]:
         if key is None:
             return self.store[id]
         else:
-            return self.store[id].get(key)
+            return self.store.get(id, {}).get(key, default)
 
-    def reset_config(self, id: ConfigId) -> None:
+    def reset_config(self, id: ConfigId, key: str = None) -> None:
         if id in self.store:
-            del self.store[id]
+            if key is None:
+                del self.store[id]
+            elif key in self.store[id]:
+                del self.store[id][key]

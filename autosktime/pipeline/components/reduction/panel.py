@@ -16,7 +16,7 @@ from autosktime.pipeline.components.base import COMPONENT_PROPERTIES, AutoSktime
 from autosktime.pipeline.components.downsampling import DownsamplerChoice, BaseDownSampling
 from autosktime.pipeline.templates.base import set_pipeline_configuration, get_pipeline_search_space
 from autosktime.pipeline.util import NotVectorizedMixin
-from autosktime.util.backend import ConfigId
+from autosktime.util.backend import ConfigId, ConfigContext
 
 
 class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForecaster, AutoSktimePredictor):
@@ -43,7 +43,8 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
             window_length: int = 10,
             step_size: float = 0.5,
             transformers: List[Tuple[str, AutoSktimeTransformer]] = None,
-            random_state: np.random.RandomState = None
+            random_state: np.random.RandomState = None,
+            config_id: ConfigId = None
     ):
         super(NotVectorizedMixin, self).__init__(estimator, window_length, transformers)
         self.step_size = step_size
@@ -51,6 +52,7 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
         self.transformers: List[Tuple[str, AutoSktimeTransformer]] = transformers
         self.dataset_properties = dataset_properties
         self.random_state = random_state
+        self.config_id = config_id
 
     @staticmethod
     def get_properties(dataset_properties: DatasetProperties = None) -> COMPONENT_PROPERTIES:
@@ -81,6 +83,9 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
 
         res = super()._fit(yt, Xt, fh)
 
+        config_context: ConfigContext = ConfigContext.instance()
+        config_context.reset_config(self.config_id, key='panel_sizes')
+
         self.transformers = transformers
         return res
 
@@ -93,16 +98,19 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
         if isinstance(y.index, pd.MultiIndex):
             Xt_complete = []
             yt_complete = []
+
+            sizes = []
             for idx in y.index.remove_unused_levels().levels[0]:
                 X_ = X.loc[idx] if X is not None else None
                 y_ = y.loc[idx]
 
                 yt, Xt = self._transform(y_, X_)
-                # Add index column
-                Xt = np.concatenate((Xt, np.ones((Xt.shape[0], Xt.shape[1], 1)) * idx), -1)
-
                 yt_complete.append(yt)
                 Xt_complete.append(Xt)
+                sizes.append(Xt.shape[0])
+
+            config_context: ConfigContext = ConfigContext.instance()
+            config_context.set_config(self.config_id, key='panel_sizes', value=sizes)
 
             return np.concatenate(yt_complete), np.concatenate(Xt_complete)
         else:
@@ -233,9 +241,6 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
 
         # noinspection PyTypeChecker
         _, Xt = self._transform(None, X)
-        # Add index column
-        Xt = np.concatenate((Xt, np.ones((Xt.shape[0], Xt.shape[1], 1)) * -1), -1)
-
         y_pred = self.estimator_.predict(Xt)
 
         if self.step_size_ > 1:
@@ -325,6 +330,7 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
         return forecaster.get_max_iter()
 
     def set_config_id(self, config_id: ConfigId):
+        super().set_config_id(config_id)
         self.estimator.set_config_id(config_id)
         if hasattr(self, 'estimator_'):
             self.estimator_.set_config_id(config_id)

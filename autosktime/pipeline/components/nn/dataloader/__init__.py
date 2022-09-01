@@ -13,6 +13,7 @@ from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import AutoSktimeComponent, COMPONENT_PROPERTIES
 from autosktime.pipeline.components.nn.util import NN_DATA
 from autosktime.pipeline.util import Int64Index
+from autosktime.util.backend import ConfigContext, ConfigId
 
 
 class TimeSeriesDataset(Dataset):
@@ -34,19 +35,24 @@ class DataLoaderComponent(AutoSktimeComponent):
             self,
             batch_size: int = 8,
             window_length: int = 10,
-            validation_size: int = 0.1,
-            random_state: np.random.RandomState = None
+            validation_size: int = 0.2,
+            random_state: np.random.RandomState = None,
+            config_id: ConfigId = None
     ):
         super().__init__()
         self.batch_size = batch_size
         self.window_length = window_length
         self.validation_size = validation_size
         self.random_state = random_state
+        self.config_id = config_id
 
     def fit(self, data: NN_DATA, y=None):
         X, y = self._prepare_data(data.get('X'), data.get('y'))
 
-        if self.validation_size > 0:
+        if 'X_val' in data:
+            X_val, y_val = self._prepare_data(data.get('X_val'), data.get('y_val'), key='panel_sizes_val')
+            y_train, y_val, X_train, X_val = y, y_val, X, X_val
+        elif self.validation_size > 0:
             y_train, y_val, X_train, X_val = train_test_split(y, X, test_size=self.validation_size,
                                                               random_state=self.random_state)
         else:
@@ -70,11 +76,11 @@ class DataLoaderComponent(AutoSktimeComponent):
         )
         return data
 
-    def _prepare_data(self, X: np.ndarray, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-        # By convention the last column contains the sequence id
-        splits = np.where(X[:-1, -1] != X[1:, -1])[0] + 1
+    def _prepare_data(self, X: np.ndarray, y: np.ndarray, key: str = 'panel_sizes') -> Tuple[np.ndarray, np.ndarray]:
+        config: ConfigContext = ConfigContext.instance()
+        splits = np.cumsum(config.get_config(self.config_id, key, default=[0])[:-1])
 
-        xs = np.split(X[:, :-1], splits)
+        xs = np.split(X, splits)
         X = np.concatenate([self._generate_lookback(x_, self.window_length) for x_ in xs])
 
         if y is None:

@@ -65,7 +65,7 @@ class CNN(BaseNetwork, AutoSktimeComponent):
         self.random_state = random_state
 
     def fit(self, data: NN_DATA, y: Any = None):
-        self.num_features_ = data['X'].shape[1] - 1
+        self.num_features_ = data['X'].shape[1]
 
         layers = []
         for i in range(self.num_layers):
