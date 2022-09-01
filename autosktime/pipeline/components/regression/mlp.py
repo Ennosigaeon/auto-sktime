@@ -15,6 +15,7 @@ from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, HANDL
 from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import AutoSktimeRegressionAlgorithm, COMPONENT_PROPERTIES
 from autosktime.pipeline.util import Int64Index
+from autosktime.util.backend import ConfigId
 from autosktime.util.common import check_for_bool
 
 
@@ -38,8 +39,8 @@ class MLPClassifier(AutoSktimeRegressionAlgorithm):
             validation_fraction: float = None,
             random_state: np.random.RandomState = None,
             verbose: bool = False,
-
-            desired_iterations: int = None
+            iterations: int = None,
+            config_id: ConfigId = None
     ):
         super().__init__()
         self.hidden_layer_depth = hidden_layer_depth
@@ -61,8 +62,8 @@ class MLPClassifier(AutoSktimeRegressionAlgorithm):
         self.beta_1 = beta_1
         self.random_state = random_state
         self.verbose = verbose
-
-        self.desired_iterations = desired_iterations
+        self.iterations = iterations
+        self.config_id = config_id
 
     def get_max_iter(self):
         return 512
@@ -134,16 +135,12 @@ class MLPClassifier(AutoSktimeRegressionAlgorithm):
         )
 
     def fit(self, X: pd.DataFrame, y: pd.Series):
-        iterations = self.desired_iterations or self.get_max_iter()
+        iterations = self.get_iterations()
         self._set_model(iterations)
         return self._fit(X, y)
 
-    def update(self, X: pd.DataFrame, y: pd.Series, n_iter: int = 1):
-        if self.estimator is None:
-            self._set_model(n_iter)
-        else:
-            self.estimator.max_iter = min(n_iter, self.estimator.max_iter)
-        return self._fit(X, y)
+    def _update(self):
+        self.estimator.max_iter = self.get_iterations()
 
     def _fit(self, X: pd.DataFrame, y: pd.Series):
         with warnings.catch_warnings():

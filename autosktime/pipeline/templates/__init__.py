@@ -16,6 +16,7 @@ from autosktime.pipeline.templates.nn_panel_regression import NNPanelRegressionP
 from autosktime.pipeline.templates.regression import RegressionPipeline
 from autosktime.pipeline.templates.univariate_endogenous import UnivariateEndogenousPipeline
 from autosktime.pipeline.util import sub_configuration, NotVectorizedMixin, Int64Index
+from autosktime.util.backend import ConfigId
 
 
 class TemplateChoice(NotVectorizedMixin, AutoSktimePredictor):
@@ -170,9 +171,9 @@ class TemplateChoice(NotVectorizedMixin, AutoSktimePredictor):
         # noinspection PyUnresolvedReferences
         return self.estimator.get_max_iter()
 
-    def set_desired_iterations(self, iterations: int):
+    def set_config_id(self, config_id: ConfigId):
         # noinspection PyUnresolvedReferences
-        self.estimator.set_desired_iterations(iterations)
+        self.estimator.set_config_id(config_id)
 
     @staticmethod
     def get_properties(dataset_properties: DatasetProperties = None) -> COMPONENT_PROPERTIES:

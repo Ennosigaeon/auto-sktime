@@ -1,11 +1,13 @@
 import os
 import tempfile
-from typing import Optional
+from typing import Optional, Any, Dict, Union
 
 import numpy as np
 import pandas as pd
+
 from autosktime.automl_common.common.utils.backend import Backend as Backend_, BackendContext
 from autosktime.constants import SUPPORTED_Y_TYPES
+from autosktime.util.singleton import Singleton
 
 
 class Backend(Backend_):
@@ -61,3 +63,36 @@ def create(
     backend = Backend(context, prefix)
 
     return backend
+
+
+ConfigId = int
+
+
+@Singleton
+class ConfigContext:
+
+    def __init__(self):
+        self.store: Dict[ConfigId, Dict[str, Any]] = dict()
+
+    def set_config(self, id: ConfigId, config: Dict = None, key: str = None, value: Any = None) -> None:
+        if config is None:
+            if key is None:
+                raise ValueError('Config and key/value pair are both None')
+            config = {key: value}
+        else:
+            if key is not None or value is not None:
+                raise ValueError(f'Provide either config or key/value pair, not both')
+
+        if id not in self.store:
+            self.store[id] = dict()
+        self.store[id].update(config)
+
+    def get_config(self, id: ConfigId, key: str = None) -> Union[Any, Dict[str, Any]]:
+        if key is None:
+            return self.store[id]
+        else:
+            return self.store[id].get(key)
+
+    def reset_config(self, id: ConfigId) -> None:
+        if id in self.store:
+            del self.store[id]

@@ -8,6 +8,8 @@ from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import AutoSktimeComponent, AutoSktimeChoice, AutoSktimePredictor
 from sktime.forecasting.compose import TransformedTargetForecaster, ForecastingPipeline
 
+from autosktime.util.backend import ConfigId
+
 
 class ConfigurablePipeline(ABC):
 
@@ -122,10 +124,12 @@ class ConfigurablePipeline(ABC):
         forecaster = self.steps[-1][1]
         return forecaster.get_max_iter()
 
-    def set_desired_iterations(self, iterations: int):
-        self.steps[-1][1].set_desired_iterations(iterations)
+    def set_config_id(self, config_id: ConfigId):
+        for name, est in self.steps:
+            est.set_config_id(config_id)
         if hasattr(self, 'steps_'):
-            self.steps_[-1][1].set_desired_iterations(iterations)
+            for name, est in self.steps_:
+                est.set_config_id(config_id)
 
 
 class ConfigurableTransformedTargetForecaster(TransformedTargetForecaster, ConfigurablePipeline, AutoSktimePredictor,

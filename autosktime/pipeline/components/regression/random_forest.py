@@ -10,6 +10,7 @@ from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, IGNOR
 from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import AutoSktimeRegressionAlgorithm, COMPONENT_PROPERTIES
 from autosktime.pipeline.util import Int64Index
+from autosktime.util.backend import ConfigId
 from autosktime.util.common import check_none, check_for_bool
 
 
@@ -28,8 +29,8 @@ class RandomForestComponent(AutoSktimeRegressionAlgorithm):
             min_impurity_decrease: float = 0.,
             random_state: np.random.RandomState = None,
             n_jobs: int = 1,
-
-            desired_iterations: int = None
+            iterations: int = None,
+            config_id: ConfigId = None
     ):
         super().__init__()
         self.criterion = criterion
@@ -43,8 +44,8 @@ class RandomForestComponent(AutoSktimeRegressionAlgorithm):
         self.min_impurity_decrease = min_impurity_decrease
         self.random_state = random_state
         self.n_jobs = n_jobs
-
-        self.desired_iterations = desired_iterations
+        self.iterations = iterations
+        self.config_id = config_id
 
     def _set_model(self, iterations: int):
         from sklearn.ensemble import RandomForestRegressor
@@ -74,16 +75,12 @@ class RandomForestComponent(AutoSktimeRegressionAlgorithm):
         )
 
     def fit(self, X: pd.DataFrame, y: pd.Series):
-        iterations = self.desired_iterations or self.get_max_iter()
+        iterations = self.get_iterations()
         self._set_model(iterations)
         return self._fit(X, y)
 
-    def update(self, X: pd.DataFrame, y: pd.Series, n_iter: int = 1):
-        if self.estimator is None:
-            self._set_model(n_iter)
-        else:
-            self.estimator.n_estimators = min(n_iter, self.estimator.n_estimators)
-        return self._fit(X, y)
+    def _update(self):
+        self.estimator.n_estimators = self.get_iterations()
 
     def _fit(self, X: pd.DataFrame, y: pd.Series):
         if y.ndim == 2 and y.shape[1] == 1:

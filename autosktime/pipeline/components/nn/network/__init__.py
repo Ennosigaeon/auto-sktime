@@ -18,7 +18,7 @@ _nn_directory = os.path.split(__file__)[0]
 _nns = find_components(__package__, _nn_directory, BaseNetwork)
 
 
-class NeuralNetworkChoice(AutoSktimeChoice, AutoSktimeRegressionAlgorithm):
+class NeuralNetworkChoice(AutoSktimeChoice, AutoSktimeComponent):
     _estimator_class: Type[BaseNetwork] = None
     estimator: BaseNetwork = None
 
@@ -53,8 +53,3 @@ class NeuralNetworkChoice(AutoSktimeChoice, AutoSktimeRegressionAlgorithm):
     def fit(self, X: NN_DATA, y: pd.Series):
         # noinspection PyUnresolvedReferences
         return self.estimator.fit(X, y)
-
-    def update(self, X: NN_DATA, y: pd.Series, update_params: bool = True):
-        # noinspection PyUnresolvedReferences
-        self.estimator.update(X, y, n_iter=self.estimator.desired_iterations)
-        return self

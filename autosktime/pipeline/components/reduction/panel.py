@@ -16,6 +16,7 @@ from autosktime.pipeline.components.base import COMPONENT_PROPERTIES, AutoSktime
 from autosktime.pipeline.components.downsampling import DownsamplerChoice, BaseDownSampling
 from autosktime.pipeline.templates.base import set_pipeline_configuration, get_pipeline_search_space
 from autosktime.pipeline.util import NotVectorizedMixin
+from autosktime.util.backend import ConfigId
 
 
 class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForecaster, AutoSktimePredictor):
@@ -323,11 +324,7 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
         forecaster = self.estimator.steps[-1][1]
         return forecaster.get_max_iter()
 
-    def set_desired_iterations(self, iterations: int):
-        self.estimator.steps[-1][1].set_desired_iterations(iterations)
-        if hasattr(self.estimator, 'steps_'):
-            self.estimator.steps_[-1][1].set_desired_iterations(iterations)
+    def set_config_id(self, config_id: ConfigId):
+        self.estimator.set_config_id(config_id)
         if hasattr(self, 'estimator_'):
-            self.estimator_.steps[-1][1].set_desired_iterations(iterations)
-            if hasattr(self.estimator_, 'steps_'):
-                self.estimator_.steps_[-1][1].set_desired_iterations(iterations)
+            self.estimator_.set_config_id(config_id)

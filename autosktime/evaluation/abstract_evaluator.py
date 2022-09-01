@@ -18,6 +18,7 @@ from autosktime.evaluation import TaFuncResult
 from autosktime.metrics import calculate_loss, get_cost_of_crash
 from autosktime.pipeline.templates import TemplateChoice
 from autosktime.util import resolve_index
+from autosktime.util.backend import ConfigContext, ConfigId
 from autosktime.util.plotting import plot_grouped_series
 from smac.tae import StatusType
 
@@ -30,6 +31,7 @@ from autosktime.pipeline.components.base import AutoSktimeComponent, AutoSktimeP
 
 def _fit_and_suppress_warnings(
         logger: logging.Logger,
+        config_id: ConfigId,
         model: AutoSktimeComponent,
         y: SUPPORTED_Y_TYPES,
         X: Optional[pd.DataFrame] = None,
@@ -47,6 +49,8 @@ def _fit_and_suppress_warnings(
 
     with warnings.catch_warnings():
         warnings.showwarning = send_warnings_to_log
+        model.set_config_id(config_id)
+
         if model.is_fitted:
             # noinspection PyUnresolvedReferences
             model.update(y, X=X)
@@ -72,6 +76,7 @@ class AbstractEvaluator:
     ):
         self.configuration = configuration
         self.backend = backend
+        self.config_context: ConfigContext = ConfigContext.instance()
 
         self.datamanager: DataManager = self.backend.load_datamanager()
 

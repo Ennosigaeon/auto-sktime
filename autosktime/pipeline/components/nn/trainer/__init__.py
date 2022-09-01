@@ -12,12 +12,13 @@ from ConfigSpace import ConfigurationSpace, UniformIntegerHyperparameter, Unifor
 from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, HANDLES_PANEL, IGNORES_EXOGENOUS_X, \
     SUPPORTED_INDEX_TYPES
 from autosktime.data import DatasetProperties
-from autosktime.pipeline.components.base import AutoSktimeComponent, COMPONENT_PROPERTIES
+from autosktime.pipeline.components.base import COMPONENT_PROPERTIES, AutoSktimeRegressionAlgorithm
 from autosktime.pipeline.components.nn.util import NN_DATA
 from autosktime.pipeline.util import Int64Index
+from autosktime.util.backend import ConfigContext, ConfigId
 
 
-class TrainerComponent(AutoSktimeComponent):
+class TrainerComponent(AutoSktimeRegressionAlgorithm):
     estimator: torch.nn.Module = None
 
     def __init__(
@@ -25,7 +26,8 @@ class TrainerComponent(AutoSktimeComponent):
             patience: int = 3,
             tol: float = 1e-4,
             random_state: np.random.RandomState = None,
-            desired_iterations: int = None
+            iterations: int = None,
+            config_id: ConfigId = None
     ):
         super().__init__()
         self.patience = patience
@@ -36,7 +38,8 @@ class TrainerComponent(AutoSktimeComponent):
         self.device: Optional[torch.device] = None
 
         self.random_state = random_state if random_state is not None else check_random_state(1)
-        self.desired_iterations = desired_iterations
+        self.iterations = iterations
+        self.config_id = config_id
 
         self.logger = logging.getLogger('NeuralNetwork')
         self.fitted_epochs_ = 0
@@ -50,13 +53,17 @@ class TrainerComponent(AutoSktimeComponent):
 
         return self._fit(train_loader=data['train_data_loader'], val_loader=data['val_data_loader'])
 
+    def _update(self):
+        pass
+
     def _fit(self, train_loader: DataLoader, val_loader: DataLoader):
-        iterations = (self.desired_iterations or self.get_max_iter()) - self.fitted_epochs_
+        config: ConfigContext = ConfigContext.instance()
+        iterations = self.iterations or config.get_config(self.config_id, 'iterations') or self.get_max_iter()
 
         last_loss = np.inf
         trigger = 0
 
-        for epoch in range(iterations):
+        for epoch in range(iterations - self.fitted_epochs_):
             train_loss = self._train_epoch(train_loader=train_loader)
             val_loss = self._test_model(data_loader=val_loader)
             self.logger.info(f'Epoch: {self.fitted_epochs_}, train_loss: {train_loss:1.5f}, '

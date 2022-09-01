@@ -10,7 +10,7 @@ from ConfigSpace import ConfigurationSpace, UniformIntegerHyperparameter, Catego
 from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, HANDLES_PANEL, IGNORES_EXOGENOUS_X, \
     SUPPORTED_INDEX_TYPES
 from autosktime.data import DatasetProperties
-from autosktime.pipeline.components.base import COMPONENT_PROPERTIES
+from autosktime.pipeline.components.base import COMPONENT_PROPERTIES, AutoSktimeComponent
 from autosktime.pipeline.components.nn.network import BaseNetwork
 from autosktime.pipeline.components.nn.util import NN_DATA
 from autosktime.pipeline.util import Int64Index
@@ -41,7 +41,7 @@ class CnnBlock(nn.Module):
         return out
 
 
-class CNN(BaseNetwork):
+class CNN(BaseNetwork, AutoSktimeComponent):
 
     def __init__(
             self,

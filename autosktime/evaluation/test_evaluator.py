@@ -3,7 +3,6 @@ from typing import Optional
 import numpy as np
 # noinspection PyProtectedMember
 from sktime.performance_metrics.forecasting._classes import BaseForecastingErrorMetric
-from smac.tae import StatusType
 
 from ConfigSpace import Configuration
 from autosktime.data.splitter import BaseSplitter
@@ -11,6 +10,7 @@ from autosktime.evaluation import TaFuncResult
 # noinspection PyProtectedMember
 from autosktime.evaluation.abstract_evaluator import AbstractEvaluator, _fit_and_suppress_warnings
 from autosktime.util.backend import Backend
+from smac.tae import StatusType
 
 
 class TestEvaluator(AbstractEvaluator):
@@ -23,9 +23,9 @@ class TestEvaluator(AbstractEvaluator):
 
         if self.model.budget != 0.0:
             n_iter = int(np.ceil(self.budget / 100 * self.model.get_max_iter()))
-            self.model.set_desired_iterations(n_iter)
+            self.config_context.set_config(self.configuration.config_id, key='iterations', value=n_iter)
 
-        _fit_and_suppress_warnings(self.logger, self.model, y, X, fh=None)
+        _fit_and_suppress_warnings(self.logger, self.configuration.config_id, self.model, y, X, fh=None)
         test_pred = self.predict_function(self.datamanager.y_ens, self.datamanager.X_ens, self.model)
         loss = self._loss(y, test_pred, error='raise')
 

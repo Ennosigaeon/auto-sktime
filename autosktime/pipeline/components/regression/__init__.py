@@ -53,8 +53,3 @@ class RegressorChoice(AutoSktimeChoice, AutoSktimeRegressionAlgorithm):
     def predict(self, X: pd.DataFrame) -> pd.Series:
         # noinspection PyUnresolvedReferences
         return self.estimator.predict(X)
-
-    def update(self, X: pd.DataFrame, y: pd.Series, update_params: bool = True):
-        # noinspection PyUnresolvedReferences
-        self.estimator.update(X, y, n_iter=self.estimator.desired_iterations)
-        return self
