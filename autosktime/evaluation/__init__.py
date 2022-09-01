@@ -151,6 +151,7 @@ class ExecuteTaFunc(AbstractTAFunc):
         # Provide additional configuration for model evaluation
         config_context: ConfigContext = ConfigContext.instance()
         config_context.set_config(run_info.config.config_id, {
+            'start': time.time(),
             'cutoff': run_info.cutoff,
             'budget': run_info.budget
         })

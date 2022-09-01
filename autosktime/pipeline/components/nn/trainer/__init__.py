@@ -1,4 +1,6 @@
 import logging
+import math
+import time
 from typing import Optional, Tuple, Any
 
 import numpy as np
@@ -59,11 +61,17 @@ class TrainerComponent(AutoSktimeRegressionAlgorithm):
     def _fit(self, train_loader: DataLoader, val_loader: DataLoader):
         config: ConfigContext = ConfigContext.instance()
         iterations = self.iterations or config.get_config(self.config_id, 'iterations') or self.get_max_iter()
+        cutoff = config.get_config(self.config_id, 'cutoff') or math.inf
+        start = config.get_config(self.config_id, 'start') or 0
 
         last_loss = np.inf
         trigger = 0
 
         for epoch in range(iterations - self.fitted_epochs_):
+            if time.time() - start > cutoff:
+                self.logger.info(f'Aborting fitting after {self.fitted_epochs_} epochs due to timeout')
+                break
+
             train_loss = self._train_epoch(train_loader=train_loader)
             val_loss = self._test_model(data_loader=val_loader)
             self.logger.info(f'Epoch: {self.fitted_epochs_}, train_loss: {train_loss:1.5f}, '
