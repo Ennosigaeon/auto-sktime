@@ -31,8 +31,8 @@ class CnnBlock(nn.Module):
 
         self.net = nn.Sequential(
             nn.Conv1d(n_inputs, n_outputs, kernel_size=kernel_size, stride=stride, padding=padding),
+            nn.AvgPool1d(pool_size),
             nn.ReLU(),
-            nn.MaxPool1d(pool_size),
             nn.Dropout(dropout)
         )
 
