@@ -149,7 +149,7 @@ class TrainerComponent(AutoSktimeRegressionAlgorithm):
 
     @staticmethod
     def get_hyperparameter_search_space(dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
-        patience = UniformIntegerHyperparameter('patience', lower=1, upper=5, default_value=3)
+        patience = UniformIntegerHyperparameter('patience', lower=2, upper=10, default_value=10)
         tol = UniformFloatHyperparameter('tol', 1e-5, 1e-1, default_value=1e-4, log=True)
 
         cs = ConfigurationSpace()
@@ -157,7 +157,7 @@ class TrainerComponent(AutoSktimeRegressionAlgorithm):
         return cs
 
     def get_max_iter(self) -> Optional[int]:
-        return 16
+        return 64
 
     def predict(self, data: NN_DATA, y: Any = None, **kwargs) -> torch.Tensor:
         loader = data['test_data_loader']

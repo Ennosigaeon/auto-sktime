@@ -103,12 +103,12 @@ class CNN(BaseNetwork, AutoSktimeComponent):
 
     @staticmethod
     def get_hyperparameter_search_space(dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
-        num_layers = UniformIntegerHyperparameter('num_layers', lower=1, upper=6, default_value=3)
-        num_filters = UniformIntegerHyperparameter('num_filters', lower=4, upper=64, default_value=16, log=True)
-        kernel_size = UniformIntegerHyperparameter('kernel_size', lower=2, upper=64, default_value=8, log=True)
+        num_layers = UniformIntegerHyperparameter('num_layers', lower=1, upper=6, default_value=5)
+        num_filters = UniformIntegerHyperparameter('num_filters', lower=4, upper=150, default_value=150, log=True)
+        kernel_size = UniformIntegerHyperparameter('kernel_size', lower=2, upper=64, default_value=28, log=True)
         pool_size = UniformIntegerHyperparameter('pool_size', lower=1, upper=3, default_value=1)
         use_dropout = CategoricalHyperparameter('use_dropout', choices=[True, False], default_value=False)
-        dropout = UniformFloatHyperparameter('dropout', lower=0, upper=0.5, default_value=0.1)
+        dropout = UniformFloatHyperparameter('dropout', lower=0, upper=0.5, default_value=0.3)
 
         cs = ConfigurationSpace()
 
