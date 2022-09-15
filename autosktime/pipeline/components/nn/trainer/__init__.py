@@ -25,8 +25,8 @@ class TrainerComponent(AutoSktimeRegressionAlgorithm):
 
     def __init__(
             self,
-            patience: int = 3,
-            tol: float = 1e-4,
+            patience: int = 5,
+            tol: float = 1e-6,
             random_state: np.random.RandomState = None,
             iterations: int = None,
             config_id: ConfigId = None
@@ -64,7 +64,6 @@ class TrainerComponent(AutoSktimeRegressionAlgorithm):
         cutoff = config.get_config(self.config_id, 'cutoff') or math.inf
         start = config.get_config(self.config_id, 'start') or 0
 
-        last_loss = np.inf
         trigger = 0
 
         for epoch in range(iterations - self.fitted_epochs_):
@@ -77,37 +76,30 @@ class TrainerComponent(AutoSktimeRegressionAlgorithm):
             self.logger.info(f'Epoch: {self.fitted_epochs_}, train_loss: {train_loss:1.5f}, '
                              f'val_loss: {val_loss:1.5f}')
 
-            if last_loss < val_loss:
+            if self.best_loss_ < val_loss:
                 trigger += 1
-                if trigger < self.patience:
-                    self.logger.debug(f'Performance is decreasing. Trying {self.patience - trigger} more times')
-                else:
-                    self.logger.info(f'Stopping optimization early after {self.fitted_epochs_ + 1} epochs')
-                    break
+                self.logger.debug(f'Performance is decreasing. Trying {self.patience - trigger} more times')
+            elif np.abs(val_loss - self.best_loss_) < self.tol:
+                trigger += 1
+                self.logger.info(f'Performance is not increasing anymore. Trying {self.patience - trigger} more times')
             else:
                 trigger = 0
 
-            if np.abs(val_loss - self.best_loss_) < self.tol:
-                self.logger.info('Aborting optimization as no progress is made anymore')
+            if trigger >= self.patience:
+                self.logger.info(f'Stopping optimization early after {self.fitted_epochs_ + 1} epochs')
                 break
 
-            last_loss = val_loss
             self.fitted_epochs_ += 1
             self.best_loss_ = min(val_loss, self.best_loss_)
 
     def _train_epoch(self, train_loader: DataLoader) -> float:
-        loss_sum = 0.0
-        N = 0
+        total_loss = 0.0
         self.estimator.train()
 
         for step, (data, targets) in enumerate(train_loader):
             loss, outputs = self._train_step(data, targets)
-
-            batch_size = data.size(0)
-            loss_sum += loss * batch_size
-            N += batch_size
-
-        return loss_sum / N
+            total_loss += loss
+        return total_loss / len(train_loader)
 
     def _train_step(self, data: torch.Tensor, targets: torch.Tensor) -> Tuple[float, torch.Tensor]:
         # prepare
@@ -131,7 +123,6 @@ class TrainerComponent(AutoSktimeRegressionAlgorithm):
         return loss.item(), outputs
 
     def _test_model(self, data_loader: DataLoader) -> float:
-        num_batches = len(data_loader)
         total_loss = 0
 
         self.estimator.eval()
@@ -143,7 +134,7 @@ class TrainerComponent(AutoSktimeRegressionAlgorithm):
                 output = self.estimator(X, device=self.device)
                 total_loss += self.criterion(output, y).item()
 
-        avg_loss = total_loss / num_batches
+        avg_loss = total_loss / len(data_loader)
         return avg_loss
 
     @staticmethod
