@@ -10,6 +10,7 @@ from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import COMPONENT_PROPERTIES
 from autosktime.pipeline.components.downsampling import BaseDownSampling
 from autosktime.pipeline.util import Int64Index
+from autosktime.util.backend import ConfigId
 
 
 class IdentityComponent(BaseDownSampling):
@@ -17,8 +18,8 @@ class IdentityComponent(BaseDownSampling):
         'capability:inverse_transform': True
     }
 
-    def __init__(self, random_state: np.random.RandomState = None):
-        super().__init__()
+    def __init__(self, random_state: np.random.RandomState = None, config_id: ConfigId = None):
+        super().__init__(config_id)
         self.random_state = random_state
 
     def _transform(self, X: Union[pd.Series, pd.DataFrame], y: pd.Series = None):

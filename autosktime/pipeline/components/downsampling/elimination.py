@@ -11,12 +11,14 @@ from autosktime.pipeline.components.base import COMPONENT_PROPERTIES
 from autosktime.pipeline.components.downsampling import BaseDownSampling
 from autosktime.pipeline.components.downsampling.base import fix_size
 from autosktime.pipeline.util import Int64Index
+from autosktime.util.backend import ConfigId
 
 
 class EliminationDownSampler(BaseDownSampling):
 
-    def __init__(self, window_size: Union[float, int] = 10, random_state: np.random.RandomState = None):
-        super().__init__()
+    def __init__(self, window_size: Union[float, int] = 10, random_state: np.random.RandomState = None,
+                 config_id: ConfigId = None):
+        super().__init__(config_id)
         self.window_size = window_size
         self.random_state = random_state
 

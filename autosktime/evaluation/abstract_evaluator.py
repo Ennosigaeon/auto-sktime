@@ -50,13 +50,16 @@ def _fit_and_suppress_warnings(
     with warnings.catch_warnings():
         warnings.showwarning = send_warnings_to_log
         model.set_config_id(config_id)
+        config: ConfigContext = ConfigContext.instance()
 
+        config.set_config(config_id, key='is_fitting', value=True)
         if model.is_fitted:
             # noinspection PyUnresolvedReferences
             model.update(y, X=X)
         else:
             # noinspection PyUnresolvedReferences
             model.fit(y, X=X, fh=fh)
+        config.reset_config(config_id, key='is_fitting')
 
     return model
 

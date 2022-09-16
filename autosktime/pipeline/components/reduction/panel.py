@@ -334,3 +334,9 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
         self.estimator.set_config_id(config_id)
         if hasattr(self, 'estimator_'):
             self.estimator_.set_config_id(config_id)
+
+        for _, trans in self.transformers:
+            trans.set_config_id(config_id)
+        if hasattr(self, 'transformers_') and self.transformers_ is not None:
+            for _, trans in self.transformers_:
+                trans.set_config_id(config_id)

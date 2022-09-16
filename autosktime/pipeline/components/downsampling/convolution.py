@@ -12,11 +12,14 @@ from autosktime.pipeline.components.downsampling.base import fix_size
 from autosktime.pipeline.util import Int64Index
 from scipy import signal
 
+from autosktime.util.backend import ConfigId
+
 
 class ConvolutionDownSampler(BaseDownSampling):
 
-    def __init__(self, window_size: Union[float, int] = 0.01, random_state: np.random.RandomState = None):
-        super().__init__()
+    def __init__(self, window_size: Union[float, int] = 0.01, random_state: np.random.RandomState = None,
+                 config_id: ConfigId = None):
+        super().__init__(config_id)
         self.window_size = window_size
         self.random_state = random_state
 
@@ -40,7 +43,8 @@ class ConvolutionDownSampler(BaseDownSampling):
         Xt = pd.DataFrame(Xt, columns=X.columns, index=index)
         if y is not None:
             self._y_filter = np.ones((self.window_size_, y.shape[1])) / self.window_size_
-            yt = pd.DataFrame(signal.convolve(y, self._y_filter, mode='valid')[::self.window_size_], columns=y.columns, index=index)
+            yt = pd.DataFrame(signal.convolve(y, self._y_filter, mode='valid')[::self.window_size_], columns=y.columns,
+                              index=index)
         else:
             yt = None
 

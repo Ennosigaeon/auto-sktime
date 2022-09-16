@@ -11,6 +11,7 @@ from autosktime.pipeline.components.base import COMPONENT_PROPERTIES
 from autosktime.pipeline.components.downsampling import BaseDownSampling
 from autosktime.pipeline.components.downsampling.base import fix_size
 from autosktime.pipeline.util import Int64Index
+from autosktime.util.backend import ConfigId
 
 
 class SlidingWindowDownSampler(BaseDownSampling):
@@ -19,9 +20,10 @@ class SlidingWindowDownSampler(BaseDownSampling):
             self,
             window_size: Union[float, int] = 0.01,
             overlap: float = 0.5,
-            random_state: np.random.RandomState = None
+            random_state: np.random.RandomState = None,
+            config_id: ConfigId = None
     ):
-        super().__init__()
+        super().__init__(config_id)
         self.window_size = window_size
         self.overlap = overlap
         self.random_state = random_state
