@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -60,19 +60,24 @@ class RecurrentNetwork(BaseNetwork, AutoSktimeComponent):
 
         return self
 
-    def forward(self, x: torch.Tensor, device: torch.device) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, device: torch.device, output_seq: bool = True) -> torch.Tensor:
         batch_size = x.shape[0]
         h0 = torch.zeros(self.num_layers, batch_size, self.hidden_size).requires_grad_().to(device)
 
         if self.cell_type == 'lstm':
             c0 = torch.zeros(self.num_layers, batch_size, self.hidden_size).requires_grad_().to(device)
-            _, (hn, _) = self.network_(x, (h0, c0))
+            output, hn = self.network_(x, (h0, c0))
         else:
-            ula, hn = self.network_(x, h0)
+            output, hn = self.network_(x, h0)
 
-        out = self.output_projector_(hn[0]).flatten()
+        if not output_seq:
+            output = self._get_last_seq_value(output)
 
+        out = self.output_projector_(output).view(batch_size, -1)
         return out
+
+    def _get_last_seq_value(self, x: torch.Tensor) -> torch.Tensor:
+        return x[:, -1:, :]
 
     @staticmethod
     def get_properties(dataset_properties: DatasetProperties = None):

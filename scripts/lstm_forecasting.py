@@ -62,9 +62,8 @@ def create_data_loaders(df_train, df_val, df_test):
         'panel_sizes_val': find_runs(df_val.index.get_level_values(0))
     })
 
-    batch_size = 512
-    window_length = 50
-    train_data = DataLoaderComponent(batch_size=batch_size, window_length=window_length, validation_size=0) \
+    batch_size = 1
+    train_data = DataLoaderComponent(batch_size=batch_size, validation_size=0) \
         .fit({
         'X': df_train[features].values, 'y': df_train[target].values,
         'X_val': df_val[features].values, 'y_val': df_val[target].values
@@ -73,7 +72,7 @@ def create_data_loaders(df_train, df_val, df_test):
     context.set_config(None, {
         'panel_sizes': find_runs(df_test.index.get_level_values(0)),
     })
-    test_data = DataLoaderComponent(batch_size=batch_size, window_length=window_length, validation_size=0) \
+    test_data = DataLoaderComponent(batch_size=batch_size, validation_size=0) \
         .fit({'X': df_test[features].values, 'y': df_test[target].values})
 
     return train_data, test_data

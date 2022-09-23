@@ -108,14 +108,21 @@ class TemporalConvNetwork(BaseNetwork, AutoSktimeComponent):
 
         return self
 
-    def forward(self, x: torch.Tensor, device: torch.device) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, device: torch.device, output_seq: bool = True) -> torch.Tensor:
         # swap sequence and feature dimensions for use with convolutional nets
-        x = x.transpose(1, 2).contiguous()
-        x = self.network_(x)
-        x = x.transpose(1, 2).contiguous()
+        output = x.transpose(1, 2).contiguous()
+        output = self.network_(output)
+        output = output.transpose(1, 2).contiguous()
 
-        out = self.output_projector_(x[:, -1, :]).flatten()
+        if not output_seq:
+            output = self._get_last_seq_value(output)
+
+        batch_size = x.shape[0]
+        out = self.output_projector_(output).view(batch_size, -1)
         return out
+
+    def _get_last_seq_value(self, x: torch.Tensor) -> torch.Tensor:
+        return x[:, -1:, :]
 
     @staticmethod
     def get_properties(dataset_properties: DatasetProperties = None) -> COMPONENT_PROPERTIES:

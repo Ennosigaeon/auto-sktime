@@ -73,17 +73,20 @@ class TrainerComponent(AutoSktimeRegressionAlgorithm):
 
             train_loss = self._train_epoch(train_loader=train_loader)
             val_loss = self._test_model(data_loader=val_loader)
-            self.logger.info(f'Epoch: {self.fitted_epochs_}, train_loss: {train_loss:1.5f}, '
-                             f'val_loss: {val_loss:1.5f}')
 
             if self.best_loss_ < val_loss:
                 trigger += 1
-                self.logger.debug(f'Performance is decreasing. Trying {self.patience - trigger} more times')
+                abort_msg = f'Performance is decreasing (best {self.best_loss_:1.5f}). Trying {self.patience - trigger} more times'
             elif np.abs(val_loss - self.best_loss_) < self.tol:
                 trigger += 1
-                self.logger.info(f'Performance is not increasing anymore. Trying {self.patience - trigger} more times')
+                abort_msg = f'Performance is not increasing anymore. Trying {self.patience - trigger} more times'
             else:
                 trigger = 0
+                abort_msg = ''
+
+            if epoch % 10 == 0:
+                self.logger.debug(f'Epoch: {self.fitted_epochs_}, train_loss: {train_loss:1.5f}, '
+                                  f'val_loss: {val_loss:1.5f}. {abort_msg}')
 
             if trigger >= self.patience:
                 self.logger.info(f'Stopping optimization early after {self.fitted_epochs_ + 1} epochs')
@@ -113,10 +116,6 @@ class TrainerComponent(AutoSktimeRegressionAlgorithm):
         # Backpropagation
         self.optimizer.zero_grad()
         loss.backward()
-
-        # TODO remove once pytorch > 1.12.0 has been released (see https://github.com/pytorch/pytorch/pull/80345)
-        if not hasattr(self.optimizer, '_warned_capturable_if_run_uncaptured'):
-            self.optimizer._warned_capturable_if_run_uncaptured = True
 
         self.optimizer.step()
 
@@ -149,32 +148,32 @@ class TrainerComponent(AutoSktimeRegressionAlgorithm):
 
     @staticmethod
     def get_hyperparameter_search_space(dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
-        patience = UniformIntegerHyperparameter('patience', lower=2, upper=10, default_value=10)
-        tol = UniformFloatHyperparameter('tol', 1e-5, 1e-1, default_value=1e-4, log=True)
+        patience = UniformIntegerHyperparameter('patience', lower=2, upper=50, default_value=25)
+        tol = UniformFloatHyperparameter('tol', 1e-7, 1e-1, default_value=1e-6, log=True)
 
         cs = ConfigurationSpace()
         cs.add_hyperparameters([patience, tol])
         return cs
 
     def get_max_iter(self) -> Optional[int]:
-        return 64
+        return 128
 
-    def predict(self, data: NN_DATA, y: Any = None, **kwargs) -> torch.Tensor:
+    def predict(self, data: NN_DATA, y: Any = None, **kwargs) -> np.ndarray:
         loader = data['test_data_loader']
         self.estimator.eval()
         self.estimator.to(self.device)
 
         # Batch prediction
-        output = torch.tensor([])
+        output = []
 
         with torch.no_grad():
             for X, _ in loader:
                 X = X.to(self.device)
 
-                y_star = self.estimator(X, device=self.device).cpu()
-                output = torch.cat((output, y_star), 0)
+                y_star = self.estimator(X, device=self.device).cpu().numpy()
+                output.append(y_star)
 
-        return output.numpy()
+        return np.hstack(output).flatten()
 
     def update(self, data: NN_DATA, y: Any = None, update_params: bool = True):
         return self._fit(train_loader=data['train_data_loader'], val_loader=data['val_data_loader'])

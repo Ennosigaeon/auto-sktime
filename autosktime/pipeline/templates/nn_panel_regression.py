@@ -38,7 +38,6 @@ class NNPanelRegressionPipeline(PanelRegressionPipeline):
             ('reduction', RecursivePanelReducer(
                 transformers=[
                     ('add_index', SwappedInput(AddIndexComponent())),
-                    ('downsampling', EliminationDownSampler(random_state=self.random_state)),
                 ],
                 estimator=pipeline,
                 random_state=self.random_state,
