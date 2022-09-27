@@ -12,7 +12,7 @@ from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, HANDL
 from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import AutoSktimeComponent
 from autosktime.pipeline.components.nn.network.base import BaseNetwork
-from autosktime.pipeline.components.nn.util import NN_DATA
+from autosktime.pipeline.components.nn.util import NN_DATA, noop
 from autosktime.pipeline.util import Int64Index
 
 
@@ -55,7 +55,7 @@ class RecurrentNetwork(BaseNetwork, AutoSktimeComponent):
             bidirectional=False,
             batch_first=True,
         )
-
+        self.dropout_layer = nn.Dropout(self.dropout) if self.use_dropout else noop
         self.output_projector_ = nn.Linear(self.hidden_size, self.output_size)
 
         return self
@@ -73,7 +73,7 @@ class RecurrentNetwork(BaseNetwork, AutoSktimeComponent):
         if not output_seq:
             output = self._get_last_seq_value(output)
 
-        out = self.output_projector_(output).view(batch_size, -1)
+        out = self.output_projector_(self.dropout_layer(output)).view(batch_size, -1)
         return out
 
     def _get_last_seq_value(self, x: torch.Tensor) -> torch.Tensor:
@@ -91,10 +91,10 @@ class RecurrentNetwork(BaseNetwork, AutoSktimeComponent):
 
     @staticmethod
     def get_hyperparameter_search_space(dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
-        cell_type = CategoricalHyperparameter('cell_type', ['lstm', 'gru'])
+        cell_type = CategoricalHyperparameter('cell_type', ['lstm', 'gru'], default_value='lstm')
         num_layers = UniformIntegerHyperparameter('num_layers', lower=1, upper=3, default_value=1)
-        hidden_size = UniformIntegerHyperparameter('hidden_size', lower=16, upper=512, default_value=64, log=True)
-        use_dropout = CategoricalHyperparameter('use_dropout', [True, False])
+        hidden_size = UniformIntegerHyperparameter('hidden_size', lower=16, upper=512, default_value=100, log=True)
+        use_dropout = CategoricalHyperparameter('use_dropout', [True, False], default_value=True)
         dropout = UniformFloatHyperparameter('dropout', lower=0., upper=0.5, default_value=0.3)
 
         cs = ConfigurationSpace()

@@ -42,3 +42,8 @@ class DictionaryInput(AutoSktimeComponent):
     @staticmethod
     def get_hyperparameter_search_space(dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
         return ConfigurationSpace()
+
+
+def noop(x=None, *args, **kwargs):
+    "Do nothing"
+    return x
