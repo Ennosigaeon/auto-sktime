@@ -1,6 +1,8 @@
 import logging
 import math
 import time
+# noinspection PyUnresolvedReferences
+from torch.optim.lr_scheduler import _LRScheduler
 from typing import Optional, Tuple, Any
 
 import numpy as np
@@ -37,6 +39,7 @@ class TrainerComponent(AutoSktimeRegressionAlgorithm):
 
         self.criterion: Optional[torch.nn.Module] = None
         self.optimizer: Optional[Optimizer] = None
+        self.scheduler: Optional[_LRScheduler] = None
         self.device: Optional[torch.device] = None
 
         self.random_state = random_state if random_state is not None else check_random_state(1)
@@ -51,6 +54,7 @@ class TrainerComponent(AutoSktimeRegressionAlgorithm):
         self.device = data['device']
         self.estimator = data['network'].to(self.device)
         self.optimizer = data['optimizer']
+        self.scheduler = data['scheduler']
         self.criterion = torch.nn.MSELoss()
 
         return self._fit(train_loader=data['train_data_loader'], val_loader=data['val_data_loader'])
@@ -102,6 +106,8 @@ class TrainerComponent(AutoSktimeRegressionAlgorithm):
         for step, (data, targets) in enumerate(train_loader):
             loss, outputs = self._train_step(data, targets)
             total_loss += loss
+
+        self.scheduler.step()
         return total_loss / len(train_loader)
 
     def _train_step(self, data: torch.Tensor, targets: torch.Tensor) -> Tuple[float, torch.Tensor]:

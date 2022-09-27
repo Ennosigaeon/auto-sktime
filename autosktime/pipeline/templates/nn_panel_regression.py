@@ -3,10 +3,10 @@ from typing import Tuple, List
 from autosktime.pipeline.components.base import AutoSktimeComponent, UpdatablePipeline, SwappedInput
 from autosktime.pipeline.components.data_preprocessing import VarianceThresholdComponent
 from autosktime.pipeline.components.data_preprocessing.rescaling.standardize import StandardScalerComponent
-from autosktime.pipeline.components.downsampling.elimination import EliminationDownSampler
 from autosktime.pipeline.components.features import FeatureGenerationChoice
 from autosktime.pipeline.components.index import AddIndexComponent
 from autosktime.pipeline.components.nn.dataloader import DataLoaderComponent
+from autosktime.pipeline.components.nn.learning_rate import LearningRateScheduler
 from autosktime.pipeline.components.nn.network import NeuralNetworkChoice
 from autosktime.pipeline.components.nn.optimizer.optimizer import AdamOptimizer
 from autosktime.pipeline.components.nn.trainer import TrainerComponent
@@ -28,6 +28,7 @@ class NNPanelRegressionPipeline(PanelRegressionPipeline):
             ('data_loader', DataLoaderComponent()),
             ('network', NeuralNetworkChoice()),
             ('optimizer', AdamOptimizer()),
+            ('lr_scheduler', LearningRateScheduler()),
             ('trainer', TrainerComponent()),
         ])
 
