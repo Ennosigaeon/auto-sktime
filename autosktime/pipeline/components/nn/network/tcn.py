@@ -137,10 +137,10 @@ class TemporalConvNetwork(BaseNetwork, AutoSktimeComponent):
 
     @staticmethod
     def get_hyperparameter_search_space(dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
-        num_layers = UniformIntegerHyperparameter('num_layers', lower=1, upper=4, default_value=3)
-        num_filters = UniformIntegerHyperparameter('num_filters', lower=4, upper=64, default_value=16, log=True)
+        num_layers = UniformIntegerHyperparameter('num_layers', lower=1, upper=4, default_value=1)
+        num_filters = UniformIntegerHyperparameter('num_filters', lower=4, upper=128, default_value=16, log=True)
         kernel_size = UniformIntegerHyperparameter('kernel_size', lower=2, upper=64, default_value=8, log=True)
-        use_dropout = CategoricalHyperparameter('use_dropout', choices=[True, False], default_value=False)
+        use_dropout = CategoricalHyperparameter('use_dropout', choices=[True, False], default_value=True)
         dropout = UniformFloatHyperparameter('dropout', lower=0, upper=0.5, default_value=0.1)
 
         cs = ConfigurationSpace()
