@@ -3,6 +3,7 @@ from typing import Optional
 import numpy as np
 from torch import nn
 
+from autosktime.pipeline.components.nn.network.head import NetworkHead
 from autosktime.pipeline.components.nn.util import NN_DATA
 
 
@@ -14,7 +15,7 @@ class BaseNetwork(nn.Module):
 
         self.num_features_: Optional[int] = None
         self.network_: Optional[nn.Module] = None
-        self.output_projector_: Optional[nn.Module] = None
+        self.output_projector_: Optional[NetworkHead] = None
 
     def transform(self, X: NN_DATA) -> NN_DATA:
         X.update({'network': self})

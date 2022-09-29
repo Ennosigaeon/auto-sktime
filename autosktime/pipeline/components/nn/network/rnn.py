@@ -1,9 +1,8 @@
-from typing import Any
-
 import numpy as np
 import pandas as pd
 import torch
 from torch import nn
+from typing import Any
 
 from ConfigSpace import ConfigurationSpace, GreaterThanCondition, AndConjunction, EqualsCondition, \
     CategoricalHyperparameter, UniformIntegerHyperparameter, UniformFloatHyperparameter
@@ -12,7 +11,8 @@ from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, HANDL
 from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import AutoSktimeComponent
 from autosktime.pipeline.components.nn.network.base import BaseNetwork
-from autosktime.pipeline.components.nn.util import NN_DATA, noop
+from autosktime.pipeline.components.nn.network.head import LinearHead
+from autosktime.pipeline.components.nn.util import NN_DATA
 from autosktime.pipeline.util import Int64Index
 
 
@@ -55,8 +55,7 @@ class RecurrentNetwork(BaseNetwork, AutoSktimeComponent):
             bidirectional=False,
             batch_first=True,
         )
-        self.dropout_layer = nn.Dropout(self.dropout) if self.use_dropout else noop
-        self.output_projector_ = nn.Linear(self.hidden_size, self.output_size)
+        self.output_projector_ = LinearHead(self.hidden_size, self.output_size)
 
         return self
 
@@ -73,7 +72,7 @@ class RecurrentNetwork(BaseNetwork, AutoSktimeComponent):
         if not output_seq:
             output = self._get_last_seq_value(output)
 
-        out = self.output_projector_(self.dropout_layer(output)).view(batch_size, -1)
+        out = self.output_projector_(output).view(batch_size, -1)
         return out
 
     def _get_last_seq_value(self, x: torch.Tensor) -> torch.Tensor:

@@ -1,10 +1,9 @@
-from typing import Any
-
 import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
 from torch.nn.utils import weight_norm
+from typing import Any
 
 from ConfigSpace import ConfigurationSpace, UniformIntegerHyperparameter, CategoricalHyperparameter, \
     UniformFloatHyperparameter, EqualsCondition
@@ -13,6 +12,7 @@ from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, HANDL
 from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import AutoSktimeComponent, COMPONENT_PROPERTIES
 from autosktime.pipeline.components.nn.network.base import BaseNetwork
+from autosktime.pipeline.components.nn.network.head import LinearHead
 from autosktime.pipeline.components.nn.util import NN_DATA
 from autosktime.pipeline.util import Int64Index
 
@@ -104,7 +104,8 @@ class TemporalConvNetwork(BaseNetwork, AutoSktimeComponent):
             ]
 
         self.network_ = nn.Sequential(*layers)
-        self.output_projector_ = nn.Linear(self.num_filters, self.output_size)
+        self.output_projector_ = LinearHead(self.num_filters, self.output_size,
+                                            dropout=self.dropout if self.use_dropout else 0)
 
         return self
 
