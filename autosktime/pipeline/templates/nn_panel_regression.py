@@ -6,7 +6,7 @@ from autosktime.pipeline.components.data_preprocessing.rescaling.standardize imp
 from autosktime.pipeline.components.features import FeatureGenerationChoice
 from autosktime.pipeline.components.index import AddIndexComponent
 from autosktime.pipeline.components.nn.dataloader import DataLoaderComponent
-from autosktime.pipeline.components.nn.learning_rate import LearningRateScheduler
+from autosktime.pipeline.components.nn.lr_scheduler import LearningRateScheduler
 from autosktime.pipeline.components.nn.network import NeuralNetworkChoice
 from autosktime.pipeline.components.nn.optimizer.optimizer import AdamOptimizer
 from autosktime.pipeline.components.nn.trainer import TrainerComponent
