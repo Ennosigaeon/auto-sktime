@@ -34,7 +34,7 @@ class DataLoaderComponent(AutoSktimeComponent):
     def __init__(
             self,
             batch_size: int = 1,
-            validation_size: int = 0.,
+            validation_size: int = 0.2,
             sequence_length: int = None,
             random_state: np.random.RandomState = None,
             config_id: ConfigId = None
@@ -49,22 +49,20 @@ class DataLoaderComponent(AutoSktimeComponent):
     def fit(self, data: NN_DATA, y=None):
         X, y = data.get('X'), data.get('y')
 
-        if 'X_val' in data:
-            X_val, y_val = data.get('X_val'), data.get('y_val')
-            y_train, y_val, X_train, X_val = y, y_val, X, X_val
-        elif self.validation_size > 0:
-            y_train, y_val, X_train, X_val = train_test_split(y, X, test_size=self.validation_size,
-                                                              random_state=self.random_state)
-        else:
-            y_train, y_val, X_train, X_val = y, y, X, X
-
         config: ConfigContext = ConfigContext.instance()
         self.sequence_length = max(config.get_config(self.config_id, 'panel_sizes', default=[0]))
+        X_train, y_train = self._prepare_train_data(X, y)
 
-        self.train_loader_ = DataLoader(TimeSeriesDataset(*self._prepare_train_data(X_train, y_train)),
-                                        batch_size=self.batch_size, shuffle=True)
-        self.val_loader_ = DataLoader(TimeSeriesDataset(*self._prepare_validation_data(X_val, y_val)),
-                                      batch_size=self.batch_size, shuffle=False)
+        if 'X_val' in data:
+            X_val, y_val = self._prepare_validation_data(data.get('X_val'), data.get('y_val'))
+        elif self.validation_size > 0:
+            y_train, y_val, X_train, X_val = train_test_split(y_train, X_train, test_size=self.validation_size,
+                                                              random_state=self.random_state)
+        else:
+            X_val, y_val = X_train, y_train
+
+        self.train_loader_ = DataLoader(TimeSeriesDataset(X_train, y_train), batch_size=self.batch_size, shuffle=True)
+        self.val_loader_ = DataLoader(TimeSeriesDataset(X_val, y_val), batch_size=self.batch_size, shuffle=False)
 
         return self
 
