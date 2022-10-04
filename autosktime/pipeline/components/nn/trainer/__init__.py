@@ -1,16 +1,16 @@
 import logging
 import math
-import time
-# noinspection PyUnresolvedReferences
-from torch.optim.lr_scheduler import _LRScheduler
-from typing import Optional, Tuple, Any
-
 import numpy as np
 import pandas as pd
+import tempfile
+import time
 import torch
 from sklearn.utils import check_random_state
 from torch.optim import Optimizer
+# noinspection PyUnresolvedReferences
+from torch.optim.lr_scheduler import _LRScheduler
 from torch.utils.data import DataLoader
+from typing import Optional, Tuple, Any
 
 from ConfigSpace import ConfigurationSpace, UniformIntegerHyperparameter, UniformFloatHyperparameter
 from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, HANDLES_PANEL, IGNORES_EXOGENOUS_X, \
@@ -29,6 +29,7 @@ class TrainerComponent(AutoSktimeRegressionAlgorithm):
             self,
             patience: int = 5,
             tol: float = 1e-6,
+            use_best_epoch: bool = True,
             random_state: np.random.RandomState = None,
             iterations: int = None,
             config_id: ConfigId = None
@@ -36,6 +37,7 @@ class TrainerComponent(AutoSktimeRegressionAlgorithm):
         super().__init__()
         self.patience = patience
         self.tol = tol
+        self.use_best_epoch = use_best_epoch
 
         self.criterion: Optional[torch.nn.Module] = None
         self.optimizer: Optional[Optimizer] = None
@@ -57,12 +59,16 @@ class TrainerComponent(AutoSktimeRegressionAlgorithm):
         self.scheduler = data['scheduler']
         self.criterion = torch.nn.MSELoss()
 
-        return self._fit(train_loader=data['train_data_loader'], val_loader=data['val_data_loader'])
+        with tempfile.NamedTemporaryFile() as cache_file:
+            self._fit(train_loader=data['train_data_loader'], val_loader=data['val_data_loader'], cache_file=cache_file)
+
+            if self.use_best_epoch:
+                self._load_checkpoint(cache_file)
 
     def _update(self):
         pass
 
-    def _fit(self, train_loader: DataLoader, val_loader: DataLoader):
+    def _fit(self, train_loader: DataLoader, val_loader: DataLoader, cache_file=None):
         config: ConfigContext = ConfigContext.instance()
         iterations = self.iterations or config.get_config(self.config_id, 'iterations') or self.get_max_iter()
         cutoff = config.get_config(self.config_id, 'cutoff') or math.inf
@@ -95,6 +101,9 @@ class TrainerComponent(AutoSktimeRegressionAlgorithm):
             if trigger >= self.patience or np.isnan(val_loss):
                 self.logger.info(f'Stopping optimization early after {self.fitted_epochs_ + 1} epochs')
                 break
+
+            if val_loss < self.best_loss_:
+                self._store_checkpoint(cache_file)
 
             self.fitted_epochs_ += 1
             self.best_loss_ = min(val_loss, self.best_loss_)
@@ -141,6 +150,20 @@ class TrainerComponent(AutoSktimeRegressionAlgorithm):
 
         avg_loss = total_loss / len(data_loader)
         return avg_loss
+
+    def _store_checkpoint(self, path) -> None:
+        if path is not None:
+            torch.save({
+                'model_state_dict': self.estimator.state_dict(),
+                'optimizer_state_dict': self.optimizer.state_dict(),
+            }, path)
+
+    def _load_checkpoint(self, path):
+        if path is not None:
+            with open(path.name, 'rb') as f:
+                checkpoint = torch.load(f)
+            self.estimator.load_state_dict(checkpoint['model_state_dict'])
+            self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 
     @staticmethod
     def get_properties(dataset_properties: DatasetProperties = None) -> COMPONENT_PROPERTIES:
