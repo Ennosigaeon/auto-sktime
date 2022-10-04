@@ -92,7 +92,7 @@ class TrainerComponent(AutoSktimeRegressionAlgorithm):
                 self.logger.debug(f'Epoch: {self.fitted_epochs_}, train_loss: {train_loss:1.5f}, '
                                   f'val_loss: {val_loss:1.5f}. {abort_msg}')
 
-            if trigger >= self.patience:
+            if trigger >= self.patience or np.isnan(val_loss):
                 self.logger.info(f'Stopping optimization early after {self.fitted_epochs_ + 1} epochs')
                 break
 
