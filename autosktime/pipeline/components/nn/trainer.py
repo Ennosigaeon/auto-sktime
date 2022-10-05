@@ -10,7 +10,7 @@ from torch.optim import Optimizer
 # noinspection PyUnresolvedReferences
 from torch.optim.lr_scheduler import _LRScheduler
 from torch.utils.data import DataLoader
-from typing import Optional, Tuple, Any
+from typing import Optional, Tuple, Any, List
 
 from ConfigSpace import ConfigurationSpace, UniformIntegerHyperparameter, UniformFloatHyperparameter
 from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, HANDLES_PANEL, IGNORES_EXOGENOUS_X, \
@@ -82,7 +82,7 @@ class TrainerComponent(AutoSktimeRegressionAlgorithm):
                 break
 
             train_loss = self._train_epoch(train_loader=train_loader)
-            val_loss = self._test_model(data_loader=val_loader)
+            val_loss, _ = self._predict(loader=val_loader)
 
             if self.best_loss_ < val_loss:
                 trigger += 1
@@ -112,21 +112,21 @@ class TrainerComponent(AutoSktimeRegressionAlgorithm):
         total_loss = 0.0
         self.estimator.train()
 
-        for step, (data, targets) in enumerate(train_loader):
-            loss, outputs = self._train_step(data, targets)
+        for step, (X, y) in enumerate(train_loader):
+            loss, y_hat = self._train_step(X, y)
             total_loss += loss
 
         self.scheduler.step()
         return total_loss / len(train_loader)
 
-    def _train_step(self, data: torch.Tensor, targets: torch.Tensor) -> Tuple[float, torch.Tensor]:
+    def _train_step(self, X: torch.Tensor, y: torch.Tensor) -> Tuple[float, torch.Tensor]:
         # prepare
-        data = data.to(self.device)
-        targets = targets.to(self.device)
+        X = X.to(self.device)
+        y = y.to(self.device)
 
         # training
-        outputs = self.estimator(data, device=self.device)
-        loss = self.criterion(outputs, targets)
+        y_hat = self.estimator(X, device=self.device)
+        loss = self.criterion(y_hat, y)
 
         # Backpropagation
         self.optimizer.zero_grad()
@@ -134,22 +134,7 @@ class TrainerComponent(AutoSktimeRegressionAlgorithm):
 
         self.optimizer.step()
 
-        return loss.item(), outputs
-
-    def _test_model(self, data_loader: DataLoader) -> float:
-        total_loss = 0
-
-        self.estimator.eval()
-        with torch.no_grad():
-            for X, y in data_loader:
-                X = X.to(self.device)
-                y = y.to(self.device)
-
-                output = self.estimator(X, device=self.device)
-                total_loss += self.criterion(output, y).item()
-
-        avg_loss = total_loss / len(data_loader)
-        return avg_loss
+        return loss.item(), y_hat
 
     def _store_checkpoint(self, path) -> None:
         if path is not None:
@@ -189,20 +174,29 @@ class TrainerComponent(AutoSktimeRegressionAlgorithm):
 
     def predict(self, data: NN_DATA, y: Any = None, **kwargs) -> np.ndarray:
         loader = data['test_data_loader']
+        _, y_hat = self._predict(loader)
+        return np.hstack(y_hat).flatten()
+
+    def _predict(self, loader: DataLoader) -> Tuple[float, List[np.ndarray]]:
         self.estimator.eval()
         self.estimator.to(self.device)
 
         # Batch prediction
         output = []
+        total_loss = 0
 
         with torch.no_grad():
-            for X, _ in loader:
+            for step, (X, y) in enumerate(loader):
                 X = X.to(self.device)
+                y = y.to(self.device)
 
-                y_star = self.estimator(X, device=self.device).cpu().numpy()
-                output.append(y_star)
+                y_hat = self.estimator(X, device=self.device)
 
-        return np.hstack(output).flatten()
+                output.append(y_hat.cpu().numpy())
+                total_loss += self.criterion(y_hat, y).item()
+
+        avg_loss = total_loss / len(loader)
+        return avg_loss, output
 
     def update(self, data: NN_DATA, y: Any = None, update_params: bool = True):
         return self._fit(train_loader=data['train_data_loader'], val_loader=data['val_data_loader'])
