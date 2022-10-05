@@ -8,8 +8,7 @@ from ConfigSpace import ConfigurationSpace
 from autosktime.constants import SUPPORTED_INDEX_TYPES, HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, IGNORES_EXOGENOUS_X, \
     HANDLES_PANEL
 from autosktime.data import DatasetProperties
-from autosktime.pipeline.components.base import AutoSktimeComponent, find_components, AutoSktimeChoice, \
-    AutoSktimeRegressionAlgorithm
+from autosktime.pipeline.components.base import AutoSktimeComponent, find_components, AutoSktimeChoice
 from autosktime.pipeline.components.nn.network.base import BaseNetwork
 from autosktime.pipeline.components.nn.util import NN_DATA
 from autosktime.pipeline.util import Int64Index

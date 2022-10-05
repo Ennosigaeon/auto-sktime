@@ -141,7 +141,7 @@ class TrainerComponent(AutoSktimeRegressionAlgorithm):
             torch.save({
                 'model_state_dict': self.estimator.state_dict(),
                 'optimizer_state_dict': self.optimizer.state_dict(),
-            }, path)
+            }, path.name)
 
     def _load_checkpoint(self, path):
         if path is not None:

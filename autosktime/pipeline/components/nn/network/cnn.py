@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import torch
 from torch import nn
+from torch.nn.utils import weight_norm
 from typing import Any
 
 from ConfigSpace import ConfigurationSpace, UniformIntegerHyperparameter, CategoricalHyperparameter, \
@@ -12,6 +13,7 @@ from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import COMPONENT_PROPERTIES, AutoSktimeComponent
 from autosktime.pipeline.components.nn.network import BaseNetwork
 from autosktime.pipeline.components.nn.network.head import LinearHead
+from autosktime.pipeline.components.nn.network.tcn import Chomp1d
 from autosktime.pipeline.components.nn.util import NN_DATA
 from autosktime.pipeline.util import Int64Index
 
@@ -30,9 +32,10 @@ class CnnBlock(nn.Module):
         super().__init__()
 
         self.net = nn.Sequential(
-            nn.Conv1d(n_inputs, n_outputs, kernel_size=kernel_size, stride=stride, padding=padding),
-            nn.AvgPool1d(pool_size),
+            weight_norm(nn.Conv1d(n_inputs, n_outputs, kernel_size=kernel_size, stride=stride, padding=padding)),
+            Chomp1d(padding),
             nn.ReLU(),
+            # nn.MaxPool1d(pool_size),
             nn.Dropout(dropout)
         )
 
@@ -73,7 +76,7 @@ class CNN(BaseNetwork, AutoSktimeComponent):
             out_channels = self.num_filters
             layers += [
                 CnnBlock(in_channels, out_channels, kernel_size=self.kernel_size, stride=1,
-                         padding='same', pool_size=self.pool_size,
+                         padding=self.kernel_size - 1, pool_size=self.pool_size,
                          dropout=self.dropout if self.use_dropout else 0)
             ]
 
@@ -115,7 +118,7 @@ class CNN(BaseNetwork, AutoSktimeComponent):
         num_filters = UniformIntegerHyperparameter('num_filters', lower=4, upper=150, default_value=150, log=True)
         kernel_size = UniformIntegerHyperparameter('kernel_size', lower=2, upper=64, default_value=28, log=True)
         pool_size = UniformIntegerHyperparameter('pool_size', lower=1, upper=3, default_value=1)
-        use_dropout = CategoricalHyperparameter('use_dropout', choices=[True, False], default_value=False)
+        use_dropout = CategoricalHyperparameter('use_dropout', choices=[True, False], default_value=True)
         dropout = UniformFloatHyperparameter('dropout', lower=0, upper=0.5, default_value=0.3)
 
         cs = ConfigurationSpace()
