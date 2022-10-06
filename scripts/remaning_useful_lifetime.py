@@ -54,21 +54,21 @@ for fold, ((_, train), (_, val), (_, test)) in enumerate(
         n_jobs=1,
         seed=fold,
         temporary_directory=workdir,
-        metric=RootMeanSquaredError(start=50),
+        metric=RootMeanSquaredError(start=125),
         resampling_strategy='panel-pre',
-        resampling_strategy_arguments={'train_ids': [train], 'test_ids': [val]},
+        resampling_strategy_arguments={'train_ids': [pd.concat((train, val))], 'test_ids': [test]},
         delete_tmp_folder_after_terminate=False,
-        use_pynisher=True,
+        use_pynisher=False,
         use_multi_fidelity=True,
         verbose=True
     )
 
-    automl.fit(y_train, X_train, dataset_name='rul', task=PANEL_INDIRECT_FORECAST)
+    automl.fit(y, X, dataset_name='rul', task=PANEL_INDIRECT_FORECAST)
 
     y_pred = automl.predict(ForecastingHorizon(resolve_index(y_test.index), is_relative=False), X_test)
 
     for metric_name in performance.keys():
-        metric = STRING_TO_METRIC[metric_name](start=50)
+        metric = STRING_TO_METRIC[metric_name](start=125)
         performance[metric_name][fold] = metric(y_test, y_pred)
 
     plot_grouped_series(None, y_test, y_pred)
