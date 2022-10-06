@@ -7,6 +7,7 @@ import time
 import torch
 from matplotlib import pyplot as plt
 from sklearn.utils import check_random_state
+from torch import nn
 from torch.optim import Optimizer
 # noinspection PyUnresolvedReferences
 from torch.optim.lr_scheduler import _LRScheduler
@@ -21,6 +22,16 @@ from autosktime.pipeline.components.base import COMPONENT_PROPERTIES, AutoSktime
 from autosktime.pipeline.components.nn.util import NN_DATA
 from autosktime.pipeline.util import Int64Index
 from autosktime.util.backend import ConfigContext, ConfigId
+
+
+class RMSELoss(nn.Module):
+    def __init__(self, eps: float = 1e-6):
+        super().__init__()
+        self.mse = nn.MSELoss()
+        self.eps = eps
+
+    def forward(self, yhat, y):
+        return torch.sqrt(self.mse(yhat, y) + self.eps)
 
 
 class TrainerComponent(AutoSktimeRegressionAlgorithm):
@@ -60,7 +71,7 @@ class TrainerComponent(AutoSktimeRegressionAlgorithm):
         self.estimator = data['network'].to(self.device)
         self.optimizer = data['optimizer']
         self.scheduler = data['scheduler']
-        self.criterion = torch.nn.MSELoss()
+        self.criterion = RMSELoss()
 
         with tempfile.NamedTemporaryFile() as cache_file:
             self._fit(train_loader=data['train_data_loader'], val_loader=data['val_data_loader'], cache_file=cache_file)
