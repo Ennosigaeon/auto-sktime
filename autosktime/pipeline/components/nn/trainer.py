@@ -5,6 +5,7 @@ import pandas as pd
 import tempfile
 import time
 import torch
+from matplotlib import pyplot as plt
 from sklearn.utils import check_random_state
 from torch.optim import Optimizer
 # noinspection PyUnresolvedReferences
@@ -30,6 +31,7 @@ class TrainerComponent(AutoSktimeRegressionAlgorithm):
             patience: int = 5,
             tol: float = 1e-6,
             use_best_epoch: bool = True,
+            plot: bool = False,
             random_state: np.random.RandomState = None,
             iterations: int = None,
             config_id: ConfigId = None
@@ -38,6 +40,7 @@ class TrainerComponent(AutoSktimeRegressionAlgorithm):
         self.patience = patience
         self.tol = tol
         self.use_best_epoch = use_best_epoch
+        self.plot = plot
 
         self.criterion: Optional[torch.nn.Module] = None
         self.optimizer: Optional[Optimizer] = None
@@ -82,7 +85,7 @@ class TrainerComponent(AutoSktimeRegressionAlgorithm):
                 break
 
             train_loss = self._train_epoch(train_loader=train_loader)
-            val_loss, _ = self._predict(loader=val_loader)
+            val_loss, _ = self._predict(loader=val_loader, epoch=epoch)
 
             if self.best_loss_ < val_loss:
                 trigger += 1
@@ -177,7 +180,7 @@ class TrainerComponent(AutoSktimeRegressionAlgorithm):
         _, y_hat = self._predict(loader)
         return np.hstack(y_hat).flatten()
 
-    def _predict(self, loader: DataLoader) -> Tuple[float, List[np.ndarray]]:
+    def _predict(self, loader: DataLoader, epoch: int = None) -> Tuple[float, List[np.ndarray]]:
         self.estimator.eval()
         self.estimator.to(self.device)
 
@@ -192,6 +195,9 @@ class TrainerComponent(AutoSktimeRegressionAlgorithm):
 
                 y_hat = self.estimator(X, device=self.device)
 
+                if self.plot and step < 10 and epoch is not None and epoch % 10 == 0:
+                    self._plot(step, y, y_hat, f'Validation {step} - Epoch {epoch}')
+
                 output.append(y_hat.cpu().numpy())
                 total_loss += self.criterion(y_hat, y).item()
 
@@ -200,3 +206,14 @@ class TrainerComponent(AutoSktimeRegressionAlgorithm):
 
     def update(self, data: NN_DATA, y: Any = None, update_params: bool = True):
         return self._fit(train_loader=data['train_data_loader'], val_loader=data['val_data_loader'])
+
+    def _plot(self, step: int, y, y_hat, title: str = ''):
+        if step == 0:
+            plt.close()
+
+        plt.plot(y.cpu().detach().numpy().flatten())
+        plt.plot(y_hat.cpu().detach().numpy().flatten())
+        plt.title(title)
+
+        if step == 9:
+            plt.show()
