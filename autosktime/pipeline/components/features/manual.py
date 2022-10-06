@@ -4,7 +4,7 @@ from scipy.stats import kurtosis, skew
 from autosktime.pipeline.components.features.base import BaseFeatureGenerator
 
 
-class MinimalFeatureGenerator(BaseFeatureGenerator):
+class ManualFeatureGenerator(BaseFeatureGenerator):
 
     def transform(self, X: np.ndarray) -> np.ndarray:
         if X.shape[1] == 1:
@@ -13,12 +13,12 @@ class MinimalFeatureGenerator(BaseFeatureGenerator):
             gradient = np.gradient(X, axis=1).sum(axis=1) / X.shape[1]
 
         features = [
-            X.mean(axis=1),
-            X.std(axis=1),
-            gradient,
-            kurtosis(X, axis=1),
-            skew(X, axis=1),
-            self._crest(X),
+            X.mean(axis=1)[:, 0:1],
+            X.std(axis=1)[:, 0:1],
+            gradient[:, 0:1],
+            kurtosis(X, axis=1)[:, 0:1],
+            skew(X, axis=1)[:, 0:1],
+            self._crest(X)[:, 0:1],
             X[:, -1, :]
         ]
         Xt = np.concatenate(features, axis=1)
