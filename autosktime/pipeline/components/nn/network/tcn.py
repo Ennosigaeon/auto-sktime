@@ -13,17 +13,8 @@ from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import AutoSktimeComponent, COMPONENT_PROPERTIES
 from autosktime.pipeline.components.nn.network.base import BaseNetwork
 from autosktime.pipeline.components.nn.network.head import LinearHead
-from autosktime.pipeline.components.nn.util import NN_DATA
+from autosktime.pipeline.components.nn.util import NN_DATA, Chomp1d
 from autosktime.pipeline.util import Int64Index
-
-
-class Chomp1d(nn.Module):
-    def __init__(self, chomp_size: int):
-        super(Chomp1d, self).__init__()
-        self.chomp_size = chomp_size
-
-    def forward(self, x: torch.Tensor):
-        return x[:, :, :-self.chomp_size].contiguous()
 
 
 class TemporalBlock(nn.Module):

@@ -1,7 +1,7 @@
-from typing import Any, Dict
-
 import pandas as pd
 import torch
+from torch import nn
+from typing import Any, Dict
 
 from ConfigSpace import ConfigurationSpace
 from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, HANDLES_PANEL, IGNORES_EXOGENOUS_X, \
@@ -47,3 +47,12 @@ class DictionaryInput(AutoSktimeComponent):
 def noop(x=None, *args, **kwargs):
     "Do nothing"
     return x
+
+
+class Chomp1d(nn.Module):
+    def __init__(self, chomp_size: int):
+        super(Chomp1d, self).__init__()
+        self.chomp_size = chomp_size
+
+    def forward(self, x: torch.Tensor):
+        return x[:, :, :-self.chomp_size].contiguous()

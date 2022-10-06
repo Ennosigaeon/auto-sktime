@@ -13,8 +13,7 @@ from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import COMPONENT_PROPERTIES, AutoSktimeComponent
 from autosktime.pipeline.components.nn.network import BaseNetwork
 from autosktime.pipeline.components.nn.network.head import LinearHead
-from autosktime.pipeline.components.nn.network.tcn import Chomp1d
-from autosktime.pipeline.components.nn.util import NN_DATA
+from autosktime.pipeline.components.nn.util import NN_DATA, Chomp1d
 from autosktime.pipeline.util import Int64Index
 
 
