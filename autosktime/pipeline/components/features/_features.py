@@ -279,7 +279,7 @@ def count_below_mean(x: np.ndarray, invert: bool = False) -> np.ndarray:
     return res
 
 
-def count_below(x: np.ndarray, t: float, invert: bool = False) -> np.ndarray:
+def count_below(x: np.ndarray, t: float = 0, invert: bool = False) -> np.ndarray:
     """
     Returns the percentage of values in x that are lower than t
 
@@ -300,7 +300,7 @@ def count_below(x: np.ndarray, t: float, invert: bool = False) -> np.ndarray:
     return res
 
 
-def count_above(x: np.ndarray, t: float) -> np.ndarray:
+def count_above(x: np.ndarray, t: float = 0) -> np.ndarray:
     """
     Returns the percentage of values in x that are higher than t
 
@@ -315,7 +315,7 @@ def count_above(x: np.ndarray, t: float) -> np.ndarray:
     return count_below(x, t, invert=True)
 
 
-def range_count(x: np.ndarray, min: float, max: float) -> np.ndarray:
+def range_count(x: np.ndarray, min: float = -1, max: float = 1) -> np.ndarray:
     """
     Count observed values within the interval [min, max).
 
@@ -396,7 +396,8 @@ def percentage_of_reoccurring_values_to_all_values(x: np.ndarray) -> np.ndarray:
     :return: the value of this feature
     :return type: float
     """
-    counts = _count_values(x)
+    unique = np.diff(np.sort(x, axis=1), axis=1) > 0
+    counts = unique.sum(axis=1) + 1
     return 1 - counts / float(x.shape[1])
 
 
@@ -409,11 +410,12 @@ def has_duplicate(x: np.ndarray) -> np.ndarray:
     :return: the value of this feature
     :return type: bool
     """
-    counts = _count_values(x)
+    unique = np.diff(np.sort(x, axis=1), axis=1) > 0
+    counts = unique.sum(axis=1) + 1
     return counts != x.shape[1]
 
 
-def ratio_beyond_r_sigma(x: np.ndarray, r: float) -> np.ndarray:
+def ratio_beyond_r_sigma(x: np.ndarray, r: float = 1) -> np.ndarray:
     """
     Ratio of values that are more than r * std(x) (so r times sigma) away from the mean of x.
 
@@ -430,7 +432,7 @@ def ratio_beyond_r_sigma(x: np.ndarray, r: float) -> np.ndarray:
     return np.sum(np.abs(x - mean) > r * std, axis=1) / x.shape[1]
 
 
-def large_standard_deviation(x: np.ndarray, r: float) -> np.ndarray:
+def large_standard_deviation(x: np.ndarray, r: float = 0.25) -> np.ndarray:
     """
     Does time series have *large* standard deviation?
 
@@ -453,7 +455,7 @@ def large_standard_deviation(x: np.ndarray, r: float) -> np.ndarray:
     return np.std(x, axis=1) > (r * (np.max(x, axis=1) - np.min(x, axis=1)))
 
 
-def quantile(x: np.ndarray, q: float) -> np.ndarray:
+def quantile(x: np.ndarray, q: float = 0.6) -> np.ndarray:
     """
     Calculates the q quantile of x. This is the value of x greater than q% of the ordered values from x.
 
@@ -467,7 +469,7 @@ def quantile(x: np.ndarray, q: float) -> np.ndarray:
     return np.quantile(x, q, axis=1) if x.shape[1] > 0 else 0
 
 
-def number_crossing_m(x: np.ndarray, m: float) -> np.ndarray:
+def number_crossing_m(x: np.ndarray, m: float = 0) -> np.ndarray:
     """
     Calculates the number of crossings of x on m. A crossing is defined as two sequential values where the first value
     is lower than m and the next is greater, or vice-versa. If you set m to zero, you will get the number of zero
@@ -484,7 +486,7 @@ def number_crossing_m(x: np.ndarray, m: float) -> np.ndarray:
     return np.sum(np.diff(positive, axis=1), axis=1)
 
 
-def cid_ce(x: np.ndarray, normalize: bool) -> np.ndarray:
+def cid_ce(x: np.ndarray, normalize: bool = True) -> np.ndarray:
     """
     This function calculator is an estimate for a time series complexity [1] (A more complex time series has more peaks,
     valleys etc.). It calculates the value of
@@ -542,7 +544,7 @@ def crest(x: np.ndarray, pctarr: float = 100.0, intep: str = 'midpoint') -> np.n
     return CF
 
 
-def c3(x: np.ndarray, lag: int) -> np.ndarray:
+def c3(x: np.ndarray, lag: int = 1) -> np.ndarray:
     """
     Uses c3 statistics to measure non linearity in the time series
 
@@ -581,7 +583,7 @@ def c3(x: np.ndarray, lag: int) -> np.ndarray:
         return np.mean((np.roll(x, 2 * -lag, axis=1) * np.roll(x, -lag, axis=1) * x)[:, 0: (n - 2 * lag), :], axis=1)
 
 
-def symmetry_looking(x: np.ndarray, r: int) -> np.ndarray:
+def symmetry_looking(x: np.ndarray, r: float = 0.25) -> np.ndarray:
     """
     Boolean variable denoting if the distribution of x *looks symmetric*. This is the case if
 
@@ -601,7 +603,7 @@ def symmetry_looking(x: np.ndarray, r: int) -> np.ndarray:
     return mean_median_difference < r * max_min_difference
 
 
-def time_reversal_asymmetry_statistic(x: np.ndarray, lag: int) -> np.ndarray:
+def time_reversal_asymmetry_statistic(x: np.ndarray, lag: int = 1) -> np.ndarray:
     """
     Returns the time reversal asymmetry statistic.
 
@@ -644,7 +646,7 @@ def time_reversal_asymmetry_statistic(x: np.ndarray, lag: int) -> np.ndarray:
         )
 
 
-def fft_coefficient(x: np.ndarray, coeff: int, attr: str) -> np.ndarray:
+def fft_coefficient(x: np.ndarray, coeff: int = 1, attr: str = 'real') -> np.ndarray:
     """
     Calculates the fourier coefficients of the one-dimensional discrete Fourier Transform for real input by fast
     fourier transformation algorithm
@@ -679,7 +681,7 @@ def fft_coefficient(x: np.ndarray, coeff: int, attr: str) -> np.ndarray:
     return complex_agg(fft[:, coeff, :], attr)
 
 
-def autocorrelation(x: np.ndarray, lag: int) -> np.ndarray:
+def autocorrelation(x: np.ndarray, lag: int = 1) -> np.ndarray:
     """
     Calculates the autocorrelation of the specified lag, according to the formula [1]
 
@@ -719,7 +721,7 @@ def autocorrelation(x: np.ndarray, lag: int) -> np.ndarray:
     return np.nan_to_num(sum_product / ((x.shape[1] - lag) * v), 0)
 
 
-def number_peaks(x: np.ndarray, n: int) -> np.ndarray:
+def number_peaks(x: np.ndarray, n: int = 3) -> np.ndarray:
     """
     Calculates the number of peaks of at least support n in the time series x. A peak of support n is defined as a
     subsequence of x where a value occurs, which is bigger than its n neighbours to the left and to the right.
@@ -758,7 +760,7 @@ def number_peaks(x: np.ndarray, n: int) -> np.ndarray:
     return np.sum(res, axis=1)
 
 
-def index_mass_quantile(x: np.ndarray, q: float) -> np.ndarray:
+def index_mass_quantile(x: np.ndarray, q: float = 0.6) -> np.ndarray:
     """
     Calculates the relative index i of time series x where q% of the mass of x lies left of i.
     For example for q = 50% this feature calculator will return the mass center of the time series.
@@ -777,12 +779,3 @@ def index_mass_quantile(x: np.ndarray, q: float) -> np.ndarray:
     mass_centralized = np.cumsum(abs_x, axis=1) / s
 
     return (np.argmax(mass_centralized >= q, axis=1) + 1) / x.shape[1]
-
-
-def _unique(x: np.ndarray) -> np.ndarray:
-    return np.diff(np.sort(x, axis=1), axis=1) > 0
-
-
-def _count_values(x: np.ndarray) -> np.ndarray:
-    unique = _unique(x)
-    return unique.sum(axis=1) + 1

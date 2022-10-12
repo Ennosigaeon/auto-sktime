@@ -33,51 +33,26 @@ from autosktime.util.backend import ConfigId, ConfigContext
 
 
 class TSFreshFeatureGenerator(BaseFeatureGenerator):
+    features = dict(getmembers(_features, isfunction))
+
+    def __init__(self, config_dict: Dict[str, bool]):
+        super().__init__()
+        self.config_dict = config_dict
 
     def transform(self, X: np.ndarray) -> np.ndarray:
-        features = [
-            latest(X),
-            mean(X),
-            variance(X),
-            standard_deviation(X),
-            length(X),
-            skewness(X),
-            median(X),
-            kurtosis(X),
-            crest(X),
-            minimum(X),
-            maximum(X),
-            last_location_of_maximum(X),
-            mean_second_derivative_central(X),
-            abs_energy(X),
-            first_location_of_minimum(X),
-            last_location_of_minimum(X),
-            first_location_of_maximum(X),
-            last_location_of_maximum(X),
-            mean_abs_change(X),
-            mean_change(X),
-            sum_values(X),
-            absolute_sum_of_changes(X),
-            variance_larger_than_standard_deviation(X),
-            percentage_of_reoccurring_values_to_all_values(X),
-            has_duplicate(X),
-            count_above_mean(X),
-            count_below_mean(X),
-            ratio_beyond_r_sigma(X, 1),
-            large_standard_deviation(X, 1),
-            quantile(X, 0.5),
-            number_crossing_m(X, 5),
-            count_below(X, 5),
-            count_above(X, 5),
-            cid_ce(X, False),
-            range_count(X, 0, 10),
-            c3(X, 2),
-            symmetry_looking(X, 2),
-            time_reversal_asymmetry_statistic(X, 2),
-            fft_coefficient(X, 2, 'real'),
-            autocorrelation(X, 2),
-            number_peaks(X, 2),
-            index_mass_quantile(X, 0.5),
-        ]
+        features = []
+        for fname, value in self.config_dict.items():
+            if fname not in TSFreshFeatureGenerator.features or not value:
+                continue
+            features.append(TSFreshFeatureGenerator.features[fname](X))
         Xt = np.concatenate(features, axis=1)
         return Xt
+
+    @staticmethod
+    def get_hyperparameter_search_space(dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
+        hps = [CategoricalHyperparameter(fname, [True, False]) for fname in TSFreshFeatureGenerator.features.keys()]
+
+        cs = ConfigurationSpace()
+        cs.add_hyperparameters(hps)
+
+        return cs
