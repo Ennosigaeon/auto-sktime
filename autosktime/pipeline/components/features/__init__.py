@@ -22,7 +22,7 @@ class FeatureGenerationChoice(AutoSktimeChoice, AutoSktimePreprocessingAlgorithm
     def get_hyperparameter_search_space(
             self,
             dataset_properties: DatasetProperties = None,
-            default: str = 'manual',
+            default: str = 'ts_fresh',
             include: List[str] = None,
             exclude: List[str] = None
     ) -> ConfigurationSpace:

@@ -70,14 +70,10 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
     def _fit(self, y, X=None, fh=None):
         self.step_size_ = max(1, int(self.window_length * self.step_size))
 
-        if self.transformers is None:
-            return super()._fit(y, X, fh)
-
         transformers = self.transformers
-
         yt = y
         Xt = X
-        for _, t in transformers:
+        for _, t in transformers or []:
             yt, Xt = t.fit_transform(X=yt, y=Xt)
         self.transformers = None
 
@@ -112,7 +108,12 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
             config_context: ConfigContext = ConfigContext.instance()
             config_context.set_config(self.config_id, key='panel_sizes', value=sizes)
 
-            return np.concatenate(yt_complete), np.concatenate(Xt_complete)
+            Xt_complete = np.concatenate(Xt_complete)
+            yt_complete = np.concatenate(yt_complete)
+
+            config_context.set_config(self.config_id, key='y', value=yt_complete)
+
+            return yt_complete, Xt_complete
         else:
             yt, Xt = super()._transform(y, X)
 

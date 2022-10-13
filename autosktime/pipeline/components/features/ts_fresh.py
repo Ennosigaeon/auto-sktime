@@ -35,18 +35,32 @@ from autosktime.util.backend import ConfigId, ConfigContext
 class TSFreshFeatureGenerator(BaseFeatureGenerator):
     features = dict(getmembers(_features, isfunction))
 
-    def __init__(self, config_dict: Dict[str, bool]):
+    def __init__(self, config_dict: Dict[str, bool], config_id: ConfigId = None):
         super().__init__()
         self.config_dict = config_dict
+        self.config_id = config_id
 
     def transform(self, X: np.ndarray) -> np.ndarray:
+        config_context: ConfigContext = ConfigContext.instance()
+        y = pd.DataFrame(config_context.get_config(self.config_id, key='y'))
+
         features = []
+        fnames = []
+
         for fname, value in self.config_dict.items():
-            if fname not in TSFreshFeatureGenerator.features or not value:
-                continue
-            features.append(TSFreshFeatureGenerator.features[fname](X))
-        Xt = np.concatenate(features, axis=1)
-        return Xt
+            if fname in TSFreshFeatureGenerator.features and value:
+                fnames.append(fname)
+                features.append(TSFreshFeatureGenerator.features[fname](X))
+        Xt = pd.DataFrame(np.concatenate(features, axis=1))
+        Xt = tsfresh.feature_selection.select_features(Xt, y[0])
+
+        # Construct feature names
+        columns = np.repeat(fnames, X.shape[2])
+        for feat in range(X.shape[2]):
+            columns[feat::X.shape[2]] = np.char.add(columns[feat::X.shape[2]], f'_{feat}')
+        Xt.columns = columns[Xt.columns]
+
+        return Xt.values
 
     @staticmethod
     def get_hyperparameter_search_space(dataset_properties: DatasetProperties = None) -> ConfigurationSpace:

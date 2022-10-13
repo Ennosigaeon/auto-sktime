@@ -203,9 +203,15 @@ def find_components(package, directory, base_class) -> Dict[str, Type[AutoSktime
 
 class AutoSktimeChoice(AutoSktimeComponent, ABC):
 
-    def __init__(self, estimator: AutoSktimeComponent = None, random_state: np.random.RandomState = None):
+    def __init__(
+            self,
+            estimator: AutoSktimeComponent = None,
+            config_id: ConfigId = None,
+            random_state: np.random.RandomState = None
+    ):
         super().__init__()
         self.estimator: AutoSktimeComponent = estimator
+        self.config_id = config_id
         self.random_state = random_state
 
     @classmethod
