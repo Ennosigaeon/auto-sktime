@@ -203,9 +203,15 @@ def find_components(package, directory, base_class) -> Dict[str, Type[AutoSktime
 
 class AutoSktimeChoice(AutoSktimeComponent, ABC):
 
-    def __init__(self, estimator: AutoSktimeComponent = None, random_state: np.random.RandomState = None):
+    def __init__(
+            self,
+            estimator: AutoSktimeComponent = None,
+            config_id: ConfigId = None,
+            random_state: np.random.RandomState = None
+    ):
         super().__init__()
         self.estimator: AutoSktimeComponent = estimator
+        self.config_id = config_id
         self.random_state = random_state
 
     @classmethod
@@ -270,8 +276,13 @@ class AutoSktimeChoice(AutoSktimeComponent, ABC):
             # noinspection PyArgumentList
             self.estimator = self.get_components()[choice](**new_params)
         except TypeError as ex:
-            # Provide selected type as additional info in message
-            raise TypeError(f'{self.get_components()[choice]}.{ex}')
+            try:
+                # Try to provide hyper-parameters as dictionary
+                # noinspection PyArgumentList
+                self.estimator = self.get_components()[choice](new_params)
+            except TypeError as ex:
+                # Provide selected type as additional info in message
+                raise TypeError(f'{self.get_components()[choice]}.{ex}')
 
         # Copy tags from selected estimator
         tags = self.estimator.get_tags()
@@ -368,7 +379,6 @@ class AutoSktimeRegressionAlgorithm(AutoSktimeComponent, ABC):
     @abc.abstractmethod
     def _update(self):
         pass
-
 
 
 class AutoSktimePreprocessingAlgorithm(TransformerMixin, AutoSktimeComponent, ABC):
