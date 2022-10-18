@@ -7,31 +7,57 @@ from typing import Tuple
 
 import pandas as pd
 
+from autosktime.data.benchmark import Benchmark
 
-def load_rul(base_dir: str, cache_dir: str = f'{Path.home()}/.cache/auto-sktime/') -> Tuple[pd.DataFrame, pd.DataFrame]:
-    data_directory = os.path.join(cache_dir, 'rul')
-    if not os.path.exists(data_directory):
-        os.makedirs(data_directory, exist_ok=True)
-    cache_file = os.path.join(data_directory, 'cache.pkl')
-    if os.path.exists(cache_file):
-        with open(cache_file, 'rb') as f:
-            return pickle.load(f)
+__location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
 
-    overview = _read_overview(base_dir)
 
-    complete = []
-    for file in glob.glob(os.path.join(base_dir, 'Data_*.csv')):
-        experiment = _read_single_experiment(file, overview)
-        complete.append(experiment)
+class RULBenchmark(Benchmark):
 
-    X = pd.concat(complete).sort_index()
-    y = X[['RUL']]
-    X.drop(columns=['RUL'], inplace=True)
+    def __init__(
+            self,
+            count: int = 10,
+            base_dir: str = f'{Path(__location__)}/data/rul/',
+            cache_dir: str = f'{Path.home()}/.cache/auto-sktime/'
+    ):
+        self.count = count
+        self.base_dir = base_dir
+        self.cache_dir = cache_dir
+        self.start = 125
 
-    with open(cache_file, 'wb') as f:
-        pickle.dump((X, y), f)
+    def get_data(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
+        data_directory = os.path.join(self.cache_dir, 'rul')
+        if not os.path.exists(data_directory):
+            os.makedirs(data_directory, exist_ok=True)
+        cache_file = os.path.join(data_directory, 'cache.pkl')
+        if os.path.exists(cache_file):
+            with open(cache_file, 'rb') as f:
+                return pickle.load(f)
 
-    return X, y
+        overview = _read_overview(self.base_dir)
+
+        complete = []
+        for file in glob.glob(os.path.join(self.base_dir, 'Data_*.csv')):
+            experiment = _read_single_experiment(file, overview)
+            complete.append(experiment)
+
+        X = pd.concat(complete).sort_index()
+        y = X[['RUL']]
+        X.drop(columns=['RUL'], inplace=True)
+
+        with open(cache_file, 'wb') as f:
+            pickle.dump((X, y), f)
+
+        return X, y
+
+    def get_train_test_splits(self) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+        data_directory = os.path.join(self.base_dir, 'splits')
+
+        train = pd.read_csv(os.path.join(data_directory, f'idx_train_{self.count}x.csv'), header=None)
+        val = pd.read_csv(os.path.join(data_directory, f'idx_val_{self.count}x.csv'), header=None)
+        test = pd.read_csv(os.path.join(data_directory, f'idx_test_{self.count}x.csv'), header=None)
+
+        return train, val, test
 
 
 def _read_overview(base_dir: str) -> pd.DataFrame:
@@ -57,13 +83,3 @@ def _read_single_experiment(file_name: str, overview: pd.DataFrame) -> pd.DataFr
     result = pd.concat([df, const_data], sort=False, axis=1)
     result.index = pd.MultiIndex.from_tuples([(no, k) for k in result.index], names=['experiment', 'timestamp'])
     return result.infer_objects()
-
-
-def load_rul_splits(base_dir: str, count: int, ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    data_directory = os.path.join(base_dir, 'splits')
-
-    train = pd.read_csv(os.path.join(data_directory, f'idx_train_{count}x.csv'), header=None)
-    val = pd.read_csv(os.path.join(data_directory, f'idx_val_{count}x.csv'), header=None)
-    test = pd.read_csv(os.path.join(data_directory, f'idx_test_{count}x.csv'), header=None)
-
-    return train, val, test

@@ -4,16 +4,15 @@ import pickle
 import shutil
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 from sktime.forecasting.base import ForecastingHorizon
 
 from autosktime.automl import AutoML
 from autosktime.constants import PANEL_INDIRECT_FORECAST
-from autosktime.data.benchmark.rul import load_rul, load_rul_splits
+from autosktime.data.benchmark.rul import RULBenchmark
 from autosktime.data.splitter import multiindex_split
-from autosktime.metrics import RootMeanSquaredError, STRING_TO_METRIC
+from autosktime.metrics import RootMeanSquaredError
 from autosktime.util import resolve_index
 from autosktime.util.plotting import plot_grouped_series
 
@@ -21,21 +20,10 @@ pd.set_option('display.max_columns', 500)
 pd.set_option('display.width', 1000)
 
 data_dir = os.path.join(Path(__file__).parent.resolve(), 'data', 'rul')
-X, y = load_rul(data_dir)
-train_folds, val_folds, test_folds = load_rul_splits(data_dir, 10)
+benchmark = RULBenchmark(count=10)
 
-performance = {
-    'rmse': np.zeros(train_folds.shape[0]),
-    'wrmse': np.zeros(train_folds.shape[0]),
-    'mae': np.zeros(train_folds.shape[0]),
-    'wmae': np.zeros(train_folds.shape[0]),
-    'me': np.zeros(train_folds.shape[0]),
-    'std': np.zeros(train_folds.shape[0]),
-    'maare': np.zeros(train_folds.shape[0]),
-    'relph': np.zeros(train_folds.shape[0]),
-    'phrate': np.zeros(train_folds.shape[0]),
-    'cra': np.zeros(train_folds.shape[0]),
-}
+X, y = benchmark.get_data()
+train_folds, val_folds, test_folds = benchmark.get_train_test_splits()
 
 for fold, ((_, train), (_, val), (_, test)) in enumerate(
         zip(train_folds.iterrows(), val_folds.iterrows(), test_folds.iterrows())):
@@ -66,10 +54,7 @@ for fold, ((_, train), (_, val), (_, test)) in enumerate(
     automl.fit(y, X, dataset_name='rul', task=PANEL_INDIRECT_FORECAST)
 
     y_pred = automl.predict(ForecastingHorizon(resolve_index(y_test.index), is_relative=False), X_test)
-
-    for metric_name in performance.keys():
-        metric = STRING_TO_METRIC[metric_name](start=125)
-        performance[metric_name][fold] = metric(y_test, y_pred)
+    benchmark.score_solutions(y_pred, y_test)
 
     plot_grouped_series(None, y_test, y_pred)
     plt.savefig(os.path.join(workdir, 'plot.pdf'))
@@ -79,6 +64,8 @@ for fold, ((_, train), (_, val), (_, test)) in enumerate(
     with open(os.path.join(workdir, 'ensemble.json'), 'w') as f:
         json.dump(automl.ensemble_configurations_, f)
 
-    df = pd.DataFrame(performance)
+    df = pd.DataFrame(benchmark.performance)
     print(df)
     print(df.describe())
+
+    break

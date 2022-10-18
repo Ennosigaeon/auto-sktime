@@ -7,7 +7,7 @@ from typing import Dict
 from ConfigSpace import ConfigurationSpace, CategoricalHyperparameter
 from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.features import BaseFeatureGenerator, _features
-from autosktime.util.backend import ConfigId, ConfigContext
+from autosktime.util.backend import ConfigId
 
 "binned_entropy"
 "energy_ratio_by_chunks"
@@ -40,10 +40,23 @@ class TSFreshFeatureGenerator(BaseFeatureGenerator):
         self.config_dict = config_dict
         self.config_id = config_id
 
-    def transform(self, X: np.ndarray) -> np.ndarray:
-        config_context: ConfigContext = ConfigContext.instance()
-        y = pd.DataFrame(config_context.get_config(self.config_id, key='y'))
+    def fit(self, X: np.ndarray, y: np.ndarray):
+        Xt = self._calc_features(X)
 
+        column_names = Xt.columns
+        Xt.columns = np.arange(len(column_names))
+        Xt = tsfresh.feature_selection.select_features(Xt, pd.Series(y))
+        Xt.columns = column_names[Xt.columns]
+        self._selected_columns = np.copy(Xt.columns.values)
+
+        return self
+
+    def transform(self, X: np.ndarray) -> np.ndarray:
+        Xt = self._calc_features(X)
+        Xt = Xt[self._selected_columns]
+        return Xt.values
+
+    def _calc_features(self, X: np.ndarray) -> pd.DataFrame:
         features = []
         fnames = []
 
@@ -52,15 +65,14 @@ class TSFreshFeatureGenerator(BaseFeatureGenerator):
                 fnames.append(fname)
                 features.append(TSFreshFeatureGenerator.features[fname](X))
         Xt = pd.DataFrame(np.concatenate(features, axis=1))
-        Xt = tsfresh.feature_selection.select_features(Xt, y[0])
 
         # Construct feature names
         columns = np.repeat(fnames, X.shape[2])
         for feat in range(X.shape[2]):
             columns[feat::X.shape[2]] = np.char.add(columns[feat::X.shape[2]], f'_{feat}')
-        Xt.columns = columns[Xt.columns]
+        Xt.columns = columns
 
-        return Xt.values
+        return Xt
 
     @staticmethod
     def get_hyperparameter_search_space(dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
