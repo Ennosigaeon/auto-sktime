@@ -29,7 +29,7 @@ class TimeSeriesDataset(Dataset):
         return self.x[idx], self.y[idx]
 
 
-class DataLoaderComponent(AutoSktimeComponent):
+class SequenceDataLoaderComponent(AutoSktimeComponent):
 
     def __init__(
             self,
@@ -132,6 +132,62 @@ class DataLoaderComponent(AutoSktimeComponent):
     @staticmethod
     def get_hyperparameter_search_space(dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
         batch_size = CategoricalHyperparameter('batch_size', [1], default_value=1)
+
+        cs = ConfigurationSpace()
+        cs.add_hyperparameters([batch_size])
+
+        return cs
+
+
+class ChunkedDataLoaderComponent(SequenceDataLoaderComponent):
+
+    def __init__(
+            self,
+            window_length: int = 30,
+            batch_size: int = 128,
+            validation_size: int = 0.2,
+            sequence_length: int = None,
+            random_state: np.random.RandomState = None,
+            config_id: ConfigId = None
+    ):
+        super().__init__(batch_size, validation_size, sequence_length, random_state, config_id)
+        self.window_length = window_length
+
+    def _prepare_data(
+            self,
+            X: np.ndarray,
+            y: np.ndarray,
+            key: str = 'panel_sizes'
+    ) -> Tuple[List[torch.Tensor], List[torch.Tensor]]:
+        if y is None:
+            y = np.zeros(X.shape[0])
+
+        config: ConfigContext = ConfigContext.instance()
+        splits = np.cumsum(config.get_config(self.config_id, key, default=[0])[:-1])
+
+        xs = np.split(X, splits)
+        ys = np.split(y, splits)
+
+        Xt = np.concatenate([self._generate_lookback(x_, self.window_length) for x_ in xs])
+        yt = np.concatenate([self._generate_lookback(y_, self.window_length) for y_ in ys])
+
+        return torch.tensor(Xt).float(), torch.tensor(yt).float()
+
+    @staticmethod
+    def _generate_lookback(array: np.ndarray, window_length: int):
+        start = -window_length + 1
+        sub_windows = (
+                start +
+                np.expand_dims(np.arange(window_length), 0) +
+                np.expand_dims(np.arange(array.shape[0]), 0).T
+        )
+        sub_windows[sub_windows < 0] = 0
+
+        return array[sub_windows]
+
+    @staticmethod
+    def get_hyperparameter_search_space(dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
+        batch_size = CategoricalHyperparameter('batch_size', [128], default_value=128)
 
         cs = ConfigurationSpace()
         cs.add_hyperparameters([batch_size])

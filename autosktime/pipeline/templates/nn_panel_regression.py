@@ -5,7 +5,7 @@ from autosktime.pipeline.components.data_preprocessing import VarianceThresholdC
 from autosktime.pipeline.components.data_preprocessing.rescaling.standardize import StandardScalerComponent
 from autosktime.pipeline.components.features import FeatureGenerationChoice
 from autosktime.pipeline.components.index import AddIndexComponent
-from autosktime.pipeline.components.nn.data_loader import DataLoaderComponent
+from autosktime.pipeline.components.nn.data_loader import SequenceDataLoaderComponent
 from autosktime.pipeline.components.nn.lr_scheduler import LearningRateScheduler
 from autosktime.pipeline.components.nn.network import NeuralNetworkChoice
 from autosktime.pipeline.components.nn.optimizer.optimizer import AdamOptimizer
@@ -25,7 +25,7 @@ class NNPanelRegressionPipeline(PanelRegressionPipeline):
             ('variance_threshold', VarianceThresholdComponent()),
             ('scaling', StandardScalerComponent()),
             ('dict', DictionaryInput()),
-            ('data_loader', DataLoaderComponent()),
+            ('data_loader', SequenceDataLoaderComponent()),
             ('network', NeuralNetworkChoice()),
             ('optimizer', AdamOptimizer()),
             ('lr_scheduler', LearningRateScheduler()),

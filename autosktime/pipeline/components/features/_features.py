@@ -1,4 +1,5 @@
 import numpy as np
+import warnings
 
 
 def mean(x: np.ndarray) -> np.ndarray:
@@ -716,9 +717,11 @@ def autocorrelation(x: np.ndarray, lag: int = 1) -> np.ndarray:
     # The result is sometimes referred to as "covariation"
     sum_product = np.sum((y1 - x_mean) * (y2 - x_mean), axis=1)
     # Return the normalized unbiased covariance
-    v = np.var(x, axis=1)
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore')
+        v = np.var(x, axis=1)
 
-    return np.nan_to_num(sum_product / ((x.shape[1] - lag) * v), 0)
+        return np.nan_to_num(sum_product / ((x.shape[1] - lag) * v), 0)
 
 
 def number_peaks(x: np.ndarray, n: int = 3) -> np.ndarray:
