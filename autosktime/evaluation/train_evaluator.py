@@ -138,7 +138,7 @@ class TrainEvaluator(AbstractEvaluator):
             X_test = X.iloc[test, :]
 
         model = self.models[fold]
-        _fit_and_suppress_warnings(self.logger, model, y_train, X_train, fh=None)
+        _fit_and_suppress_warnings(self.logger, self.configuration.config_id, model, y_train, X_train, fh=None)
 
         self.indices[fold] = (y_train.index, y_test.index)
 
@@ -155,7 +155,7 @@ class TrainEvaluator(AbstractEvaluator):
     ) -> Tuple[SUPPORTED_Y_TYPES, SUPPORTED_Y_TYPES]:
         model = self.models[fold]
         n_iter = int(np.ceil(self.budget / 100 * model.get_max_iter()))
-        model.set_desired_iterations(n_iter)
+        self.config_context.set_config(self.configuration.config_id, key='iterations', value=n_iter)
         model.budget = self.budget
 
         return self._fit_and_predict_fold_standard(fold, train, test)
@@ -181,9 +181,9 @@ class TrainEvaluator(AbstractEvaluator):
 
             if self.budget_type == 'iterations' and model.supports_iterative_fit():
                 n_iter = int(np.ceil(self.budget / 100 * model.get_max_iter()))
-                model.set_desired_iterations(n_iter)
+                self.config_context.set_config(self.configuration.config_id, key='iterations', value=n_iter)
 
-            _fit_and_suppress_warnings(self.logger, model, y, X, fh)
+            _fit_and_suppress_warnings(self.logger, self.configuration.config_id, model, y, X, fh)
         else:
             model = self.models[0]
 

@@ -16,6 +16,7 @@ from autosktime.pipeline.components.base import COMPONENT_PROPERTIES, AutoSktime
 from autosktime.pipeline.components.downsampling import DownsamplerChoice, BaseDownSampling
 from autosktime.pipeline.templates.base import set_pipeline_configuration, get_pipeline_search_space
 from autosktime.pipeline.util import NotVectorizedMixin
+from autosktime.util.backend import ConfigId, ConfigContext
 
 
 class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForecaster, AutoSktimePredictor):
@@ -42,7 +43,8 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
             window_length: int = 10,
             step_size: float = 0.5,
             transformers: List[Tuple[str, AutoSktimeTransformer]] = None,
-            random_state: np.random.RandomState = None
+            random_state: np.random.RandomState = None,
+            config_id: ConfigId = None
     ):
         super(NotVectorizedMixin, self).__init__(estimator, window_length, transformers)
         self.step_size = step_size
@@ -50,6 +52,7 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
         self.transformers: List[Tuple[str, AutoSktimeTransformer]] = transformers
         self.dataset_properties = dataset_properties
         self.random_state = random_state
+        self.config_id = config_id
 
     @staticmethod
     def get_properties(dataset_properties: DatasetProperties = None) -> COMPONENT_PROPERTIES:
@@ -67,18 +70,17 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
     def _fit(self, y, X=None, fh=None):
         self.step_size_ = max(1, int(self.window_length * self.step_size))
 
-        if self.transformers is None:
-            return super()._fit(y, X, fh)
-
         transformers = self.transformers
-
         yt = y
         Xt = X
-        for _, t in transformers:
+        for _, t in transformers or []:
             yt, Xt = t.fit_transform(X=yt, y=Xt)
         self.transformers = None
 
         res = super()._fit(yt, Xt, fh)
+
+        config_context: ConfigContext = ConfigContext.instance()
+        config_context.reset_config(self.config_id, key='panel_sizes')
 
         self.transformers = transformers
         return res
@@ -92,6 +94,8 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
         if isinstance(y.index, pd.MultiIndex):
             Xt_complete = []
             yt_complete = []
+
+            sizes = []
             for idx in y.index.remove_unused_levels().levels[0]:
                 X_ = X.loc[idx] if X is not None else None
                 y_ = y.loc[idx]
@@ -99,8 +103,17 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
                 yt, Xt = self._transform(y_, X_)
                 yt_complete.append(yt)
                 Xt_complete.append(Xt)
+                sizes.append(Xt.shape[0])
 
-            return np.concatenate(yt_complete), np.concatenate(Xt_complete)
+            config_context: ConfigContext = ConfigContext.instance()
+            config_context.set_config(self.config_id, key='panel_sizes', value=sizes)
+
+            Xt_complete = np.concatenate(Xt_complete)
+            yt_complete = np.concatenate(yt_complete)
+
+            config_context.set_config(self.config_id, key='y', value=yt_complete)
+
+            return yt_complete, Xt_complete
         else:
             yt, Xt = super()._transform(y, X)
 
@@ -317,11 +330,14 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
         forecaster = self.estimator.steps[-1][1]
         return forecaster.get_max_iter()
 
-    def set_desired_iterations(self, iterations: int):
-        self.estimator.steps[-1][1].set_desired_iterations(iterations)
-        if hasattr(self.estimator, 'steps_'):
-            self.estimator.steps_[-1][1].set_desired_iterations(iterations)
+    def set_config_id(self, config_id: ConfigId):
+        super().set_config_id(config_id)
+        self.estimator.set_config_id(config_id)
         if hasattr(self, 'estimator_'):
-            self.estimator_.steps[-1][1].set_desired_iterations(iterations)
-            if hasattr(self.estimator_, 'steps_'):
-                self.estimator_.steps_[-1][1].set_desired_iterations(iterations)
+            self.estimator_.set_config_id(config_id)
+
+        for _, trans in self.transformers:
+            trans.set_config_id(config_id)
+        if hasattr(self, 'transformers_') and self.transformers_ is not None:
+            for _, trans in self.transformers_:
+                trans.set_config_id(config_id)

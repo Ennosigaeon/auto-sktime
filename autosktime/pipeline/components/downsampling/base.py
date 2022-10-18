@@ -10,6 +10,7 @@ from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, HANDL
 from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import AutoSktimeTransformer, COMPONENT_PROPERTIES
 from autosktime.pipeline.util import Int64Index
+from autosktime.util.backend import ConfigContext, ConfigId
 
 
 def fix_size(arr: np.array, original_size: int) -> np.ndarray:
@@ -28,6 +29,10 @@ class BaseDownSampling(AutoSktimeTransformer, ABC):
         'fit_is_empty': True,
         'y_inner_mtype': 'pd.DataFrame'
     }
+
+    def __init__(self, config_id: ConfigId = None):
+        super().__init__()
+        self.config_id = config_id
 
     def _vectorize(self, methodname: str, **kwargs):
         """Vectorized/iterated loop over method of BaseTransformer.
@@ -81,6 +86,11 @@ class BaseDownSampling(AutoSktimeTransformer, ABC):
     def transform(self, X: pd.DataFrame, y: Union[pd.Series, pd.DataFrame] = None):
         # check whether is fitted
         self.check_is_fitted()
+
+        config: ConfigContext = ConfigContext.instance()
+        is_fitting = config.get_config(self.config_id, 'is_fitting', default=False)
+        if not is_fitting:
+            return X, y
 
         flip = X is None and y is not None
 

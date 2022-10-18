@@ -12,24 +12,27 @@ from autosktime.pipeline.components.downsampling.base import fix_size
 from autosktime.pipeline.util import Int64Index
 from scipy import signal
 
+from autosktime.util.backend import ConfigId
+
 
 class ConvolutionDownSampler(BaseDownSampling):
 
-    def __init__(self, window_size: Union[float, int] = 0.01, random_state: np.random.RandomState = None):
-        super().__init__()
+    def __init__(self, window_size: Union[float, int] = 0.01, random_state: np.random.RandomState = None,
+                 config_id: ConfigId = None):
+        super().__init__(config_id)
         self.window_size = window_size
         self.random_state = random_state
 
     def _transform(self, X: Union[pd.Series, pd.DataFrame], y: pd.DataFrame = None):
         if isinstance(self.window_size, float):
-            n = int(X.shape[0] * self.window_size)
+            self.window_size_ = int(X.shape[0] * self.window_size)
         else:
-            n = int(self.window_size)
+            self.window_size_ = int(self.window_size)
 
         self._original_size = X.shape[0]
-        self._X_filter = np.ones((n, X.shape[1])) / n
+        self._X_filter = np.ones((self.window_size_, X.shape[1])) / self.window_size_
 
-        Xt = signal.convolve(X, self._X_filter, mode='valid')[::n]
+        Xt = signal.convolve(X, self._X_filter, mode='valid')[::self.window_size_]
 
         index = X.index
         if isinstance(index, pd.PeriodIndex):
@@ -39,8 +42,9 @@ class ConvolutionDownSampler(BaseDownSampling):
 
         Xt = pd.DataFrame(Xt, columns=X.columns, index=index)
         if y is not None:
-            self._y_filter = np.ones((n, y.shape[1])) / n
-            yt = pd.DataFrame(signal.convolve(y, self._y_filter, mode='valid')[::n], columns=y.columns, index=index)
+            self._y_filter = np.ones((self.window_size_, y.shape[1])) / self.window_size_
+            yt = pd.DataFrame(signal.convolve(y, self._y_filter, mode='valid')[::self.window_size_], columns=y.columns,
+                              index=index)
         else:
             yt = None
 

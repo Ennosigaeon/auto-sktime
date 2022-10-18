@@ -22,6 +22,7 @@ from autosktime.constants import SUPPORTED_INDEX_TYPES, UNIVARIATE_TASKS, MULTIV
 from autosktime.data import DatasetProperties
 from autosktime.pipeline.util import sub_configuration
 from autosktime.sktime_._utilities import get_cutoff
+from autosktime.util.backend import ConfigContext, ConfigId
 
 COMPONENT_PROPERTIES = Any
 
@@ -29,6 +30,7 @@ COMPONENT_PROPERTIES = Any
 class AutoSktimeComponent(BaseEstimator):
     _estimator_class: Type[BaseEstimator] = None
     estimator: BaseEstimator = None
+    config_id: ConfigId = None
 
     _tags = {
         'fit_is_empty': False,
@@ -110,8 +112,8 @@ class AutoSktimeComponent(BaseEstimator):
     def get_max_iter(self) -> Optional[int]:
         return None
 
-    def set_desired_iterations(self, iterations: int):
-        self.desired_iterations = iterations
+    def set_config_id(self, config_id: ConfigId):
+        self.config_id = config_id
 
 
 class AutoSktimePredictor(AutoSktimeComponent, BaseForecaster, ABC):
@@ -201,9 +203,15 @@ def find_components(package, directory, base_class) -> Dict[str, Type[AutoSktime
 
 class AutoSktimeChoice(AutoSktimeComponent, ABC):
 
-    def __init__(self, estimator: AutoSktimeComponent = None, random_state: np.random.RandomState = None):
+    def __init__(
+            self,
+            estimator: AutoSktimeComponent = None,
+            config_id: ConfigId = None,
+            random_state: np.random.RandomState = None
+    ):
         super().__init__()
         self.estimator: AutoSktimeComponent = estimator
+        self.config_id = config_id
         self.random_state = random_state
 
     @classmethod
@@ -268,8 +276,13 @@ class AutoSktimeChoice(AutoSktimeComponent, ABC):
             # noinspection PyArgumentList
             self.estimator = self.get_components()[choice](**new_params)
         except TypeError as ex:
-            # Provide selected type as additional info in message
-            raise TypeError(f'{self.get_components()[choice]}.{ex}')
+            try:
+                # Try to provide hyper-parameters as dictionary
+                # noinspection PyArgumentList
+                self.estimator = self.get_components()[choice](new_params)
+            except TypeError as ex:
+                # Provide selected type as additional info in message
+                raise TypeError(f'{self.get_components()[choice]}.{ex}')
 
         # Copy tags from selected estimator
         tags = self.estimator.get_tags()
@@ -328,21 +341,44 @@ class AutoSktimeChoice(AutoSktimeComponent, ABC):
             return None
         return self.estimator.get_max_iter()
 
-    def set_desired_iterations(self, iterations: int):
+    def set_config_id(self, config_id: ConfigId):
         if self.estimator is None:
             return
-        self.estimator.set_desired_iterations(iterations)
+        self.estimator.set_config_id(config_id)
+
+    def update(self, X: pd.DataFrame, y: pd.Series, update_params: bool = True):
+        # noinspection PyUnresolvedReferences
+        self.estimator.update(X, y)
+        return self
 
 
 class AutoSktimeRegressionAlgorithm(AutoSktimeComponent, ABC):
     _estimator_class: Type[RegressorMixin] = None
     estimator: RegressorMixin = None
+    iterations: int = None
 
     def predict(self, X: pd.DataFrame) -> pd.Series:
         if self.estimator is None:
             raise NotImplementedError
         # noinspection PyUnresolvedReferences
         return self.estimator.predict(X)
+
+    def get_iterations(self):
+        config: ConfigContext = ConfigContext.instance()
+        return self.iterations or config.get_config(self.config_id, 'iterations') or self.get_max_iter()
+
+    def update(self, X: pd.DataFrame, y: pd.Series):
+        if self.estimator is None:
+            # noinspection PyUnresolvedReferences
+            return self.fit(X, y)
+        else:
+            self._update()
+            # noinspection PyUnresolvedReferences
+            return self._fit(X, y)
+
+    @abc.abstractmethod
+    def _update(self):
+        pass
 
 
 class AutoSktimePreprocessingAlgorithm(TransformerMixin, AutoSktimeComponent, ABC):
@@ -383,6 +419,13 @@ class UpdatablePipeline(Pipeline):
         for _, name, transform in self._iter(with_final=False):
             Xt = transform.transform(Xt)
         return self.steps[-1][1].update(Xt, y, update_params=update_params)
+
+    def set_config_id(self, config_id: ConfigId):
+        for name, est in self.steps:
+            est.set_config_id(config_id)
+        if hasattr(self, 'steps_'):
+            for name, est in self.steps_:
+                est.set_config_id(config_id)
 
 
 class SwappedInput(AutoSktimePreprocessingAlgorithm, AutoSktimeTransformer):

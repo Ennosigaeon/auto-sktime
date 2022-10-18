@@ -11,6 +11,7 @@ from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import COMPONENT_PROPERTIES
 from autosktime.pipeline.components.downsampling.base import BaseDownSampling
 from autosktime.pipeline.util import Int64Index
+from autosktime.util.backend import ConfigId
 
 
 class ResamplingDownSampling(BaseDownSampling):
@@ -19,9 +20,10 @@ class ResamplingDownSampling(BaseDownSampling):
             self,
             num: Union[float, int] = 0.5,
             initial_size: int = None,
-            random_state: np.random.RandomState = None
+            random_state: np.random.RandomState = None,
+            config_id: ConfigId = None
     ):
-        super().__init__()
+        super().__init__(config_id)
         self.num = num
         self.initial_size = initial_size
         self.random_state = random_state
