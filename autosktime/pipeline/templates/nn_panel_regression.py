@@ -23,14 +23,14 @@ class NNPanelRegressionPipeline(PanelRegressionPipeline):
     def _get_pipeline_steps(self) -> List[Tuple[str, AutoSktimeComponent]]:
         pipeline = UpdatablePipeline(steps=[
             ('feature_generation', FeatureGenerationChoice(random_state=self.random_state)),
-            ('variance_threshold', VarianceThresholdComponent()),
-            ('scaling', StandardScalerComponent()),
+            ('variance_threshold', VarianceThresholdComponent(random_state=self.random_state)),
+            ('scaling', StandardScalerComponent(random_state=self.random_state)),
             ('dict', DictionaryInput()),
-            ('data_loader', SequenceDataLoaderComponent()),
-            ('network', NeuralNetworkChoice()),
-            ('optimizer', AdamOptimizer()),
+            ('data_loader', SequenceDataLoaderComponent(random_state=self.random_state)),
+            ('network', NeuralNetworkChoice(random_state=self.random_state)),
+            ('optimizer', AdamOptimizer(random_state=self.random_state)),
             ('lr_scheduler', LearningRateScheduler()),
-            ('trainer', TrainerComponent()),
+            ('trainer', TrainerComponent(random_state=self.random_state)),
         ])
 
         steps = [

@@ -89,7 +89,7 @@ class PanelRegressionPipeline(NotVectorizedMixin, ConfigurableTransformedTargetF
              RecursivePanelReducer(
                  transformers=[
                      ('smoothing', SwappedInput(SmoothingChoice(random_state=self.random_state))),
-                     ('add_index', SwappedInput(AddIndexComponent(self.random_state), random_state=self.random_state)),
+                     ('add_index', SwappedInput(AddIndexComponent(random_state=self.random_state))),
                  ],
                  estimator=pipeline,
                  random_state=self.random_state,
