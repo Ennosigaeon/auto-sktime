@@ -10,6 +10,7 @@ from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import AutoSktimeComponent, COMPONENT_PROPERTIES, UpdatablePipeline, \
     SwappedInput
 from autosktime.pipeline.components.data_preprocessing import DataPreprocessingPipeline
+from autosktime.pipeline.components.data_preprocessing.smooting import SmoothingChoice
 from autosktime.pipeline.components.features import FeatureGenerationChoice
 from autosktime.pipeline.components.index import AddIndexComponent
 from autosktime.pipeline.components.preprocessing.impute import ImputerComponent
@@ -87,6 +88,7 @@ class PanelRegressionPipeline(NotVectorizedMixin, ConfigurableTransformedTargetF
             ('reduction',
              RecursivePanelReducer(
                  transformers=[
+                     ('smoothing', SwappedInput(SmoothingChoice(random_state=self.random_state))),
                      ('add_index', SwappedInput(AddIndexComponent(self.random_state), random_state=self.random_state)),
                  ],
                  estimator=pipeline,

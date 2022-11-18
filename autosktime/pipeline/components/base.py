@@ -458,4 +458,12 @@ class SwappedInput(AutoSktimePreprocessingAlgorithm, AutoSktimeTransformer):
 
     @staticmethod
     def get_hyperparameter_search_space(dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
-        return ConfigurationSpace()
+        raise ValueError('Do not use the static version of this method.')
+
+    # noinspection PyRedeclaration
+    def get_hyperparameter_search_space(self, dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
+        # This method is not static to allow access to self.estimator
+        return self.estimator.get_hyperparameter_search_space(dataset_properties)
+
+    def set_hyperparameters(self, configuration: Union[Configuration, Dict], init_params: Dict[str, Any] = None):
+        self.estimator.set_hyperparameters(configuration, init_params)

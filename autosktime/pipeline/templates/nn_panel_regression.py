@@ -3,6 +3,7 @@ from typing import Tuple, List
 from autosktime.pipeline.components.base import AutoSktimeComponent, UpdatablePipeline, SwappedInput
 from autosktime.pipeline.components.data_preprocessing import VarianceThresholdComponent
 from autosktime.pipeline.components.data_preprocessing.rescaling.standardize import StandardScalerComponent
+from autosktime.pipeline.components.data_preprocessing.smooting import SmoothingChoice
 from autosktime.pipeline.components.features import FeatureGenerationChoice
 from autosktime.pipeline.components.index import AddIndexComponent
 from autosktime.pipeline.components.nn.data_loader import SequenceDataLoaderComponent
@@ -38,6 +39,7 @@ class NNPanelRegressionPipeline(PanelRegressionPipeline):
             ('scaling', TargetStandardizeComponent(random_state=self.random_state)),
             ('reduction', RecursivePanelReducer(
                 transformers=[
+                    ('smoothing', SwappedInput(SmoothingChoice(random_state=self.random_state))),
                     ('add_index', SwappedInput(AddIndexComponent())),
                 ],
                 estimator=pipeline,
