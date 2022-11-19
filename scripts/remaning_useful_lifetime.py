@@ -10,7 +10,7 @@ from sktime.forecasting.base import ForecastingHorizon
 
 from autosktime.automl import AutoML
 from autosktime.constants import PANEL_INDIRECT_FORECAST
-from autosktime.data.benchmark.rul import RULBenchmark
+from autosktime.data.benchmark import *
 from autosktime.data.splitter import multiindex_split
 from autosktime.metrics import RootMeanSquaredError
 from autosktime.util import resolve_index
@@ -20,7 +20,8 @@ pd.set_option('display.max_columns', 500)
 pd.set_option('display.width', 1000)
 
 data_dir = os.path.join(Path(__file__).parent.resolve(), 'data', 'rul')
-benchmark = RULBenchmark(count=10)
+# benchmark = RULBenchmark(count=10)
+benchmark = CMAPSSBenchmark(number=1)
 
 X, y = benchmark.get_data()
 train_folds, val_folds, test_folds = benchmark.get_train_test_splits()

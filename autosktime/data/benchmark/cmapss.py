@@ -5,7 +5,7 @@ from pathlib import Path
 from sklearn.model_selection import train_test_split
 from typing import Tuple
 
-from autosktime.data.benchmark import Benchmark
+from autosktime.data.benchmark.base import Benchmark
 
 __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
 

@@ -7,7 +7,7 @@ from typing import Tuple
 
 import pandas as pd
 
-from autosktime.data.benchmark import Benchmark
+from autosktime.data.benchmark.base import Benchmark
 
 __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
 
