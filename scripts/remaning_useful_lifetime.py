@@ -42,7 +42,7 @@ for fold, ((_, train), (_, val), (_, test)) in enumerate(
         n_jobs=1,
         seed=fold,
         temporary_directory=workdir,
-        metric=RootMeanSquaredError(start=125),
+        metric=RootMeanSquaredError(start=0.1),
         resampling_strategy='panel-pre',
         resampling_strategy_arguments={'train_ids': [pd.concat((train, val))], 'test_ids': [test]},
         delete_tmp_folder_after_terminate=False,
