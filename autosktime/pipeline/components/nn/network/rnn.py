@@ -25,6 +25,7 @@ class RecurrentNetwork(BaseNetwork, AutoSktimeComponent):
             num_layers: int = 1,
             use_dropout: bool = True,
             dropout: float = 0.3,
+            latent_size: int = 2,
             output_size: int = 1,
             random_state: np.random.RandomState = None
     ):
@@ -34,6 +35,7 @@ class RecurrentNetwork(BaseNetwork, AutoSktimeComponent):
         self.num_layers = num_layers
         self.use_dropout = use_dropout
         self.dropout = dropout
+        self.latent_size = latent_size
         self.output_size = output_size
         self.random_state = random_state
 
@@ -55,7 +57,8 @@ class RecurrentNetwork(BaseNetwork, AutoSktimeComponent):
             bidirectional=False,
             batch_first=True,
         )
-        self.output_projector_ = LinearHead(self.hidden_size, self.output_size)
+        self.linear = nn.Linear(self.hidden_size, self.latent_size)
+        self.output_projector_ = LinearHead(self.latent_size, self.output_size)
 
         return self
 
@@ -72,6 +75,7 @@ class RecurrentNetwork(BaseNetwork, AutoSktimeComponent):
         if not output_seq:
             output = self._get_last_seq_value(output)
 
+        output = self.linear(output)
         out = self.output_projector_(output).view(batch_size, -1)
         return out
 

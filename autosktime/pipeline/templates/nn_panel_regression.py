@@ -3,9 +3,10 @@ from typing import Tuple, List
 from autosktime.pipeline.components.base import AutoSktimeComponent, UpdatablePipeline, SwappedInput
 from autosktime.pipeline.components.data_preprocessing import VarianceThresholdComponent
 from autosktime.pipeline.components.data_preprocessing.rescaling.standardize import StandardScalerComponent
+from autosktime.pipeline.components.data_preprocessing.smooting import SmoothingChoice
 from autosktime.pipeline.components.features import FeatureGenerationChoice
 from autosktime.pipeline.components.index import AddIndexComponent
-from autosktime.pipeline.components.nn.data_loader import DataLoaderComponent
+from autosktime.pipeline.components.nn.data_loader import SequenceDataLoaderComponent
 from autosktime.pipeline.components.nn.lr_scheduler import LearningRateScheduler
 from autosktime.pipeline.components.nn.network import NeuralNetworkChoice
 from autosktime.pipeline.components.nn.optimizer.optimizer import AdamOptimizer
@@ -22,14 +23,14 @@ class NNPanelRegressionPipeline(PanelRegressionPipeline):
     def _get_pipeline_steps(self) -> List[Tuple[str, AutoSktimeComponent]]:
         pipeline = UpdatablePipeline(steps=[
             ('feature_generation', FeatureGenerationChoice(random_state=self.random_state)),
-            ('variance_threshold', VarianceThresholdComponent()),
-            ('scaling', StandardScalerComponent()),
+            ('variance_threshold', VarianceThresholdComponent(random_state=self.random_state)),
+            ('scaling', StandardScalerComponent(random_state=self.random_state)),
             ('dict', DictionaryInput()),
-            ('data_loader', DataLoaderComponent()),
-            ('network', NeuralNetworkChoice()),
-            ('optimizer', AdamOptimizer()),
+            ('data_loader', SequenceDataLoaderComponent(random_state=self.random_state)),
+            ('network', NeuralNetworkChoice(random_state=self.random_state)),
+            ('optimizer', AdamOptimizer(random_state=self.random_state)),
             ('lr_scheduler', LearningRateScheduler()),
-            ('trainer', TrainerComponent()),
+            ('trainer', TrainerComponent(random_state=self.random_state)),
         ])
 
         steps = [
@@ -38,6 +39,7 @@ class NNPanelRegressionPipeline(PanelRegressionPipeline):
             ('scaling', TargetStandardizeComponent(random_state=self.random_state)),
             ('reduction', RecursivePanelReducer(
                 transformers=[
+                    ('smoothing', SwappedInput(SmoothingChoice(random_state=self.random_state))),
                     ('add_index', SwappedInput(AddIndexComponent())),
                 ],
                 estimator=pipeline,

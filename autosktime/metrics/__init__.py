@@ -1,6 +1,6 @@
 # noinspection PyProtectedMember
 import warnings
-from typing import Optional, Dict
+from typing import Optional, Dict, Union
 
 import numpy as np
 import pandas as pd
@@ -73,7 +73,7 @@ def get_cost_of_crash(metric: BaseForecastingErrorMetric) -> float:
 
 class PrintableVectorizedMetric(BaseForecastingErrorMetric):
 
-    def __init__(self, start: int = 0):
+    def __init__(self, start: Union[int, float] = 0):
         super().__init__()
         self.start = start
 
@@ -88,8 +88,10 @@ class PrintableVectorizedMetric(BaseForecastingErrorMetric):
         if hasattr(y_true_inner, 'index') and isinstance(y_true_inner.index, pd.MultiIndex):
             out_df = []
             for idx in y_true_inner.index.remove_unused_levels().levels[0]:
-                y_true_inner_ = y_true_inner.loc[idx].iloc[self.start:]
-                y_pred_inner_ = y_pred_inner.loc[idx].iloc[self.start:]
+                n = y_true_inner.loc[idx].shape[0]
+                start = self.start if isinstance(self.start, int) else int(self.start * n)
+                y_true_inner_ = y_true_inner.loc[idx].iloc[start:]
+                y_pred_inner_ = y_pred_inner.loc[idx].iloc[start:]
                 out_df.append(self._evaluate(y_true=y_true_inner_, y_pred=y_pred_inner_, **kwargs))
             return np.mean(out_df)
         else:

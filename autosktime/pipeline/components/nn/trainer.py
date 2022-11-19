@@ -16,7 +16,7 @@ from typing import Optional, Tuple, Any, List
 
 from ConfigSpace import ConfigurationSpace, UniformIntegerHyperparameter, UniformFloatHyperparameter
 from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, HANDLES_PANEL, IGNORES_EXOGENOUS_X, \
-    SUPPORTED_INDEX_TYPES
+    SUPPORTED_INDEX_TYPES, MAXINT
 from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import COMPONENT_PROPERTIES, AutoSktimeRegressionAlgorithm
 from autosktime.pipeline.components.nn.util import NN_DATA
@@ -72,6 +72,12 @@ class TrainerComponent(AutoSktimeRegressionAlgorithm):
         self.optimizer = data['optimizer']
         self.scheduler = data['scheduler']
         self.criterion = RMSELoss()
+
+        seed = self.random_state.randint(MAXINT)
+        torch.manual_seed(seed)
+        torch.cuda.manual_seed(seed)
+        # torch.backends.cudnn.deterministic = True
+        # torch.backends.cudnn.benchmark = False
 
         with tempfile.NamedTemporaryFile() as cache_file:
             self._fit(train_loader=data['train_data_loader'], val_loader=data['val_data_loader'], cache_file=cache_file)

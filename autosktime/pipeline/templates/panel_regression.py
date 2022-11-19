@@ -1,8 +1,9 @@
-from typing import Tuple, List
-
 import numpy as np
 import pandas as pd
+from ConfigSpace import ConfigurationSpace, ForbiddenEqualsClause
+from ConfigSpace.forbidden import ForbiddenAndConjunction
 from sktime.forecasting.base import ForecastingHorizon
+from typing import Tuple, List
 
 from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, IGNORES_EXOGENOUS_X, SUPPORTED_INDEX_TYPES, \
     HANDLES_PANEL
@@ -10,6 +11,7 @@ from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import AutoSktimeComponent, COMPONENT_PROPERTIES, UpdatablePipeline, \
     SwappedInput
 from autosktime.pipeline.components.data_preprocessing import DataPreprocessingPipeline
+from autosktime.pipeline.components.data_preprocessing.smooting import SmoothingChoice
 from autosktime.pipeline.components.features import FeatureGenerationChoice
 from autosktime.pipeline.components.index import AddIndexComponent
 from autosktime.pipeline.components.preprocessing.impute import ImputerComponent
@@ -87,7 +89,8 @@ class PanelRegressionPipeline(NotVectorizedMixin, ConfigurableTransformedTargetF
             ('reduction',
              RecursivePanelReducer(
                  transformers=[
-                     ('add_index', SwappedInput(AddIndexComponent(self.random_state), random_state=self.random_state)),
+                     ('smoothing', SwappedInput(SmoothingChoice(random_state=self.random_state))),
+                     ('add_index', SwappedInput(AddIndexComponent(random_state=self.random_state))),
                  ],
                  estimator=pipeline,
                  random_state=self.random_state,
@@ -105,3 +108,22 @@ class PanelRegressionPipeline(NotVectorizedMixin, ConfigurableTransformedTargetF
             IGNORES_EXOGENOUS_X: False,
             SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.DatetimeIndex, pd.PeriodIndex, Int64Index]
         }
+
+    def get_hyperparameter_search_space(self, dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
+        cs = super().get_hyperparameter_search_space(dataset_properties)
+
+        try:
+            # Disable tsfresh if only one value is considered in look-back window
+            window_length = cs.get_hyperparameter('reduction:window_length')
+            feature_generation_choice = cs.get_hyperparameter('reduction:estimator:feature_generation:__choice__')
+
+            forbidden_tsfresh = ForbiddenAndConjunction(
+                ForbiddenEqualsClause(window_length, 1),
+                ForbiddenEqualsClause(feature_generation_choice, 'ts_fresh')
+
+            )
+            cs.add_forbidden_clause(forbidden_tsfresh)
+        except KeyError:
+            pass
+
+        return cs
