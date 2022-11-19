@@ -178,14 +178,12 @@ def _safe_index(df: Union[pd.DataFrame, pd.Series], idx) -> Union[pd.DataFrame, 
 
 
 def get_ensemble_data(y: pd.Series, X: pd.DataFrame, splitter: BaseSplitter) -> Tuple[pd.Series, pd.DataFrame]:
-    return y, X
+    _, ens = next(splitter.split(y))
 
-    # _, ens = next(splitter.split(y))
-    #
-    # y_idx = _safe_index(y, ens)
-    # if X is None:
-    #     X_idx = None
-    # else:
-    #     X_idx = _safe_index(X, ens)
-    #
-    # return y_idx, X_idx
+    y_idx = _safe_index(y, ens)
+    if X is None:
+        X_idx = None
+    else:
+        X_idx = _safe_index(X, ens)
+
+    return y_idx, X_idx
