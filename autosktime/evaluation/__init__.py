@@ -159,8 +159,6 @@ class ExecuteTaFunc(AbstractTAFunc):
         self.logger.info(
             f'Starting to evaluate configuration {run_info.config.config_id}: {run_info.config.get_dictionary()}')
         info, value = super().run_wrapper(run_info=run_info)
-        self.logger.info(f'Finished evaluating configuration {run_info.config.config_id} with loss {value.cost} and '
-                         f'status {value.status}')
 
         config_context.reset_config(run_info.config.config_id)
 
@@ -176,6 +174,9 @@ class ExecuteTaFunc(AbstractTAFunc):
                     additional_info=value.additional_info
                 )
             del value.additional_info['status']
+
+        self.logger.info(f'Finished evaluating configuration {run_info.config.config_id} with loss {value.cost} and '
+                         f'status {value.status}')
 
         return info, value
 
