@@ -1,8 +1,9 @@
-from typing import Tuple, List
-
 import numpy as np
 import pandas as pd
+from ConfigSpace import ConfigurationSpace, ForbiddenEqualsClause
+from ConfigSpace.forbidden import ForbiddenAndConjunction
 from sktime.forecasting.base import ForecastingHorizon
+from typing import Tuple, List
 
 from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, IGNORES_EXOGENOUS_X, SUPPORTED_INDEX_TYPES, \
     HANDLES_PANEL
@@ -107,3 +108,22 @@ class PanelRegressionPipeline(NotVectorizedMixin, ConfigurableTransformedTargetF
             IGNORES_EXOGENOUS_X: False,
             SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.DatetimeIndex, pd.PeriodIndex, Int64Index]
         }
+
+    def get_hyperparameter_search_space(self, dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
+        cs = super().get_hyperparameter_search_space(dataset_properties)
+
+        try:
+            # Disable tsfresh if only one value is considered in look-back window
+            window_length = cs.get_hyperparameter('reduction:window_length')
+            feature_generation_choice = cs.get_hyperparameter('reduction:estimator:feature_generation:__choice__')
+
+            forbidden_tsfresh = ForbiddenAndConjunction(
+                ForbiddenEqualsClause(window_length, 1),
+                ForbiddenEqualsClause(feature_generation_choice, 'ts_fresh')
+
+            )
+            cs.add_forbidden_clause(forbidden_tsfresh)
+        except KeyError:
+            pass
+
+        return cs
