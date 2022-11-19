@@ -164,11 +164,15 @@ class TrainerComponent(AutoSktimeRegressionAlgorithm):
             }, path.name)
 
     def _load_checkpoint(self, path):
-        if path is not None:
+        if path is None:
+            return
+        try:
             with open(path.name, 'rb') as f:
                 checkpoint = torch.load(f)
             self.estimator.load_state_dict(checkpoint['model_state_dict'])
             self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        except EOFError:
+            self.logger.warning('Failed to load NN checkpoint')
 
     @staticmethod
     def get_properties(dataset_properties: DatasetProperties = None) -> COMPONENT_PROPERTIES:
