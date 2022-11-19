@@ -8,12 +8,16 @@ class DatasetProperties(MutableMapping):
 
     def __init__(self, task: int, index_type: pd.Index, **kwargs):
         if isinstance(index_type, pd.MultiIndex):
+            series_length = index_type.to_frame().groupby(level=0).size().min()
             index_type = index_type.levels[-1]
+        else:
+            series_length = index_type.size
 
         self._data = dict(
             kwargs,
             index_type=type(index_type),
-            task=task
+            task=task,
+            series_length=series_length
         )
 
     @property
@@ -23,6 +27,10 @@ class DatasetProperties(MutableMapping):
     @property
     def task(self) -> int:
         return self._data['task']
+
+    @property
+    def series_length(self) -> int:
+        return self._data['series_length']
 
     def __setitem__(self, k: str, v: Any) -> None:
         self._data[k] = v
