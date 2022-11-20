@@ -145,7 +145,7 @@ class TrainerComponent(AutoSktimeRegressionAlgorithm):
         y = y.to(self.device)
 
         # training
-        y_hat = self.estimator(X, device=self.device)
+        y_hat = self.estimator(X, device=self.device, output_seq=len(y.shape) > 1)
         loss = self.criterion(y_hat, y)
 
         # Backpropagation
@@ -199,7 +199,7 @@ class TrainerComponent(AutoSktimeRegressionAlgorithm):
     def predict(self, data: NN_DATA, y: Any = None, **kwargs) -> np.ndarray:
         loader = data['test_data_loader']
         _, y_hat = self._predict(loader)
-        return np.hstack(y_hat).flatten()
+        return np.vstack(y_hat).flatten()
 
     def _predict(self, loader: DataLoader, epoch: int = None) -> Tuple[float, List[np.ndarray]]:
         self.estimator.eval()
@@ -214,7 +214,7 @@ class TrainerComponent(AutoSktimeRegressionAlgorithm):
                 X = X.to(self.device)
                 y = y.to(self.device)
 
-                y_hat = self.estimator(X, device=self.device)
+                y_hat = self.estimator(X, device=self.device, output_seq=len(y.shape) > 1)
 
                 if self.plot and step < 10 and epoch is not None and epoch % 10 == 0:
                     self._plot(step, y, y_hat, f'Validation {step} - Epoch {epoch}')

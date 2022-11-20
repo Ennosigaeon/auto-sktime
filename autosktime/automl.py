@@ -194,6 +194,7 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
         if self.__configs is not None:
             res = self._fit_configs(self.__configs, y, X)
             del self.__configs
+            self._build_ensemble()
             return res
 
         # If no dask client was provided, we create one, so that we can start an ensemble process in parallel to SMBO
@@ -331,11 +332,7 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
         self._logger.info('Loading models...')
         self._load_models()
         self._logger.info('Finished loading models...')
-
-        self.ensemble_configurations_ = []
-        for weight, model in self.models_:
-            self.ensemble_configurations_.append((weight, model.budget, model.config.get_dictionary()))
-        self._logger.info(f'Final weighted ensemble: {self.ensemble_configurations_}')
+        self._build_ensemble()
 
         self.num_run_ = len(self.runhistory_.data)
         self._fit_cleanup()
@@ -421,6 +418,12 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
         if self._delete_tmp_folder_after_terminate:
             self._backend.context.delete_directories(force=False)
         return
+
+    def _build_ensemble(self):
+        self.ensemble_configurations_ = []
+        for weight, model in self.models_:
+            self.ensemble_configurations_.append((weight, model.budget, model.config.get_dictionary()))
+        self._logger.info(f'Final weighted ensemble: {self.ensemble_configurations_}')
 
     def _fit_configs(
             self,

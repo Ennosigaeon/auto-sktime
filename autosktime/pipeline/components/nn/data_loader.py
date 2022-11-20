@@ -166,12 +166,9 @@ class ChunkedDataLoaderComponent(SequenceDataLoaderComponent):
         splits = np.cumsum(config.get_config(self.config_id, key, default=[0])[:-1])
 
         xs = np.split(X, splits)
-        ys = np.split(y, splits)
-
         Xt = np.concatenate([self._generate_lookback(x_, self.window_length) for x_ in xs])
-        yt = np.concatenate([self._generate_lookback(y_, self.window_length) for y_ in ys])
 
-        return torch.tensor(Xt).float(), torch.tensor(yt).float()
+        return torch.tensor(Xt).float(), torch.tensor(y).float()
 
     @staticmethod
     def _generate_lookback(array: np.ndarray, window_length: int):
