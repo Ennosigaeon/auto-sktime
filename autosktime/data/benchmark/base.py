@@ -4,6 +4,7 @@ from typing import Tuple, Dict, List
 
 
 class Benchmark(abc.ABC):
+    folds: int
 
     @abc.abstractmethod
     def get_data(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
@@ -11,6 +12,11 @@ class Benchmark(abc.ABC):
 
     @abc.abstractmethod
     def get_train_test_splits(self):
+        pass
+
+    @staticmethod
+    @abc.abstractmethod
+    def name() -> str:
         pass
 
     def get_n_splits(self) -> int:

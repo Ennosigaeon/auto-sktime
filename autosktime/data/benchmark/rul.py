@@ -16,11 +16,11 @@ class RULBenchmark(Benchmark):
 
     def __init__(
             self,
-            count: int = 10,
+            folds: int = 10,
             base_dir: str = f'{Path(__location__)}/data/rul/',
             cache_dir: str = f'{Path.home()}/.cache/auto-sktime/'
     ):
-        self.count = count
+        self.folds = folds
         self.base_dir = base_dir
         self.cache_dir = cache_dir
         self.start = 125
@@ -53,11 +53,15 @@ class RULBenchmark(Benchmark):
     def get_train_test_splits(self) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         data_directory = os.path.join(self.base_dir, 'splits')
 
-        train = pd.read_csv(os.path.join(data_directory, f'idx_train_{self.count}x.csv'), header=None)
-        val = pd.read_csv(os.path.join(data_directory, f'idx_val_{self.count}x.csv'), header=None)
-        test = pd.read_csv(os.path.join(data_directory, f'idx_test_{self.count}x.csv'), header=None)
+        train = pd.read_csv(os.path.join(data_directory, f'idx_train_{self.folds}x.csv'), header=None)
+        val = pd.read_csv(os.path.join(data_directory, f'idx_val_{self.folds}x.csv'), header=None)
+        test = pd.read_csv(os.path.join(data_directory, f'idx_test_{self.folds}x.csv'), header=None)
 
         return train, val, test
+
+    @staticmethod
+    def name() -> str:
+        return 'rul'
 
 
 def _read_overview(base_dir: str) -> pd.DataFrame:

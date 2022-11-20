@@ -15,10 +15,12 @@ class CMAPSSBenchmark(Benchmark):
     def __init__(
             self,
             number: int = 1,
+            folds: int = 10,
             base_dir: str = f'{Path(__location__)}/data/CMAPSS/',
             cache_dir: str = f'{Path.home()}/.cache/auto-sktime/'
     ):
         self.number = number
+        self.folds = folds
         self.base_dir = base_dir
         self.cache_dir = cache_dir
         self.start = 5
@@ -51,10 +53,14 @@ class CMAPSSBenchmark(Benchmark):
         train, val = train_test_split(np.arange(1, 101), test_size=0.2, random_state=42)
 
         return (
-            pd.DataFrame([train]),
-            pd.DataFrame([val]),
-            pd.DataFrame([np.arange(-1, -101, -1)])
+            pd.DataFrame([train] * self.folds),
+            pd.DataFrame([val] * self.folds),
+            pd.DataFrame([np.arange(-1, -101, -1)] * self.folds)
         )
+
+    @staticmethod
+    def name() -> str:
+        return 'cmapss'
 
 
 def _add_remaining_useful_life(df: pd.DataFrame, threshold: float = None, y: pd.Series = None):
