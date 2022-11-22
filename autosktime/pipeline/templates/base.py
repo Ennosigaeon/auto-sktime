@@ -164,6 +164,9 @@ class ConfigurableTransformedTargetForecaster(TransformedTargetForecaster, Confi
         # Only implemented for type checker, not actually used
         return super(ConfigurableTransformedTargetForecaster, self).get_fitted_params()
 
+    def supports_pynisher(self) -> bool:
+        return True
+
 
 class ConfigurableForecastingPipeline(ConfigurablePipeline, ForecastingPipeline, AutoSktimePredictor, ABC):
     def __init__(

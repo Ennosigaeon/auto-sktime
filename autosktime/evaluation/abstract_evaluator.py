@@ -145,12 +145,8 @@ class AbstractEvaluator:
         raise NotImplementedError()
 
     def _get_model(self) -> TemplateChoice:
-        return TemplateChoice(
-            config=self.configuration,
-            budget=self.budget,
-            dataset_properties=self.datamanager.dataset_properties,
-            random_state=self.random_state
-        )
+        return TemplateChoice.from_config(self.configuration, self.budget, self.datamanager.dataset_properties,
+                                          self.random_state)
 
     def _get_resampling_models(self, n: int) -> List[TemplateChoice]:
         return [self._get_model() for _ in range(n)]

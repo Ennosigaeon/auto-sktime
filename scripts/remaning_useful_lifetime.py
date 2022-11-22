@@ -63,7 +63,7 @@ for fold, ((_, train), (_, val), (_, test)) in enumerate(
         resampling_strategy='panel-pre',
         resampling_strategy_arguments={'train_ids': [pd.concat((train, val))], 'test_ids': [test]},
         delete_tmp_folder_after_terminate=False,
-        use_pynisher=False,
+        use_pynisher=True,
         use_multi_fidelity=True,
         verbose=True
     )

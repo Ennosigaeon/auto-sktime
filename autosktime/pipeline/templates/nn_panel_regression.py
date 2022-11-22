@@ -48,3 +48,6 @@ class NNPanelRegressionPipeline(PanelRegressionPipeline):
              ),
         ]
         return steps
+
+    def supports_pynisher(self) -> bool:
+        return False

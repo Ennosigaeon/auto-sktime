@@ -175,6 +175,10 @@ class TemplateChoice(NotVectorizedMixin, AutoSktimePredictor):
         # noinspection PyUnresolvedReferences
         self.estimator.set_config_id(config_id)
 
+    def supports_pynisher(self) -> bool:
+        # noinspection PyUnresolvedReferences
+        return self.estimator.supports_pynisher()
+
     @staticmethod
     def get_properties(dataset_properties: DatasetProperties = None) -> COMPONENT_PROPERTIES:
         return {
@@ -184,3 +188,17 @@ class TemplateChoice(NotVectorizedMixin, AutoSktimePredictor):
             IGNORES_EXOGENOUS_X: False,
             SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.DatetimeIndex, pd.PeriodIndex, Int64Index]
         }
+
+    @staticmethod
+    def from_config(
+            configuration: Configuration,
+            budget: float = None,
+            dataset_properties: DatasetProperties = None,
+            random_state: np.random.RandomState = None
+    ) -> 'TemplateChoice':
+        return TemplateChoice(
+            config=configuration,
+            budget=budget,
+            dataset_properties=dataset_properties,
+            random_state=random_state
+        )

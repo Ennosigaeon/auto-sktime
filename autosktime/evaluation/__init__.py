@@ -14,7 +14,9 @@ from ConfigSpace import Configuration
 from autosktime.automl_common.common.utils.backend import Backend
 from autosktime.data.splitter import BaseSplitter
 from autosktime.metrics import get_cost_of_crash
+from autosktime.pipeline.templates import TemplateChoice
 from autosktime.util.backend import ConfigContext
+from autosktime.util.context import Restorer
 from smac.runhistory.runhistory import RunInfo, RunValue
 from smac.stats.stats import Stats
 from smac.tae import StatusType
@@ -103,6 +105,7 @@ class ExecuteTaFunc(AbstractTAFunc):
             memory_limit = int(math.ceil(memory_limit))
         self.memory_limit = memory_limit
 
+        self.dataset_properties = self.backend.load_datamanager().dataset_properties
         self.logger: logging.Logger = logging.getLogger('TAE')
 
     def run_wrapper(
@@ -158,7 +161,10 @@ class ExecuteTaFunc(AbstractTAFunc):
 
         self.logger.info(
             f'Starting to evaluate configuration {run_info.config.config_id}: {run_info.config.get_dictionary()}')
-        info, value = super().run_wrapper(run_info=run_info)
+
+        with Restorer(self, 'use_pynisher'):
+            self.use_pynisher = self._use_pynisher(run_info)
+            info, value = super().run_wrapper(run_info=run_info)
 
         config_context.reset_config(run_info.config.config_id)
 
@@ -179,6 +185,13 @@ class ExecuteTaFunc(AbstractTAFunc):
                          f'status {value.status}')
 
         return info, value
+
+    def _use_pynisher(self, run_info: RunInfo) -> bool:
+        if self.use_pynisher:
+            # Check if actual model supports pynisher
+            model = TemplateChoice.from_config(run_info.config, run_info.budget, self.dataset_properties)
+            return model.supports_pynisher()
+        return self.use_pynisher
 
     def _call_ta(
             self,
