@@ -146,7 +146,7 @@ class TrainerComponent(AutoSktimeRegressionAlgorithm):
 
         # training
         y_hat = self.estimator(X, device=self.device, output_seq=len(y.shape) > 1)
-        loss = self.criterion(y_hat, y)
+        loss = self.criterion(y_hat.flatten(), y.flatten())
 
         # Backpropagation
         self.optimizer.zero_grad()
@@ -220,7 +220,7 @@ class TrainerComponent(AutoSktimeRegressionAlgorithm):
                     self._plot(step, y, y_hat, f'Validation {step} - Epoch {epoch}')
 
                 output.append(y_hat.cpu().numpy())
-                total_loss += self.criterion(y_hat, y).item()
+                total_loss += self.criterion(y_hat.flatten(), y.flatten()).item()
 
         avg_loss = total_loss / len(loader)
         return avg_loss, output

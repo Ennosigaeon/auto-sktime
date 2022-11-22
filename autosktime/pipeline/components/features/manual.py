@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 from scipy.stats import kurtosis, skew
 
@@ -12,15 +14,17 @@ class ManualFeatureGenerator(BaseFeatureGenerator):
         else:
             gradient = np.gradient(X, axis=1).sum(axis=1) / X.shape[1]
 
-        features = [
-            X.mean(axis=1)[:, 0:1],
-            X.std(axis=1)[:, 0:1],
-            gradient[:, 0:1],
-            kurtosis(X, axis=1)[:, 0:1],
-            skew(X, axis=1)[:, 0:1],
-            self._crest(X)[:, 0:1],
-            X[:, -1, :]
-        ]
+        with warnings.catch_warnings():
+            warnings.simplefilter(action='ignore', category=RuntimeWarning)
+            features = [
+                X.mean(axis=1)[:, 0:1],
+                X.std(axis=1)[:, 0:1],
+                gradient[:, 0:1],
+                kurtosis(X, axis=1)[:, 0:1],
+                skew(X, axis=1)[:, 0:1],
+                self._crest(X)[:, 0:1],
+                X[:, -1, :]
+            ]
         Xt = np.concatenate(features, axis=1)
         return Xt
 

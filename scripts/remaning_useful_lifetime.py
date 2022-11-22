@@ -1,4 +1,5 @@
 import os.path
+import warnings
 
 import json
 import pandas as pd
@@ -16,6 +17,8 @@ from autosktime.metrics import RootMeanSquaredError
 from autosktime.util import resolve_index
 from autosktime.util.arg_types import fold_type, parse_folds
 from autosktime.util.plotting import plot_grouped_series
+
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 pd.set_option('display.max_columns', 500)
 pd.set_option('display.width', 1000)

@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 import pandas as pd
 import tsfresh.feature_selection
@@ -42,6 +44,7 @@ class TSFreshFeatureGenerator(BaseFeatureGenerator):
 
     def fit(self, X: np.ndarray, y: np.ndarray):
         Xt = self._calc_features(X)
+        Xt = Xt.dropna(axis=1)
 
         column_names = Xt.columns
         Xt.columns = np.arange(len(column_names))
@@ -57,22 +60,24 @@ class TSFreshFeatureGenerator(BaseFeatureGenerator):
         return Xt.values
 
     def _calc_features(self, X: np.ndarray) -> pd.DataFrame:
-        features = []
-        fnames = []
+        with warnings.catch_warnings():
+            warnings.simplefilter(action='ignore', category=RuntimeWarning)
+            features = []
+            fnames = []
 
-        for fname, value in self.config_dict.items():
-            if fname in TSFreshFeatureGenerator.features and value:
-                fnames.append(fname)
-                features.append(TSFreshFeatureGenerator.features[fname](X))
-        Xt = pd.DataFrame(np.concatenate(features, axis=1))
+            for fname, value in self.config_dict.items():
+                if fname in TSFreshFeatureGenerator.features and value:
+                    fnames.append(fname)
+                    features.append(TSFreshFeatureGenerator.features[fname](X))
+            Xt = pd.DataFrame(np.concatenate(features, axis=1))
 
-        # Construct feature names
-        columns = np.repeat(fnames, X.shape[2])
-        for feat in range(X.shape[2]):
-            columns[feat::X.shape[2]] = np.char.add(columns[feat::X.shape[2]], f'_{feat}')
-        Xt.columns = columns
+            # Construct feature names
+            columns = np.repeat(fnames, X.shape[2])
+            for feat in range(X.shape[2]):
+                columns[feat::X.shape[2]] = np.char.add(columns[feat::X.shape[2]], f'_{feat}')
+            Xt.columns = columns
 
-        return Xt
+            return Xt
 
     @staticmethod
     def get_hyperparameter_search_space(dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
