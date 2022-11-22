@@ -148,7 +148,7 @@ class TemplateChoice(NotVectorizedMixin, AutoSktimePredictor):
         return {
             'linear': UnivariateEndogenousPipeline,
             'regression': RegressionPipeline,
-            # 'panel-regression': PanelRegressionPipeline,
+            'panel-regression': PanelRegressionPipeline,
             'nn-panel-regression': NNPanelRegressionPipeline,
         }
 
