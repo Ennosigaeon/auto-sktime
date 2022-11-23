@@ -13,7 +13,9 @@ from autosktime.util.backend import ConfigId
 from autosktime.util.common import check_none, check_for_bool
 
 
-class ExtraTreesRegressorComponent(AutoSktimeRegressionAlgorithm):
+# Ignored for now
+# class ExtraTreesRegressorComponent(AutoSktimeRegressionAlgorithm):
+class ExtraTreesRegressorComponent:
     def __init__(
             self,
             criterion: str = 'squared_error',

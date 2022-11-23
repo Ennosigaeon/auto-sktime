@@ -6,7 +6,7 @@ from autosktime.pipeline.components.data_preprocessing.rescaling.standardize imp
 from autosktime.pipeline.components.data_preprocessing.smooting import SmoothingChoice
 from autosktime.pipeline.components.features import FeatureGenerationChoice
 from autosktime.pipeline.components.index import AddIndexComponent
-from autosktime.pipeline.components.nn.data_loader import SequenceDataLoaderComponent
+from autosktime.pipeline.components.nn.data_loader import SequenceDataLoaderComponent, ChunkedDataLoaderComponent
 from autosktime.pipeline.components.nn.lr_scheduler import LearningRateScheduler
 from autosktime.pipeline.components.nn.network import NeuralNetworkChoice
 from autosktime.pipeline.components.nn.optimizer.optimizer import AdamOptimizer
@@ -26,7 +26,7 @@ class NNPanelRegressionPipeline(PanelRegressionPipeline):
             ('variance_threshold', VarianceThresholdComponent(random_state=self.random_state)),
             ('scaling', StandardScalerComponent(random_state=self.random_state)),
             ('dict', DictionaryInput()),
-            ('data_loader', SequenceDataLoaderComponent(random_state=self.random_state)),
+            ('data_loader', ChunkedDataLoaderComponent(random_state=self.random_state)),
             ('network', NeuralNetworkChoice(random_state=self.random_state)),
             ('optimizer', AdamOptimizer(random_state=self.random_state)),
             ('lr_scheduler', LearningRateScheduler()),
