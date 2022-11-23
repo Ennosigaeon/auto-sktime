@@ -70,16 +70,16 @@ for fold, ((_, train), (_, val), (_, test)) in enumerate(
 
     automl.fit(y, X, dataset_name='rul', task=PANEL_INDIRECT_FORECAST)
 
+    with open(os.path.join(workdir, 'model.pkl'), 'wb') as f:
+        pickle.dump(automl, f)
+    with open(os.path.join(workdir, 'ensemble.json'), 'w') as f:
+        json.dump(automl.ensemble_configurations_, f)
+
     y_pred = automl.predict(ForecastingHorizon(resolve_index(y_test.index), is_relative=False), X_test)
     benchmark.score_solutions(y_pred, y_test)
 
     plot_grouped_series(None, y_test, y_pred)
     plt.savefig(os.path.join(workdir, 'plot.pdf'))
-
-    with open(os.path.join(workdir, 'model.pkl'), 'wb') as f:
-        pickle.dump(automl, f)
-    with open(os.path.join(workdir, 'ensemble.json'), 'w') as f:
-        json.dump(automl.ensemble_configurations_, f)
 
     df = pd.DataFrame(benchmark.performance)
     automl._logger.info(f'Fold results\n{df}\n{df.describe()}')
