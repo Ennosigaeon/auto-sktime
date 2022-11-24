@@ -140,7 +140,7 @@ def mean_second_derivative_central(x: np.ndarray) -> np.ndarray:
     :return: the value of this feature
     :return type: float
     """
-    return (x[:, -1] - x[:, -2] - x[:, 1] + x[:, 0]) / (2 * (x.shape[1] - 2)) if x.shape[1] > 2 else 0
+    return (x[:, -1] - x[:, -2] - x[:, 1] + x[:, 0]) / (2 * (x.shape[1] - 2)) if x.shape[1] > 2 else np.zeros((x.shape[0], x.shape[2]))
 
 
 def abs_energy(x: np.ndarray) -> np.ndarray:
@@ -169,7 +169,7 @@ def last_location_of_maximum(x: np.ndarray) -> np.ndarray:
     :return: the value of this feature
     :return type: float
     """
-    return 1.0 - np.argmax(x[::-1], axis=1) / x.shape[1] if x.shape[1] > 0 else 0
+    return 1.0 - np.argmax(x[::-1], axis=1) / x.shape[1] if x.shape[1] > 0 else np.zeros((x.shape[0], x.shape[2]))
 
 
 def first_location_of_maximum(x: np.ndarray) -> np.ndarray:
@@ -182,7 +182,7 @@ def first_location_of_maximum(x: np.ndarray) -> np.ndarray:
     :return: the value of this feature
     :return type: float
     """
-    return np.argmax(x, axis=1) / x.shape[1] if x.shape[1] > 0 else 0
+    return np.argmax(x, axis=1) / x.shape[1] if x.shape[1] > 0 else np.zeros((x.shape[0], x.shape[2]))
 
 
 def first_location_of_minimum(x: np.ndarray) -> np.ndarray:
@@ -195,7 +195,7 @@ def first_location_of_minimum(x: np.ndarray) -> np.ndarray:
     :return: the value of this feature
     :return type: float
     """
-    return np.argmin(x, axis=1) / x.shape[1] if x.shape[1] > 0 else 0
+    return np.argmin(x, axis=1) / x.shape[1] if x.shape[1] > 0 else np.zeros((x.shape[0], x.shape[2]))
 
 
 def last_location_of_minimum(x: np.ndarray) -> np.ndarray:
@@ -208,7 +208,7 @@ def last_location_of_minimum(x: np.ndarray) -> np.ndarray:
     :return: the value of this feature
     :return type: float
     """
-    return 1.0 - np.argmin(x[::-1], axis=1) / x.shape[1] if x.shape[1] > 0 else 0
+    return 1.0 - np.argmin(x[::-1], axis=1) / x.shape[1] if x.shape[1] > 0 else np.zeros((x.shape[0], x.shape[2]))
 
 
 def mean_abs_change(x: np.ndarray) -> np.ndarray:
@@ -245,7 +245,7 @@ def mean_change(x: np.ndarray) -> np.ndarray:
     :return: the value of this feature
     :return type: float
     """
-    return (x[:, -1, :] - x[:, 0, :]) / (x.shape[1] - 1) if x.shape[1] > 1 else 0
+    return (x[:, -1, :] - x[:, 0, :]) / (x.shape[1] - 1) if x.shape[1] > 1 else np.zeros((x.shape[0], x.shape[2]))
 
 
 def count_above_mean(x: np.ndarray) -> np.ndarray:
@@ -347,7 +347,7 @@ def sum_values(x: np.ndarray) -> np.ndarray:
     :return: the value of this feature
     :return type: float
     """
-    return np.sum(x, axis=1) if x.shape[1] > 0 else 0
+    return np.sum(x, axis=1) if x.shape[1] > 0 else np.zeros((x.shape[0], x.shape[2]))
 
 
 def absolute_sum_of_changes(x: np.ndarray) -> np.ndarray:
@@ -467,7 +467,7 @@ def quantile(x: np.ndarray, q: float = 0.6) -> np.ndarray:
     :return: the value of this feature
     :return type: float
     """
-    return np.quantile(x, q, axis=1) if x.shape[1] > 0 else 0
+    return np.quantile(x, q, axis=1) if x.shape[1] > 0 else np.zeros((x.shape[0], x.shape[2]))
 
 
 def number_crossing_m(x: np.ndarray, m: float = 0) -> np.ndarray:
@@ -638,7 +638,7 @@ def time_reversal_asymmetry_statistic(x: np.ndarray, lag: int = 1) -> np.ndarray
     """
     n = x.shape[1]
     if 2 * lag >= n:
-        return np.zeros((x.shape[0], x.shape[1]))
+        return np.zeros((x.shape[0], x.shape[2]))
     else:
         one_lag = np.roll(x, -lag, axis=1)
         two_lag = np.roll(x, 2 * -lag, axis=1)
@@ -707,7 +707,7 @@ def autocorrelation(x: np.ndarray, lag: int = 1) -> np.ndarray:
     # This is important: If a series is passed, the product below is calculated
     # based on the index, which corresponds to squaring the series.
     if x.shape[1] < lag:
-        return np.zeros((x.shape[0], x.shape[1]))
+        return np.zeros((x.shape[0], x.shape[2]))
     # Slice the relevant subseries based on the lag
     y1 = x[:, :(x.shape[1] - lag), :]
     y2 = x[:, lag:, :]
