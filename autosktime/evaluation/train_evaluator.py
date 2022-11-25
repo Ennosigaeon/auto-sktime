@@ -54,6 +54,7 @@ class TrainEvaluator(AbstractEvaluator):
 
     def fit_predict_and_loss(self) -> TaFuncResult:
         y = self.datamanager.y
+        y_test = self.datamanager.y_test
 
         n = self.splitter.get_n_splits(y)
         self.models = self._get_resampling_models(n)
@@ -61,14 +62,15 @@ class TrainEvaluator(AbstractEvaluator):
 
         # noinspection PyTypeChecker
         train_losses = np.empty(n)
+        val_loss = np.empty(n)
         test_loss = np.empty(n)
 
         train_weights = np.empty(n)
-        test_weights = np.empty(n)
+        val_weights = np.empty(n)
 
         # noinspection PyTypeChecker
-        test_pred: pd.Series = None  # only for mypy
-        for i, (train_split, test_split) in enumerate(self.splitter.split(y)):
+        val_pred: pd.Series = None  # only for mypy
+        for i, (train_split, val_split) in enumerate(self.splitter.split(y)):
             if self.budget_type is None:
                 fit_and_predict = self._fit_and_predict_fold_standard
             elif self.budget_type == 'iterations' and self.models[i].supports_iterative_fit():
@@ -76,7 +78,7 @@ class TrainEvaluator(AbstractEvaluator):
             else:
                 fit_and_predict = self._fit_and_predict_fold_budget
 
-            train_pred, test_pred = fit_and_predict(i, train=train_split, test=test_split)
+            train_pred, val_pred, test_pred = fit_and_predict(i, train=train_split, val=val_split)
 
             # Compute train loss of this fold and store it. train_loss could
             # either be a scalar or a dict of scalars with metrics as keys.
@@ -88,34 +90,44 @@ class TrainEvaluator(AbstractEvaluator):
             train_weights[i] = len(train_split)
 
             # Compute validation loss of this fold and store it.
-            test_loss[i] = self._loss(
-                y.iloc[test_split],
-                test_pred,
+            val_loss[i] = self._loss(
+                y.iloc[val_split],
+                val_pred,
                 error='raise'
+            )
+            val_weights[i] = len(val_split)
+
+            # Compute test loss if y_test is given
+            test_loss[i] = self._loss(
+                y_test,
+                test_pred,
+                error='worst'
             )
 
             if self.verbose:
-                self._log_progress(train_losses[i], test_loss[i],
+                self._log_progress(train_losses[i], val_loss[i], test_loss[i],
                                    y.iloc[train_split], train_pred,
-                                   y.iloc[test_split], test_pred,
+                                   y.iloc[val_split], val_pred,
+                                   y_test, test_pred,
                                    plot=False)
 
-            test_weights[i] = len(test_split)
-
         train_weights /= train_weights.sum()
-        test_weights /= test_weights.sum()
+        val_weights /= val_weights.sum()
 
         train_loss = np.average(train_losses, weights=train_weights)
-        test_loss = np.average(test_loss, weights=test_loss)
+        val_loss = np.average(val_loss, weights=val_weights)
+        test_loss = np.average(test_loss)
 
         # Retrain model on complete data
-        self.model, y_ens = self._fit_and_predict_final_model()
+        self.model, y_ens, y_test = self._fit_and_predict_final_model()
 
         return self.finish_up(
-            loss=test_loss,
+            loss=val_loss,
             train_loss=train_loss,
-            y_pred=test_pred,
+            test_loss=test_loss,
+            y_pred=val_pred,
             y_ens=y_ens,
+            y_test=y_test,
             status=StatusType.SUCCESS
         )
 
@@ -123,56 +135,60 @@ class TrainEvaluator(AbstractEvaluator):
             self,
             fold: int,
             train: np.ndarray,
-            test: np.ndarray
-    ) -> Tuple[SUPPORTED_Y_TYPES, SUPPORTED_Y_TYPES]:
+            val: np.ndarray
+    ) -> Tuple[SUPPORTED_Y_TYPES, SUPPORTED_Y_TYPES, Optional[SUPPORTED_Y_TYPES]]:
         y = self.datamanager.y
         y_train = y.iloc[train]
-        y_test = y.iloc[test]
+        y_val = y.iloc[val]
+        y_test = self.datamanager.y_test
 
         X = self.datamanager.X
         if X is None:
             X_train = None
+            X_val = None
             X_test = None
         else:
             X_train = X.iloc[train, :]
-            X_test = X.iloc[test, :]
+            X_val = X.iloc[val, :]
+            X_test = self.datamanager.X_test
 
         model = self.models[fold]
         _fit_and_suppress_warnings(self.logger, self.configuration.config_id, model, y_train, X_train, fh=None)
 
-        self.indices[fold] = (y_train.index, y_test.index)
+        self.indices[fold] = (y_train.index, y_val.index)
 
         train_pred = self.predict_function(y_train, X_train, model)
-        test_pred = self.predict_function(y_test, X_test, model)
+        val_pred = self.predict_function(y_val, X_val, model)
+        test_pred = self.predict_function(y_test, X_test, model) if y_test is not None else None
 
-        return train_pred, test_pred
+        return train_pred, val_pred, test_pred
 
     def _fit_and_predict_fold_iterative(
             self,
             fold: int,
             train: np.ndarray,
-            test: np.ndarray,
-    ) -> Tuple[SUPPORTED_Y_TYPES, SUPPORTED_Y_TYPES]:
+            val: np.ndarray,
+    ) -> Tuple[SUPPORTED_Y_TYPES, SUPPORTED_Y_TYPES, Optional[SUPPORTED_Y_TYPES]]:
         model = self.models[fold]
         n_iter = int(np.ceil(self.budget / 100 * model.get_max_iter()))
         self.config_context.set_config(self.configuration.config_id, key='iterations', value=n_iter)
         model.budget = self.budget
 
-        return self._fit_and_predict_fold_standard(fold, train, test)
+        return self._fit_and_predict_fold_standard(fold, train, val)
 
     def _fit_and_predict_fold_budget(
             self,
             fold: int,
             train: np.ndarray,
-            test: np.ndarray,
-    ) -> Tuple[SUPPORTED_Y_TYPES, SUPPORTED_Y_TYPES]:
+            val: np.ndarray,
+    ) -> Tuple[SUPPORTED_Y_TYPES, SUPPORTED_Y_TYPES, Optional[SUPPORTED_Y_TYPES]]:
         raise ValueError('Budgets not supported yet')
 
     def _fit_and_predict_final_model(
             self,
             fh: ForecastingHorizon = None,
             refit: bool = False,
-    ) -> Tuple[AutoSktimePredictor, SUPPORTED_Y_TYPES]:
+    ) -> Tuple[AutoSktimePredictor, SUPPORTED_Y_TYPES, Optional[SUPPORTED_Y_TYPES]]:
         if refit:
             y = self.datamanager.y
             X = self.datamanager.X
@@ -187,9 +203,11 @@ class TrainEvaluator(AbstractEvaluator):
         else:
             model = self.models[0]
 
-        test_pred = self.predict_function(self.datamanager.y_ens, self.datamanager.X_ens, model)
+        ens_pred = self.predict_function(self.datamanager.y_ens, self.datamanager.X_ens, model)
+        test_pred = self.predict_function(self.datamanager.y_test, self.datamanager.X_test, model) \
+            if self.datamanager.y_test is not None else None
 
-        return model, test_pred
+        return model, ens_pred, test_pred
 
 
 class MultiFidelityTrainEvaluator(TrainEvaluator):

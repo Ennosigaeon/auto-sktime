@@ -61,14 +61,14 @@ for fold, ((_, train), (_, val), (_, test)) in enumerate(
         temporary_directory=workdir,
         metric=RootMeanSquaredError(start=0.1),
         resampling_strategy='panel-pre',
-        resampling_strategy_arguments={'train_ids': [pd.concat((train, val))], 'test_ids': [test]},
+        resampling_strategy_arguments={'train_ids': [train], 'test_ids': [val]},
         delete_tmp_folder_after_terminate=False,
         use_pynisher=True,
         use_multi_fidelity=True,
         verbose=True
     )
 
-    automl.fit(y, X, dataset_name='rul', task=PANEL_INDIRECT_FORECAST)
+    automl.fit(y, X, dataset_name='rul', task=PANEL_INDIRECT_FORECAST, y_test=y_test, X_test=X_test)
 
     with open(os.path.join(workdir, 'model.pkl'), 'wb') as f:
         pickle.dump(automl, f)

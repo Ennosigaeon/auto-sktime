@@ -111,6 +111,7 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
         self._dataset_name: Optional[str] = None
         self._stopwatch = StopWatch()
         self._task = None
+        self._test_data: Tuple[Optional[pd.Series], Optional[pd.DataFrame]] = (None, None)
 
         self.models_: List[Tuple[float, TemplateChoice]] = []
         self.ensemble_: Optional[BaseForecaster] = None
@@ -155,6 +156,8 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
             fh: ForecastingHorizon = None,
             task: Optional[int] = None,
             dataset_name: Optional[str] = None,
+            y_test: Optional[SUPPORTED_Y_TYPES] = None,
+            X_test: Optional[pd.DataFrame] = None,
             configs: List[Tuple[float, float, Union[Configuration, Dict[str, Union[str, float, int]]]]] = None
     ):
         if isinstance(y.index, pd.MultiIndex):
@@ -174,6 +177,8 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
             # By convention exogenous task is endogenous + 1
             task += X is not None
         self._task = task
+
+        self._test_data = (y_test, X_test)
 
         self._metric = self._determine_metric()
 
@@ -219,7 +224,9 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
         splitter = self._determine_resampling()
         y_ens, X_ens = get_ensemble_data(y, X, splitter)
         self._backend.save_targets_ensemble(y_ens)
-        self._datamanager = DataManager(self._task, y, X, y_ens, X_ens, self._dataset_name)
+        self._backend.save_targets_test(self._test_data[0])
+        self._datamanager = DataManager(self._task, y, X, y_ens, X_ens, self._test_data[0], self._test_data[1],
+                                        self._dataset_name)
         self._backend.save_datamanager(self._datamanager)
         time_for_load_data = self._stopwatch.wall_elapsed(self._dataset_name)
 

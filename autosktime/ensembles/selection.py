@@ -1,5 +1,5 @@
 from collections import Counter
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, Tuple
 
 import numpy as np
 import pandas as pd
@@ -219,9 +219,9 @@ class EnsembleSelection(AbstractEnsemble):
 
         return output
 
-    def predict(self, base_models_predictions: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
-        raise NotImplementedError('Ensemble should always construct a sktime.forecasting.compose.EnsembleForecaster '
-                                  'that is used for actual predictions.')
+    def predict(self, base_models_predictions: List[pd.DataFrame]) -> pd.DataFrame:
+        pred = np.average(np.array(base_models_predictions)[self.indices_], weights=self.weights_, axis=0)
+        return pd.DataFrame(pred, columns=base_models_predictions[0].columns, index=base_models_predictions[0].index)
 
     def get_validation_performance(self) -> float:
         return self.trajectory_[-1]
