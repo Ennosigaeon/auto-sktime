@@ -32,7 +32,7 @@ parser.add_argument('--cleanup', type=bool, default=False)
 
 args = parser.parse_args()
 
-benchmark = BENCHMARKS[args.benchmark]()
+benchmark = BENCHMARKS[args.benchmark]
 folds = parse_folds(args.folds, benchmark.folds)
 
 X, y = benchmark.get_data()
