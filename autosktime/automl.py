@@ -51,7 +51,7 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
     def __init__(self,
                  time_left_for_this_task: int,
                  per_run_time_limit: int,
-                 temporary_directory: Optional[str] = None,
+                 working_directory: Optional[str] = None,
                  delete_tmp_folder_after_terminate: bool = True,
                  ensemble_size: int = 1,
                  ensemble_nbest: int = 1,
@@ -76,7 +76,7 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
         super(AutoML, self).__init__()
         self.configuration_space: Optional[ConfigurationSpace] = None
         self._backend: Optional[Backend] = None
-        self._temporary_directory = temporary_directory
+        self._working_directory = working_directory
         self._delete_tmp_folder_after_terminate = delete_tmp_folder_after_terminate
         self._per_run_time_limit = per_run_time_limit
         self._ensemble_size = ensemble_size
@@ -129,7 +129,7 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
         setup_logger(
             filename=f'AutoML({self._seed}):{name}.log',
             logging_config=self.logging_config,
-            output_dir=self._backend.temporary_directory,
+            output_dir=self._backend.output_directory,
         )
 
         return logging.getLogger('AutoML')
@@ -347,12 +347,13 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
         return self
 
     def _create_backend(self) -> Backend:
+        tmp_dir = self._working_directory + '__tmp__' if self._working_directory is not None else None
         return create(
-            temporary_directory=self._temporary_directory,
-            output_directory=None,
+            temporary_directory=tmp_dir,
+            output_directory=self._working_directory,
             prefix='auto-sktime',
             delete_tmp_folder_after_terminate=self._delete_tmp_folder_after_terminate,
-            delete_output_folder_after_terminate=self._delete_tmp_folder_after_terminate
+            delete_output_folder_after_terminate=self._working_directory is None
         )
 
     def _create_dask_client(self) -> Optional[dask.distributed.Client]:

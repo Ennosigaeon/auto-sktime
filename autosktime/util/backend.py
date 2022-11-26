@@ -59,6 +59,17 @@ class Backend(Backend_):
 
         return targets
 
+    @property
+    def output_directory(self) -> Optional[str]:
+        return self.context.output_directory \
+            if self.context.output_directory is not None else self.context.temporary_directory
+
+    def get_smac_output_directory(self) -> str:
+        return os.path.join(self.output_directory, "smac3-output")
+
+    def get_smac_output_directory_for_run(self, seed: int) -> str:
+        return os.path.join(self.output_directory, "smac3-output", "run_%d" % seed)
+
 
 def create(
         temporary_directory: str,

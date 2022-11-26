@@ -48,6 +48,7 @@ for fold, ((_, train), (_, val), (_, test)) in enumerate(
     try:
         if args.cleanup:
             shutil.rmtree(workdir)
+            shutil.rmtree(workdir + '__tmp__')
     except FileNotFoundError:
         pass
 
@@ -58,11 +59,11 @@ for fold, ((_, train), (_, val), (_, test)) in enumerate(
         ensemble_nbest=50,
         n_jobs=1,
         seed=fold,
-        temporary_directory=workdir,
+        working_directory=workdir,
         metric=RootMeanSquaredError(start=0.1),
         resampling_strategy='panel-pre',
         resampling_strategy_arguments={'train_ids': [train], 'test_ids': [val]},
-        delete_tmp_folder_after_terminate=False,
+        delete_tmp_folder_after_terminate=True,
         use_pynisher=True,
         use_multi_fidelity=True,
         verbose=True
