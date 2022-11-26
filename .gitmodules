@@ -1,3 +1,3 @@
 [submodule "autosktime/automl_common"]
 	path = autosktime/automl_common
-	url = git@github.com:automl/automl_common.git
+	url = https://github.com/automl/automl_common.git
