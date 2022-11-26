@@ -32,8 +32,10 @@ class TestEvaluator(AbstractEvaluator):
         return self.finish_up(
             loss=loss,
             train_loss=loss,
+            test_loss=loss,
             y_pred=test_pred,
             y_ens=test_pred,
+            y_test=test_pred,
             status=StatusType.SUCCESS
         )
 

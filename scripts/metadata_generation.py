@@ -51,7 +51,7 @@ def run_auto_sktime():
         # resampling_strategy='sliding-window',
         # resampling_strategy_arguments={'folds': 2 if is_test else 5},
         delete_tmp_folder_after_terminate=False,
-        temporary_directory=autosktime_directory
+        working_directory=autosktime_directory
 
     )
     automl.fit(y_train, dataset_name=dataset)

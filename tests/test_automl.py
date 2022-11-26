@@ -68,7 +68,7 @@ def fit_and_predict(
     automl = AutoML(
         time_left_for_this_task=10,
         per_run_time_limit=10,
-        temporary_directory='tmp',
+        working_directory='tmp',
         resampling_strategy='panel-holdout' if panel else 'temporal-holdout',
         seed=0,
         use_multi_fidelity=False

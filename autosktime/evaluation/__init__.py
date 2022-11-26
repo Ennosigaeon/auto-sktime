@@ -189,8 +189,12 @@ class ExecuteTaFunc(AbstractTAFunc):
     def _use_pynisher(self, run_info: RunInfo) -> bool:
         if self.use_pynisher:
             # Check if actual model supports pynisher
-            model = TemplateChoice.from_config(run_info.config, run_info.budget, self.dataset_properties)
-            return model.supports_pynisher()
+            try:
+                model = TemplateChoice.from_config(run_info.config, run_info.budget, self.dataset_properties)
+                return model.supports_pynisher()
+            except Exception:
+                self.logger.exception('Failed to create model from config. Assuming pynisher is not supported')
+                return False
         return self.use_pynisher
 
     def _call_ta(

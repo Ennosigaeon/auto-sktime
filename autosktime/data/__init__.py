@@ -60,13 +60,17 @@ class DataManager:
             X: Optional[pd.DataFrame] = None,
             y_ens: Optional[pd.Series] = None,
             X_ens: Optional[pd.DataFrame] = None,
+            y_test: Optional[pd.Series] = None,
+            X_test: Optional[pd.DataFrame] = None,
             dataset_name: str = ''
     ):
         self._data = {
             'y_train': y,
             'X_train': X,
             'y_ens': y_ens,
-            'X_ens': X_ens
+            'X_ens': X_ens,
+            'y_test': y_test,
+            'X_test': X_test
         }
         self._info = {
             'task': task
@@ -97,6 +101,14 @@ class DataManager:
     @property
     def X_ens(self) -> Optional[pd.DataFrame]:
         return self._data['X_ens']
+
+    @property
+    def y_test(self) -> Optional[pd.Series]:
+        return self._data['y_test']
+
+    @property
+    def X_test(self) -> Optional[pd.DataFrame]:
+        return self._data['X_test']
 
     @property
     def info(self) -> Dict[str, Any]:

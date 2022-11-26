@@ -25,8 +25,8 @@ pd.set_option('display.width', 1000)
 
 parser = ArgumentParser()
 parser.add_argument('benchmark', type=str)
-parser.add_argument('--runtime', type=int, default=300)
-parser.add_argument('--timeout', type=int, default=60)
+parser.add_argument('--runtime', type=int, default=36000)
+parser.add_argument('--timeout', type=int, default=300)
 parser.add_argument('--folds', type=fold_type, default='*')
 parser.add_argument('--cleanup', type=bool, default=False)
 
@@ -48,6 +48,7 @@ for fold, ((_, train), (_, val), (_, test)) in enumerate(
     try:
         if args.cleanup:
             shutil.rmtree(workdir)
+            shutil.rmtree(workdir + '__tmp__')
     except FileNotFoundError:
         pass
 
@@ -58,17 +59,17 @@ for fold, ((_, train), (_, val), (_, test)) in enumerate(
         ensemble_nbest=50,
         n_jobs=1,
         seed=fold,
-        temporary_directory=workdir,
+        working_directory=workdir,
         metric=RootMeanSquaredError(start=0.1),
         resampling_strategy='panel-pre',
-        resampling_strategy_arguments={'train_ids': [pd.concat((train, val))], 'test_ids': [test]},
-        delete_tmp_folder_after_terminate=False,
+        resampling_strategy_arguments={'train_ids': [train], 'test_ids': [val]},
+        delete_tmp_folder_after_terminate=True,
         use_pynisher=True,
         use_multi_fidelity=True,
         verbose=True
     )
 
-    automl.fit(y, X, dataset_name='rul', task=PANEL_INDIRECT_FORECAST)
+    automl.fit(y, X, dataset_name='rul', task=PANEL_INDIRECT_FORECAST, y_test=y_test, X_test=X_test)
 
     with open(os.path.join(workdir, 'model.pkl'), 'wb') as f:
         pickle.dump(automl, f)

@@ -13,9 +13,16 @@ from autosktime.util.singleton import Singleton
 class Backend(Backend_):
 
     def save_targets_ensemble(self, targets: SUPPORTED_Y_TYPES) -> str:
-        self._make_internals_directory()
+        return self._save_targets_ensemble(targets, self._get_targets_ensemble_filename())
 
-        filepath = self._get_targets_ensemble_filename()
+    def save_targets_test(self, targets: SUPPORTED_Y_TYPES) -> str:
+        return self._save_targets_ensemble(targets, self._get_targets_test_filename())
+
+    def _save_targets_ensemble(self, targets: SUPPORTED_Y_TYPES, filepath: str) -> str:
+        if targets is None:
+            return ''
+
+        self._make_internals_directory()
 
         # Try to open the file without locking it, this will reduce the
         # number of times when we erroneously keep a lock on the ensemble
@@ -37,13 +44,31 @@ class Backend(Backend_):
 
         return filepath
 
-    def load_targets_ensemble(self) -> SUPPORTED_Y_TYPES:
-        filepath = self._get_targets_ensemble_filename()
+    def _get_targets_test_filename(self) -> str:
+        return os.path.join(self.internals_directory, "true_targets_test.npy")
 
+    def load_targets_ensemble(self) -> SUPPORTED_Y_TYPES:
+        return self._load_targets(self._get_targets_ensemble_filename())
+
+    def load_targets_test(self) -> SUPPORTED_Y_TYPES:
+        return self._load_targets(self._get_targets_test_filename())
+
+    def _load_targets(self, filepath: str) -> SUPPORTED_Y_TYPES:
         with open(filepath, "rb") as fh:
             targets = pd.read_pickle(fh)
 
         return targets
+
+    @property
+    def output_directory(self) -> Optional[str]:
+        return self.context.output_directory \
+            if self.context.output_directory is not None else self.context.temporary_directory
+
+    def get_smac_output_directory(self) -> str:
+        return os.path.join(self.output_directory, "smac3-output")
+
+    def get_smac_output_directory_for_run(self, seed: int) -> str:
+        return os.path.join(self.output_directory, "smac3-output", "run_%d" % seed)
 
 
 def create(

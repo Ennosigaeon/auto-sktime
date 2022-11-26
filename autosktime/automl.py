@@ -51,7 +51,7 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
     def __init__(self,
                  time_left_for_this_task: int,
                  per_run_time_limit: int,
-                 temporary_directory: Optional[str] = None,
+                 working_directory: Optional[str] = None,
                  delete_tmp_folder_after_terminate: bool = True,
                  ensemble_size: int = 1,
                  ensemble_nbest: int = 1,
@@ -76,7 +76,7 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
         super(AutoML, self).__init__()
         self.configuration_space: Optional[ConfigurationSpace] = None
         self._backend: Optional[Backend] = None
-        self._temporary_directory = temporary_directory
+        self._working_directory = working_directory
         self._delete_tmp_folder_after_terminate = delete_tmp_folder_after_terminate
         self._per_run_time_limit = per_run_time_limit
         self._ensemble_size = ensemble_size
@@ -111,6 +111,7 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
         self._dataset_name: Optional[str] = None
         self._stopwatch = StopWatch()
         self._task = None
+        self._test_data: Tuple[Optional[pd.Series], Optional[pd.DataFrame]] = (None, None)
 
         self.models_: List[Tuple[float, TemplateChoice]] = []
         self.ensemble_: Optional[BaseForecaster] = None
@@ -128,7 +129,7 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
         setup_logger(
             filename=f'AutoML({self._seed}):{name}.log',
             logging_config=self.logging_config,
-            output_dir=self._backend.temporary_directory,
+            output_dir=self._backend.output_directory,
         )
 
         return logging.getLogger('AutoML')
@@ -155,6 +156,8 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
             fh: ForecastingHorizon = None,
             task: Optional[int] = None,
             dataset_name: Optional[str] = None,
+            y_test: Optional[SUPPORTED_Y_TYPES] = None,
+            X_test: Optional[pd.DataFrame] = None,
             configs: List[Tuple[float, float, Union[Configuration, Dict[str, Union[str, float, int]]]]] = None
     ):
         if isinstance(y.index, pd.MultiIndex):
@@ -174,6 +177,8 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
             # By convention exogenous task is endogenous + 1
             task += X is not None
         self._task = task
+
+        self._test_data = (y_test, X_test)
 
         self._metric = self._determine_metric()
 
@@ -219,7 +224,9 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
         splitter = self._determine_resampling()
         y_ens, X_ens = get_ensemble_data(y, X, splitter)
         self._backend.save_targets_ensemble(y_ens)
-        self._datamanager = DataManager(self._task, y, X, y_ens, X_ens, self._dataset_name)
+        self._backend.save_targets_test(self._test_data[0])
+        self._datamanager = DataManager(self._task, y, X, y_ens, X_ens, self._test_data[0], self._test_data[1],
+                                        self._dataset_name)
         self._backend.save_datamanager(self._datamanager)
         time_for_load_data = self._stopwatch.wall_elapsed(self._dataset_name)
 
@@ -340,12 +347,13 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
         return self
 
     def _create_backend(self) -> Backend:
+        tmp_dir = self._working_directory + '__tmp__' if self._working_directory is not None else None
         return create(
-            temporary_directory=self._temporary_directory,
-            output_directory=None,
+            temporary_directory=tmp_dir,
+            output_directory=self._working_directory,
             prefix='auto-sktime',
             delete_tmp_folder_after_terminate=self._delete_tmp_folder_after_terminate,
-            delete_output_folder_after_terminate=self._delete_tmp_folder_after_terminate
+            delete_output_folder_after_terminate=self._working_directory is None
         )
 
     def _create_dask_client(self) -> Optional[dask.distributed.Client]:

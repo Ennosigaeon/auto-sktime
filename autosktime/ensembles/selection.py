@@ -1,5 +1,5 @@
 from collections import Counter
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, Tuple
 
 import numpy as np
 import pandas as pd
@@ -97,7 +97,6 @@ class EnsembleSelection(AbstractEnsemble):
 
     def _fast(self, predictions: List[pd.Series], labels: pd.Series) -> Tuple[np.ndarray, np.ndarray, float]:
         """Fast version of Rich Caruana's ensemble selection method."""
-        ensemble_size = len(predictions)
         ensemble: List[pd.Series] = []
         trajectory = []
         order = []
@@ -107,7 +106,7 @@ class EnsembleSelection(AbstractEnsemble):
         weighted_ensemble_prediction = np.zeros(predictions[0].shape, dtype=np.float64)
         fant_ensemble_prediction = np.zeros(weighted_ensemble_prediction.shape, dtype=np.float64)
 
-        for i in range(ensemble_size):
+        for i in range(self.ensemble_size):
             losses = np.zeros((len(predictions)), dtype=np.float64)
             s = len(ensemble)
             if s > 0:
@@ -145,12 +144,11 @@ class EnsembleSelection(AbstractEnsemble):
 
     def _slow(self, predictions: List[pd.Series], labels: np.ndarray) -> Tuple[np.ndarray, np.ndarray, float]:
         """Rich Caruana's ensemble selection method."""
-        ensemble_size = len(predictions)
         ensemble = []
         trajectory = []
         order = []
 
-        for i in range(ensemble_size):
+        for i in range(self.ensemble_size):
             losses = np.zeros([np.shape(predictions)[0]], dtype=np.float64)
             for j, pred in enumerate(predictions):
                 ensemble.append(pred)
@@ -219,9 +217,10 @@ class EnsembleSelection(AbstractEnsemble):
 
         return output
 
-    def predict(self, base_models_predictions: Union[np.ndarray, List[np.ndarray]]) -> np.ndarray:
-        raise NotImplementedError('Ensemble should always construct a sktime.forecasting.compose.EnsembleForecaster '
-                                  'that is used for actual predictions.')
+    def predict(self, base_models_predictions: List[pd.DataFrame]) -> pd.DataFrame:
+        predictions = np.array(base_models_predictions)
+        pred = np.average(predictions[self.indices_], weights=self.weights_[self.indices_], axis=0)
+        return pd.DataFrame(pred, columns=base_models_predictions[0].columns, index=base_models_predictions[0].index)
 
     def get_validation_performance(self) -> float:
         return self.trajectory_[-1]

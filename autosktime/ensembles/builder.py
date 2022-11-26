@@ -20,11 +20,11 @@ from pandas.core.util.hashing import hash_pandas_object
 from sktime.forecasting.compose import EnsembleForecaster
 from sktime.performance_metrics.forecasting._classes import BaseForecastingErrorMetric
 
-from autosktime.automl_common.common.utils.backend import Backend
 from autosktime.data import DataManager
 from autosktime.ensembles.selection import EnsembleSelection
 from autosktime.ensembles.util import PrefittedEnsembleForecaster
 from autosktime.metrics import calculate_loss
+from autosktime.util.backend import Backend
 from autosktime.util.dask_single_thread_client import SingleThreadedClient
 from smac.callbacks import IncorporateRunResultCallback
 from smac.optimizer.smbo import SMBO
@@ -233,6 +233,9 @@ class ModelLoss:
     num_run: int
     budget: float
 
+    ens_fn: str
+    test_fn: str
+
     # Lazy keys so far:
     # 0 - not loaded
     # 1 - loaded and in memory
@@ -242,7 +245,14 @@ class ModelLoss:
 
     disc_space_cost_mb: float = None
     ens_loss: float = np.inf
+    test_loss: float = np.inf
     mtime_ens: int = 0
+
+
+@dataclass
+class Predictions:
+    train: pd.Series
+    test: Optional[pd.Series]
 
 
 class EnsembleBuilder:
@@ -291,9 +301,10 @@ class EnsembleBuilder:
 
         self.last_hash = None  # hash of ensemble training data
         self.y_true_ensemble = None
+        self.y_true_test = None
 
         self.read_losses: Dict[str, ModelLoss] = {}
-        self.predictions: Dict[str, Optional[pd.Series]] = {}
+        self.predictions: Dict[str, Optional[Predictions]] = {}
 
         # Depending on the dataset dimensions, regenerating every iteration, the predictions losses for self.read_preds
         # is too computationally expensive as the ensemble builder is stateless (every time the ensemble builder gets
@@ -304,7 +315,7 @@ class EnsembleBuilder:
             try:
                 with (open(self.ensemble_memory_file, 'rb')) as memory:
                     predictions, self.last_hash = pickle.load(memory)
-                    self.predictions: Dict[str, Optional[pd.Series]] = predictions
+                    self.predictions: Dict[str, Optional[Predictions]] = predictions
             except Exception as e:
                 self.logger.warning(
                     'Could not load the previous iterations of ensemble_builder predictions.'
@@ -322,6 +333,7 @@ class EnsembleBuilder:
                 )
 
         self.validation_performance_ = previous_performance
+        self.test_performance_ = np.inf
 
     def run(
             self,
@@ -404,6 +416,11 @@ class EnsembleBuilder:
             except FileNotFoundError:
                 self.logger.debug(f'Could not find true targets on ensemble data set: {traceback.format_exc()}')
                 return False
+        if self.y_true_test is None:
+            try:
+                self.y_true_test = self.backend.load_targets_test()
+            except FileNotFoundError:
+                pass
 
         pred_path = os.path.join(
             glob.escape(self.backend.get_runs_directory()),
@@ -438,34 +455,45 @@ class EnsembleBuilder:
                 continue
 
             if not self.read_losses.get(y_ens_fn):
-                self.read_losses[y_ens_fn] = ModelLoss(seed=_seed, num_run=_num_run, budget=_budget, loaded=0)
+                self.read_losses[y_ens_fn] = ModelLoss(seed=_seed, num_run=_num_run, budget=_budget, loaded=0,
+                                                       ens_fn=y_ens_fn,
+                                                       test_fn=y_ens_fn.replace(f'predictions_ensemble_{self.seed}_',
+                                                                                f'predictions_test_{self.seed}_'))
+            model_loss = self.read_losses[y_ens_fn]
+
             if y_ens_fn not in self.predictions:
                 self.predictions[y_ens_fn] = None
 
-            if self.read_losses[y_ens_fn].mtime_ens == mtime:
+            if model_loss.mtime_ens == mtime:
                 # same time stamp; nothing changed;
                 continue
 
             # actually read the predictions and compute their respective loss
             try:
                 y_ensemble = self._read_np_fn(y_ens_fn)
-                loss = calculate_loss(solution=self.y_true_ensemble,
-                                      prediction=y_ensemble,
-                                      task_type=self.task_type,
-                                      metric=self.metric)
+                model_loss.ens_loss = calculate_loss(solution=self.y_true_ensemble,
+                                                     prediction=y_ensemble,
+                                                     task_type=self.task_type,
+                                                     metric=self.metric)
 
-                self.read_losses[y_ens_fn].ens_loss = loss
+                # Try to load test predictions if available
+                y_test = self._read_np_fn(model_loss.test_fn)
+                if y_test is not None:
+                    model_loss.test_loss = calculate_loss(solution=self.y_true_test,
+                                                          prediction=y_test,
+                                                          task_type=self.task_type,
+                                                          metric=self.metric)
 
                 # It is not needed to create the object here. To save memory, we just compute the loss.
-                self.read_losses[y_ens_fn].mtime_ens = os.path.getmtime(y_ens_fn)
-                self.read_losses[y_ens_fn].loaded = 2
+                model_loss.mtime_ens = os.path.getmtime(y_ens_fn)
+                model_loss.loaded = 2
 
                 if self.max_models_on_disc is not None and not isinstance(self.max_models_on_disc, numbers.Integral):
-                    self.read_losses[y_ens_fn].disc_space_cost_mb = self._get_disk_consumption(y_ens_fn)
+                    model_loss.disc_space_cost_mb = self._get_disk_consumption(y_ens_fn)
 
                 n_read_files += 1
 
-            except (FileNotFoundError, ValueError, IndexError, MemoryError):
+            except (FileNotFoundError, ValueError, IndexError, MemoryError, TypeError):
                 self.logger.warning(f'Error loading {y_ens_fn}: {traceback.format_exc()}')
                 self.read_losses[y_ens_fn].ens_loss = np.inf
 
@@ -559,10 +587,14 @@ class EnsembleBuilder:
         # Load the predictions for the winning
         for k in sorted_keys[:keep_nbest]:
             if (k not in self.predictions or self.predictions[k] is None) and self.read_losses[k].loaded != 3:
-                self.predictions[k] = self._read_np_fn(k)
+                self.predictions[k] = Predictions(
+                    train=self._read_np_fn(k),
+                    test=self._read_np_fn(self.read_losses[k].test_fn)
+                )
+
                 self.read_losses[k].loaded = 1
 
-        # return keys of self.read_losses with lowest losses
+        # return keys of self.read_losses with the lowest losses
         return sorted_keys[:keep_nbest]
 
     def _get_list_of_sorted_preds(self) -> List[Tuple[str, float, int]]:
@@ -575,7 +607,8 @@ class EnsembleBuilder:
         return sorted_keys
 
     def fit_ensemble(self, selected_keys: List[str]) -> Optional[EnsembleSelection]:
-        predictions_train = [self.predictions[k] for k in selected_keys]
+        predictions_train = [self.predictions[k].train for k in selected_keys]
+        predictions_test = [self.predictions[k].test for k in selected_keys]
         include_num_runs = [(self.read_losses[k].seed, self.read_losses[k].num_run, self.read_losses[k].budget)
                             for k in selected_keys]
 
@@ -600,10 +633,22 @@ class EnsembleBuilder:
             self.logger.debug(f'Fitting the ensemble on {len(predictions_train)} models.')
             start_time = time.time()
             ensemble.fit(predictions_train, self.y_true_ensemble, include_num_runs)
+            train_loss = ensemble.get_validation_performance()
             end_time = time.time()
             self.logger.debug(f'Fitting the ensemble took {end_time - start_time:.2f} seconds.')
             self.logger.info(ensemble)
-            self.validation_performance_ = min(self.validation_performance_, ensemble.get_validation_performance())
+            self.validation_performance_ = min(self.validation_performance_, train_loss)
+
+            if self.y_true_test is not None:
+                y_test = ensemble.predict(predictions_test)
+                test_loss = calculate_loss(solution=self.y_true_test,
+                                           prediction=y_test,
+                                           task_type=self.task_type,
+                                           metric=self.metric)
+                self.test_performance_ = min(self.test_performance_, test_loss)
+                self.logger.debug(f'Finished ensemble with train loss {train_loss} and test loss {test_loss}')
+            else:
+                self.logger.debug(f'Finished ensemble with train loss {train_loss}')
         except ValueError:
             self.logger.error(f'Caught ValueError: {traceback.format_exc()}')
             return None
@@ -613,6 +658,7 @@ class EnsembleBuilder:
         finally:
             # Explicitly free memory
             del predictions_train
+            del predictions_test
 
         return ensemble
 
@@ -647,7 +693,10 @@ class EnsembleBuilder:
                 self.logger.error(f'Failed to delete non-candidate model {pred_path} due to error {e}')
 
     @staticmethod
-    def _read_np_fn(path) -> pd.Series:
-        predictions = np.load(path, allow_pickle=True).astype(dtype=np.float32)
-        # noinspection PyTypeChecker
-        return predictions
+    def _read_np_fn(path) -> Optional[pd.Series]:
+        try:
+            predictions = np.load(path, allow_pickle=True).astype(dtype=np.float32)
+            # noinspection PyTypeChecker
+            return predictions
+        except FileNotFoundError:
+            return None

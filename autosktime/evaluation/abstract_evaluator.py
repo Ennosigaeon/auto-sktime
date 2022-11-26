@@ -154,7 +154,7 @@ class AbstractEvaluator:
     def _loss(self, y_true: SUPPORTED_Y_TYPES, y_hat: SUPPORTED_Y_TYPES, error: str = 'raise') -> float:
         try:
             return calculate_loss(y_true, y_hat, self.task_type, self.metric)
-        except ValueError:
+        except (ValueError, TypeError):
             if error == 'raise':
                 raise
             elif error == 'worst':
@@ -162,28 +162,38 @@ class AbstractEvaluator:
             else:
                 raise ValueError(f"Unknown exception handling '{error}' method")
 
-    def _log_progress(self, train_loss: float, val_loss: float, y_val: SUPPORTED_Y_TYPES, y_val_pred: SUPPORTED_Y_TYPES,
-                      y_train: SUPPORTED_Y_TYPES, y_train_pred: SUPPORTED_Y_TYPES, plot: bool = False):
-        self.logger.debug(f'Finished fold with train loss {train_loss} and validation loss {val_loss}')
+    def _log_progress(self, train_loss: float, val_loss: float, test_loss: float,
+                      y_train: SUPPORTED_Y_TYPES, y_train_pred: SUPPORTED_Y_TYPES,
+                      y_val: SUPPORTED_Y_TYPES, y_val_pred: SUPPORTED_Y_TYPES,
+                      y_test: Optional[SUPPORTED_Y_TYPES], y_test_pred: Optional[SUPPORTED_Y_TYPES],
+                      plot: bool = False):
+        self.logger.debug(f'Finished fold with train loss {train_loss} and validation loss {val_loss}'
+                          f'{f" and test loss {test_loss}" if y_test is not None else ""}')
         if plot:
             plot_grouped_series(None, y_val, y_val_pred)
             plt.show()
             plot_grouped_series(None, y_train, y_train_pred)
             plt.show()
+            if y_test is not None:
+                plot_grouped_series(None, y_test, y_test_pred)
+                plt.show()
 
     def finish_up(
             self,
             loss: float,
             train_loss: float,
+            test_loss: float,
             y_pred: SUPPORTED_Y_TYPES,
             y_ens: SUPPORTED_Y_TYPES,
+            y_test: Optional[SUPPORTED_Y_TYPES],
             status: StatusType,
     ) -> TaFuncResult:
-        self.file_output(y_pred, y_ens)
+        self.file_output(y_pred, y_ens, y_test)
 
         additional_run_info = {
-            'test_loss': {self.metric.name: loss},
+            'val_loss': {self.metric.name: loss},
             'train_loss': {self.metric.name: train_loss},
+            'test_loss': {self.metric.name: test_loss},
             'seed': self.seed,
             'duration': time.time() - self.starttime,
             'num_run': self.num_run
@@ -191,14 +201,19 @@ class AbstractEvaluator:
 
         return TaFuncResult(loss=loss, additional_run_info=additional_run_info, status=status)
 
-    def file_output(self, y_pred: SUPPORTED_Y_TYPES, y_ens: SUPPORTED_Y_TYPES) -> None:
+    def file_output(
+            self,
+            y_pred: SUPPORTED_Y_TYPES,
+            y_ens: SUPPORTED_Y_TYPES,
+            y_test: Optional[SUPPORTED_Y_TYPES]
+    ) -> None:
         self.backend.save_numrun_to_dir(
             seed=self.seed,
             idx=self.num_run,
             budget=self.budget,
             model=self.model,
             cv_model=self.models if hasattr(self, 'models') else None,
-            test_predictions=y_pred,
-            valid_predictions=None,
+            test_predictions=y_test,
+            valid_predictions=y_pred,
             ensemble_predictions=y_ens
         )
