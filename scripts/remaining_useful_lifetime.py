@@ -25,8 +25,8 @@ pd.set_option('display.width', 1000)
 
 parser = ArgumentParser()
 parser.add_argument('benchmark', type=str)
-parser.add_argument('--runtime', type=int, default=300)
-parser.add_argument('--timeout', type=int, default=60)
+parser.add_argument('--runtime', type=int, default=36000)
+parser.add_argument('--timeout', type=int, default=300)
 parser.add_argument('--folds', type=fold_type, default='*')
 parser.add_argument('--cleanup', type=bool, default=False)
 
