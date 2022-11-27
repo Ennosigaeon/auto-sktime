@@ -60,7 +60,7 @@ for fold, ((_, train), (_, val), (_, test)) in enumerate(
         n_jobs=1,
         seed=fold,
         working_directory=workdir,
-        metric=RootMeanSquaredError(start=0.1),
+        metric=RootMeanSquaredError(start=benchmark.start),
         resampling_strategy='panel-pre',
         resampling_strategy_arguments={'train_ids': [train], 'test_ids': [val]},
         delete_tmp_folder_after_terminate=True,
@@ -78,6 +78,8 @@ for fold, ((_, train), (_, val), (_, test)) in enumerate(
 
     y_pred = automl.predict(ForecastingHorizon(resolve_index(y_test.index), is_relative=False), X_test)
     benchmark.score_solutions(y_pred, y_test)
+    with open(os.path.join(workdir, 'predictions.npy'), 'wb') as f:
+        y_pred.to_pickle(f)
 
     plot_grouped_series(None, y_test, y_pred)
     plt.savefig(os.path.join(workdir, 'plot.pdf'))

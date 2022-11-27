@@ -5,6 +5,7 @@ from typing import Tuple, Dict, List
 
 class Benchmark(abc.ABC):
     folds: int
+    start: int
 
     @abc.abstractmethod
     def get_data(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
