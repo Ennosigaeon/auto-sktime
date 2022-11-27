@@ -82,3 +82,47 @@ def _add_remaining_useful_life(df: pd.DataFrame, threshold: float = None, y: pd.
     # drop max_cycle as it's no longer needed
     result_frame = result_frame.drop('max_cycle', axis=1)
     return result_frame
+
+
+class CMAPSS1Benchmark(CMAPSSBenchmark):
+
+    def __init__(self, folds: int = 10, base_dir: str = f'{Path(__location__)}/data/CMAPSS/',
+                 cache_dir: str = f'{Path.home()}/.cache/auto-sktime/'):
+        super().__init__(number=1, folds=folds, base_dir=base_dir, cache_dir=cache_dir)
+
+    @staticmethod
+    def name() -> str:
+        return 'cmapss_1'
+
+
+class CMAPSS2Benchmark(CMAPSSBenchmark):
+
+    def __init__(self, folds: int = 10, base_dir: str = f'{Path(__location__)}/data/CMAPSS/',
+                 cache_dir: str = f'{Path.home()}/.cache/auto-sktime/'):
+        super().__init__(number=2, folds=folds, base_dir=base_dir, cache_dir=cache_dir)
+
+    @staticmethod
+    def name() -> str:
+        return 'cmapss_2'
+
+
+class CMAPSS3Benchmark(CMAPSSBenchmark):
+
+    def __init__(self, folds: int = 10, base_dir: str = f'{Path(__location__)}/data/CMAPSS/',
+                 cache_dir: str = f'{Path.home()}/.cache/auto-sktime/'):
+        super().__init__(number=3, folds=folds, base_dir=base_dir, cache_dir=cache_dir)
+
+    @staticmethod
+    def name() -> str:
+        return 'cmapss_3'
+
+
+class CMAPSS4Benchmark(CMAPSSBenchmark):
+
+    def __init__(self, folds: int = 10, base_dir: str = f'{Path(__location__)}/data/CMAPSS/',
+                 cache_dir: str = f'{Path.home()}/.cache/auto-sktime/'):
+        super().__init__(number=4, folds=folds, base_dir=base_dir, cache_dir=cache_dir)
+
+    @staticmethod
+    def name() -> str:
+        return 'cmapss_4'

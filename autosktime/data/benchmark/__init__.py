@@ -1,11 +1,12 @@
-from autosktime.data.benchmark.cmapss import CMAPSSBenchmark
+from autosktime.data.benchmark.cmapss import CMAPSSBenchmark, CMAPSS2Benchmark, CMAPSS1Benchmark, CMAPSS3Benchmark, \
+    CMAPSS4Benchmark
 from autosktime.data.benchmark.rul import RULBenchmark
 
 BENCHMARKS = {
-    CMAPSSBenchmark.name(): CMAPSSBenchmark(number=1),
-    CMAPSSBenchmark.name() + "1": CMAPSSBenchmark(number=1),
-    CMAPSSBenchmark.name() + "2": CMAPSSBenchmark(number=2),
-    CMAPSSBenchmark.name() + "3": CMAPSSBenchmark(number=3),
-    CMAPSSBenchmark.name() + "4": CMAPSSBenchmark(number=4),
-    RULBenchmark.name(): RULBenchmark()
+    CMAPSSBenchmark.name(): CMAPSS1Benchmark,
+    CMAPSS1Benchmark.name(): CMAPSS1Benchmark,
+    CMAPSS2Benchmark.name(): CMAPSS2Benchmark,
+    CMAPSS3Benchmark.name(): CMAPSS3Benchmark,
+    CMAPSS4Benchmark.name(): CMAPSS4Benchmark,
+    RULBenchmark.name(): RULBenchmark
 }
