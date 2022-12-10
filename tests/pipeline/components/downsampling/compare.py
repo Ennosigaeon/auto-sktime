@@ -1,11 +1,9 @@
-import os.path
 import unittest
-from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
 
-from autosktime.data.benchmark.rul import load_rul
+from autosktime.data.benchmark import PPMBenchmark
 from autosktime.pipeline.components.downsampling.convolution import ConvolutionDownSampler
 from autosktime.pipeline.components.downsampling.elimination import EliminationDownSampler
 from autosktime.pipeline.components.downsampling.resampling import ResamplingDownSampling
@@ -14,10 +12,7 @@ from autosktime.pipeline.components.downsampling.resampling import ResamplingDow
 class AutoMLTest(unittest.TestCase):
 
     def test_compare_downsampling(self, plot: bool = False):
-        X, y = load_rul(
-            os.path.join(Path(__file__).parent.resolve(), '..', '..', '..', 'data', 'rul'),
-            f'{Path.home()}/.cache/auto-sktime/test'
-        )
+        X, y = PPMBenchmark().get_data()
         X = X.loc[1, 'Differenzdruck']
         y = y.loc[1]
 

@@ -1,20 +1,18 @@
-import os.path
-import shutil
-import unittest
-from pathlib import Path
-
 import numpy as np
 import pandas as pd
-from autosktime.automl import AutoML
-from autosktime.constants import SUPPORTED_Y_TYPES
-from autosktime.data.benchmark.rul import load_rul
-from autosktime.data.splitter import PanelHoldoutSplitter
-from autosktime.metrics import calculate_loss
-from autosktime.util import resolve_index
+import shutil
+import unittest
 from sktime.datasets import load_airline, load_longley
 from sktime.forecasting.base import ForecastingHorizon
 from sktime.forecasting.model_selection import temporal_train_test_split
 from sktime.utils._testing.hierarchical import _bottom_hier_datagen
+
+from autosktime.automl import AutoML
+from autosktime.constants import SUPPORTED_Y_TYPES
+from autosktime.data.benchmark import PPMBenchmark
+from autosktime.data.splitter import PanelHoldoutSplitter
+from autosktime.metrics import calculate_loss
+from autosktime.util import resolve_index
 
 
 def train_test_split(y: SUPPORTED_Y_TYPES, X: pd.DataFrame = None, test_size: float = None):
@@ -157,10 +155,7 @@ class AutoMLTest(unittest.TestCase):
 
     @unittest.skip('Panel without exogenous data not supported')
     def test_panel_endogenous_different_size(self):
-        X, y = load_rul(
-            os.path.join(Path(__file__).parent.resolve(), 'data', 'rul'),
-            f'{Path.home()}/.cache/auto-sktime/test'
-        )
+        X, y = PPMBenchmark().get_data()
         automl, loss = fit_and_predict(y, panel=True)
 
         if len(automl.runhistory_.get_all_configs()) == 3:
@@ -169,20 +164,14 @@ class AutoMLTest(unittest.TestCase):
             self.assertAlmostEqual(0.07232810928942789, loss)
 
     def test_panel_exogenous(self):
-        X, y = load_rul(
-            os.path.join(Path(__file__).parent.resolve(), 'data', 'rul'),
-            f'{Path.home()}/.cache/auto-sktime/test'
-        )
+        X, y = PPMBenchmark().get_data()
         automl, loss = fit_and_predict(y, X, panel=True)
 
         self.assertAlmostEqual(0.31632010197592714, loss)
 
     @unittest.skip('Panel without exogenous data not supported')
     def test_panel_relative_forecast_horizon(self):
-        X, y = load_rul(
-            os.path.join(Path(__file__).parent.resolve(), 'data', 'rul'),
-            f'{Path.home()}/.cache/auto-sktime/test'
-        )
+        X, y = PPMBenchmark().get_data()
         _, loss = fit_and_predict(
             y,
             panel=True,
