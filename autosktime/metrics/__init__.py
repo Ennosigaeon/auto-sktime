@@ -90,6 +90,9 @@ class PrintableVectorizedMetric(BaseForecastingErrorMetric):
             for idx in y_true_inner.index.remove_unused_levels().levels[0]:
                 n = y_true_inner.loc[idx].shape[0]
                 start = self.start if isinstance(self.start, int) else int(self.start * n)
+                if start > n:
+                    start = 0
+
                 y_true_inner_ = y_true_inner.loc[idx].iloc[start:]
                 y_pred_inner_ = y_pred_inner.loc[idx].iloc[start:]
                 out_df.append(self._evaluate(y_true=y_true_inner_, y_pred=y_pred_inner_, **kwargs))
@@ -338,9 +341,9 @@ class OverallWeightedAverage(BaseForecastingErrorMetric):
         MASE = MeanAbsoluteScaledError()
 
         return (
-                       sMAPE(y_true, y_pred, horizon_weight) / sMAPE(y_true, y_naive2, horizon_weight) +
-                       MASE(y_true, y_pred, y_train=y_train) / MASE(y_true, y_naive2, horizon_weight, y_train=y_train)
-               ) / 2
+                sMAPE(y_true, y_pred, horizon_weight) / sMAPE(y_true, y_naive2, horizon_weight) +
+                MASE(y_true, y_pred, y_train=y_train) / MASE(y_true, y_naive2, horizon_weight, y_train=y_train)
+        ) / 2
 
 
 default_metric_for_task: Dict[int, BaseForecastingErrorMetric] = {
