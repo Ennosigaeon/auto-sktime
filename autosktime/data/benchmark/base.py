@@ -24,8 +24,13 @@ class Benchmark(abc.ABC):
         df, _, _ = self.get_train_test_splits()
         return df.shape[0]
 
-    def score_solutions(self, y_pred, y_test):
+    def score_solutions(self, y_pred: pd.Series, y_test: pd.Series, sequence: bool = True):
         from autosktime.metrics import STRING_TO_METRIC
+
+        if not sequence:
+            y_test = y_test.groupby(level=0).tail(1)
+            y_pred = y_pred.groupby(level=0).tail(1)
+
 
         if not hasattr(self, 'performance'):
             self.performance: Dict[str, List[float]] = {

@@ -12,7 +12,7 @@ from autosktime.data.benchmark.base import Benchmark
 __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
 
 
-class RULBenchmark(Benchmark):
+class PPMBenchmark(Benchmark):
 
     def __init__(
             self,
@@ -26,7 +26,7 @@ class RULBenchmark(Benchmark):
         self.start = 125
 
     def get_data(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
-        data_directory = os.path.join(self.cache_dir, 'rul')
+        data_directory = os.path.join(self.cache_dir, self.name())
         if not os.path.exists(data_directory):
             os.makedirs(data_directory, exist_ok=True)
         cache_file = os.path.join(data_directory, 'cache.pkl')
@@ -61,7 +61,7 @@ class RULBenchmark(Benchmark):
 
     @staticmethod
     def name() -> str:
-        return 'rul'
+        return 'ppm'
 
 
 def _read_overview(base_dir: str) -> pd.DataFrame:
