@@ -24,11 +24,12 @@ pd.set_option('display.max_columns', 500)
 pd.set_option('display.width', 1000)
 
 parser = ArgumentParser()
-parser.add_argument('benchmark', type=str)
-parser.add_argument('--runtime', type=int, default=36000)
-parser.add_argument('--timeout', type=int, default=300)
-parser.add_argument('--folds', type=fold_type, default='*')
-parser.add_argument('--cleanup', type=bool, default=False)
+parser.add_argument('benchmark', type=str, help='The benchmark to run', choices=BENCHMARKS.keys())
+parser.add_argument('--runtime', type=int, default=36000, help='Total optimization time in seconds')
+parser.add_argument('--timeout', type=int, default=300, help='Timeout to fit a single configuration in seconds')
+parser.add_argument('--folds', type=fold_type, default='*',
+                    help='Number of fold to run. Must be \'*\', an integer or a range like \'0-5\'')
+parser.add_argument('--cleanup', type=bool, default=False, help='Delete results of prior executions')
 
 args = parser.parse_args()
 
