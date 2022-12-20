@@ -48,7 +48,11 @@ class TSFreshFeatureGenerator(BaseFeatureGenerator):
 
         column_names = Xt.columns
         Xt.columns = np.arange(len(column_names))
-        Xt = tsfresh.feature_selection.select_features(Xt, pd.Series(y))
+        Xt_filtered = tsfresh.feature_selection.select_features(Xt, pd.Series(y))
+        # Ensure that at least one feature is kept
+        if Xt_filtered.shape[1] > 0:
+            Xt = Xt_filtered
+
         Xt.columns = column_names[Xt.columns]
         self._selected_columns = np.copy(Xt.columns.values)
 
