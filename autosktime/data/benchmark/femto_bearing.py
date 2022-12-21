@@ -31,6 +31,7 @@ class FemtoBenchmark(Benchmark):
         if not os.path.exists(os.path.join(data_dir, 'df.pkl')):
             if not os.path.exists(data_dir):
                 if not os.path.exists(zip_file):
+                    os.makedirs(data_dir, exist_ok=True)
                     self.logger.info('Downloading data. This will take some time...')
                     urllib.request.urlretrieve(
                         'https://github.com/Lucky-Loek/ieee-phm-2012-data-challenge-dataset/archive/refs/heads/master.zip',
