@@ -1,10 +1,10 @@
-from typing import Tuple, List
-
+import logging
 import numpy as np
 import pandas as pd
 import torch
 from sklearn.model_selection import train_test_split
 from torch.utils.data import Dataset, DataLoader
+from typing import Tuple, List
 
 from ConfigSpace import ConfigurationSpace, CategoricalHyperparameter
 from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, HANDLES_PANEL, \
@@ -45,6 +45,7 @@ class SequenceDataLoaderComponent(AutoSktimeComponent):
         self.validation_size = validation_size
         self.random_state = random_state
         self.config_id = config_id
+        self.logger = logging.Logger('DataLoader')
 
     def fit(self, data: NN_DATA, y=None):
         X, y = data.get('X'), data.get('y')
@@ -166,17 +167,24 @@ class ChunkedDataLoaderComponent(SequenceDataLoaderComponent):
         splits = np.cumsum(config.get_config(self.config_id, key, default=[0])[:-1])
 
         xs = np.split(X, splits)
-        Xt = np.concatenate([self._generate_lookback(x_, self.window_length) for x_ in xs])
+
+        # Subsample data sets if too large
+        max_count = np.max([x_.shape[0] for x_ in xs])
+        stride = max(1, max_count // 5000)
+        if stride > 1:
+            self.logger.info(f'Data set is too large. Down sampling by using a stride of {stride}')
+
+        Xt = np.concatenate([self._generate_lookback(x_, self.window_length, stride=stride) for x_ in xs])
 
         return torch.tensor(Xt).float(), torch.tensor(y).float()
 
     @staticmethod
-    def _generate_lookback(array: np.ndarray, window_length: int):
+    def _generate_lookback(array: np.ndarray, window_length: int, stride: int = 1):
         start = -window_length + 1
         sub_windows = (
                 start +
                 np.expand_dims(np.arange(window_length), 0) +
-                np.expand_dims(np.arange(array.shape[0]), 0).T
+                np.expand_dims(np.arange(array.shape[0], step=stride), 0).T
         )
         sub_windows[sub_windows < 0] = 0
 
