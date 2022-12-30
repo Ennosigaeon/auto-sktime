@@ -1,4 +1,3 @@
-import logging
 import numpy as np
 import pandas as pd
 import torch
@@ -45,7 +44,6 @@ class SequenceDataLoaderComponent(AutoSktimeComponent):
         self.validation_size = validation_size
         self.random_state = random_state
         self.config_id = config_id
-        self.logger = logging.Logger('DataLoader')
 
     def fit(self, data: NN_DATA, y=None):
         X, y = data.get('X'), data.get('y')
@@ -171,8 +169,6 @@ class ChunkedDataLoaderComponent(SequenceDataLoaderComponent):
         # Subsample data sets if too large
         max_count = np.max([x_.shape[0] for x_ in xs])
         stride = max(1, max_count // 5000)
-        if stride > 1:
-            self.logger.info(f'Data set is too large. Down sampling by using a stride of {stride}')
 
         Xt = np.concatenate([self._generate_lookback(x_, self.window_length, stride=stride) for x_ in xs])
 

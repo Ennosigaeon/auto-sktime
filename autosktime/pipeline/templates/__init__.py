@@ -13,6 +13,7 @@ from autosktime.pipeline.components.base import AutoSktimePredictor, COMPONENT_P
 from autosktime.pipeline.templates.base import ConfigurableTransformedTargetForecaster
 from autosktime.pipeline.templates.panel_regression import PanelRegressionPipeline
 from autosktime.pipeline.templates.nn_panel_regression import NNPanelRegressionPipeline
+from autosktime.pipeline.templates.preconstructed.random_forest import RandomForestPipeline
 from autosktime.pipeline.templates.regression import RegressionPipeline
 from autosktime.pipeline.templates.univariate_endogenous import UnivariateEndogenousPipeline
 from autosktime.pipeline.util import sub_configuration, NotVectorizedMixin, Int64Index
@@ -48,7 +49,9 @@ class TemplateChoice(NotVectorizedMixin, AutoSktimePredictor):
     ):
         params = configuration.get_dictionary() if isinstance(configuration, Configuration) else configuration
         choice, sub_config = sub_configuration(params, init_params)
-        self.estimator: AutoSktimePredictor = self.get_components()[choice](
+        available_components = self.get_components()
+        available_components.update(self.get_baseline_components())
+        self.estimator: AutoSktimePredictor = available_components[choice](
             config=sub_config,
             dataset_properties=self.dataset_properties,
             random_state=self.random_state
@@ -107,6 +110,8 @@ class TemplateChoice(NotVectorizedMixin, AutoSktimePredictor):
         available_comp = self.get_components()
 
         if include is not None:
+            # Only consider baseline components if explicitly included
+            available_comp.update(self.get_baseline_components())
             for incl in include.keys():
                 if incl not in available_comp:
                     raise ValueError(f'Trying to include unknown component: {incl}')
@@ -150,6 +155,12 @@ class TemplateChoice(NotVectorizedMixin, AutoSktimePredictor):
             'regression': RegressionPipeline,
             'panel-regression': PanelRegressionPipeline,
             'nn-panel-regression': NNPanelRegressionPipeline,
+        }
+
+    @staticmethod
+    def get_baseline_components() -> Dict[str, Type[ConfigurableTransformedTargetForecaster]]:
+        return {
+            'baseline_rf': RandomForestPipeline
         }
 
     def _fit(self, y: pd.Series, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
