@@ -1,9 +1,13 @@
 import pandas as pd
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler
 from typing import List
 
 import dataclasses
 
+from autosktime.data import DatasetProperties
 from autosktime.data.benchmark import PHME20Benchmark, CMAPSS1Benchmark, CMAPSS2Benchmark
+from autosktime.pipeline.components.base import AutoSktimePreprocessingAlgorithm, COMPONENT_PROPERTIES
 
 
 @dataclasses.dataclass
@@ -54,3 +58,69 @@ def find_benchmark_settings(X: pd.DataFrame) -> BenchmarkSettings:
                 return settings
     else:
         raise ValueError(f'Unable to find benchmark settings for columns {X.columns}')
+
+
+class KMeansOperationCondition(AutoSktimePreprocessingAlgorithm):
+
+    def fit(self, X: pd.DataFrame, y: pd.Series):
+        settings = find_benchmark_settings(X)
+
+        sample_df = X.sample(frac=0.05)
+        X_train_for_kmeans = sample_df[settings.setting_names].values
+        estimator = KMeans(n_clusters=settings.n_profiles, max_iter=10, random_state=self.random_state)
+        estimator.fit_predict(X_train_for_kmeans)
+        self.estimator = estimator
+
+        return self
+
+    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
+        settings = find_benchmark_settings(X)
+        X = X.copy()
+        # noinspection PyUnresolvedReferences
+        X['Kmeans_Profile'] = self.estimator.predict(X[settings.setting_names].values)
+        return X
+
+    @staticmethod
+    def get_properties(dataset_properties: DatasetProperties = None) -> COMPONENT_PROPERTIES:
+        pass
+
+
+class DataScaler(AutoSktimePreprocessingAlgorithm):
+
+    def __init__(self):
+        super().__init__()
+        self.profiles = []
+        self.scalers = []
+
+    def fit(self, X: pd.DataFrame, y: pd.Series = None):
+        settings = find_benchmark_settings(X)
+
+        self.scalers = {}
+        self.profiles = X['Kmeans_Profile'].unique()
+        # Full dataset fit
+        for profile in self.profiles:
+            sensors_readings = X[(X['Kmeans_Profile'] == profile)].filter(
+                settings.sensor_names + settings.artificial_names)  # Get sensor readings
+            state_scaler = StandardScaler().fit(sensors_readings)  # Fit scaler
+            self.scalers[profile] = state_scaler  # Add to sclaer_list for further reference
+
+        return self
+
+    def transform(self, X: pd.DataFrame, y: pd.Series = None):
+        settings = find_benchmark_settings(X)
+
+        # Full dataset transform
+        for profile in self.profiles:
+            sensors_readings = X[(X['Kmeans_Profile'] == profile)].filter(
+                settings.sensor_names + settings.artificial_names)  # Get sensor readings
+            if sensors_readings.shape[0] == 0:
+                continue  # No matching profiles found in X_df
+            cols = sensors_readings.columns
+            normalized_sensor_readings = self.scalers[profile].transform(sensors_readings)  # transform sensor readings
+            X.loc[(X['Kmeans_Profile'] == profile), cols] = normalized_sensor_readings  # record transformed values
+
+        return X
+
+    @staticmethod
+    def get_properties(dataset_properties: DatasetProperties = None) -> COMPONENT_PROPERTIES:
+        pass

@@ -13,6 +13,7 @@ from autosktime.pipeline.components.base import AutoSktimePredictor, COMPONENT_P
 from autosktime.pipeline.templates.base import ConfigurableTransformedTargetForecaster
 from autosktime.pipeline.templates.panel_regression import PanelRegressionPipeline
 from autosktime.pipeline.templates.nn_panel_regression import NNPanelRegressionPipeline
+from autosktime.pipeline.templates.preconstructed.lstm import LSTMRegressionPipeline
 from autosktime.pipeline.templates.preconstructed.random_forest import RandomForestPipeline
 from autosktime.pipeline.templates.regression import RegressionPipeline
 from autosktime.pipeline.templates.univariate_endogenous import UnivariateEndogenousPipeline
@@ -160,7 +161,8 @@ class TemplateChoice(NotVectorizedMixin, AutoSktimePredictor):
     @staticmethod
     def get_baseline_components() -> Dict[str, Type[ConfigurableTransformedTargetForecaster]]:
         return {
-            'baseline_rf': RandomForestPipeline
+            'baseline_rf': RandomForestPipeline,
+            'baseline_lstm': LSTMRegressionPipeline
         }
 
     def _fit(self, y: pd.Series, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
