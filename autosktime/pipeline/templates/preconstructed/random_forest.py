@@ -93,6 +93,7 @@ class OperationCondition(AutoSktimePreprocessingAlgorithm):
 
     def transform(self, X: pd.DataFrame) -> pd.DataFrame:
         settings = find_benchmark_settings(X)
+        X = X.copy()
         # noinspection PyUnresolvedReferences
         X['Kmeans_Profile'] = self.estimator.predict(X[settings.setting_names].values)
         return X
@@ -114,9 +115,10 @@ class FixedRandomForest(RandomForestComponent):
         min_samples_split = UnParametrizedHyperparameter('min_samples_split', 2)
         min_samples_leaf = UnParametrizedHyperparameter('min_samples_leaf', 2)
         bootstrap = UnParametrizedHyperparameter('bootstrap', 'True')
+        n_jobs = UnParametrizedHyperparameter('n_jobs', 4)
 
         cs = ConfigurationSpace()
-        cs.add_hyperparameters([max_features, max_depth, min_samples_split, min_samples_leaf, bootstrap])
+        cs.add_hyperparameters([max_features, max_depth, min_samples_split, min_samples_leaf, bootstrap, n_jobs])
         return cs
 
 
