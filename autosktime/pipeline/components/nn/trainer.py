@@ -42,6 +42,7 @@ class TrainerComponent(AutoSktimeRegressionAlgorithm):
             patience: int = 5,
             tol: float = 1e-6,
             use_best_epoch: bool = True,
+            use_timeout: bool = True,
             plot: bool = False,
             random_state: np.random.RandomState = None,
             iterations: int = None,
@@ -51,6 +52,7 @@ class TrainerComponent(AutoSktimeRegressionAlgorithm):
         self.patience = patience
         self.tol = tol
         self.use_best_epoch = use_best_epoch
+        self.use_timeout = use_timeout
         self.plot = plot
 
         self.criterion: Optional[torch.nn.Module] = None
@@ -97,7 +99,7 @@ class TrainerComponent(AutoSktimeRegressionAlgorithm):
         trigger = 0
 
         for epoch in range(iterations - self.fitted_epochs_):
-            if time.time() - start > cutoff:
+            if self.use_timeout and time.time() - start > cutoff:
                 self.logger.info(f'Aborting fitting after {self.fitted_epochs_} epochs due to timeout')
                 break
 
