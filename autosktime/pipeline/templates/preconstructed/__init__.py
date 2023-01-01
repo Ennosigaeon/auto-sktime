@@ -5,9 +5,12 @@ from typing import List
 
 import dataclasses
 
+from ConfigSpace import ConfigurationSpace, CategoricalHyperparameter, UnParametrizedHyperparameter
 from autosktime.data import DatasetProperties
 from autosktime.data.benchmark import PHME20Benchmark, CMAPSS1Benchmark, CMAPSS2Benchmark
 from autosktime.pipeline.components.base import AutoSktimePreprocessingAlgorithm, COMPONENT_PROPERTIES
+from autosktime.pipeline.components.reduction.panel import RecursivePanelReducer
+from autosktime.pipeline.templates.base import get_pipeline_search_space
 
 
 @dataclasses.dataclass
@@ -124,3 +127,17 @@ class DataScaler(AutoSktimePreprocessingAlgorithm):
     @staticmethod
     def get_properties(dataset_properties: DatasetProperties = None) -> COMPONENT_PROPERTIES:
         pass
+
+
+class FixedRecursivePanelReducer(RecursivePanelReducer):
+
+    def get_hyperparameter_search_space(self, dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
+        window_length = CategoricalHyperparameter('window_length', [1])
+        step_size = UnParametrizedHyperparameter('step_size', 0.001)
+
+        estimator = get_pipeline_search_space(self.estimator.steps, dataset_properties=dataset_properties)
+
+        cs = ConfigurationSpace()
+        cs.add_hyperparameters([window_length, step_size])
+        cs.add_configuration_space('estimator', estimator)
+        return cs

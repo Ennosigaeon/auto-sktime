@@ -1,55 +1,54 @@
-import torch
 from torch import nn
+from torch.nn.utils import weight_norm
+from torch.optim.lr_scheduler import StepLR
 from typing import Tuple, List, Any
 
 from ConfigSpace import UnParametrizedHyperparameter, ConfigurationSpace
 from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import AutoSktimeComponent, UpdatablePipeline, SwappedInput
 from autosktime.pipeline.components.data_preprocessing import VarianceThresholdComponent
+from autosktime.pipeline.components.data_preprocessing.rescaling.minmax import MinMaxScalerComponent
 from autosktime.pipeline.components.features.flatten import FlatteningFeatureGenerator
 from autosktime.pipeline.components.nn.data_loader import ChunkedDataLoaderComponent
 from autosktime.pipeline.components.nn.lr_scheduler import LearningRateScheduler
-from autosktime.pipeline.components.nn.network.rnn import RecurrentNetwork
+from autosktime.pipeline.components.nn.network.cnn import CNN
 from autosktime.pipeline.components.nn.optimizer.optimizer import AdamOptimizer
 from autosktime.pipeline.components.nn.trainer import TrainerComponent
 from autosktime.pipeline.components.nn.util import DictionaryInput, NN_DATA
 from autosktime.pipeline.templates import NNPanelRegressionPipeline
-from autosktime.pipeline.templates.preconstructed import KMeansOperationCondition, DataScaler, \
-    FixedRecursivePanelReducer
+from autosktime.pipeline.templates.preconstructed import KMeansOperationCondition, FixedRecursivePanelReducer
 
 
-class FixedLSTM(RecurrentNetwork):
+class Fixed1dCNN(CNN):
 
     def fit(self, data: NN_DATA, y: Any = None):
         self.num_features_ = data['X'].shape[1]
 
-        self.lstm_1 = nn.LSTM(input_size=self.num_features_, hidden_size=32, num_layers=1, batch_first=True,
-                              dropout=0.1)
-        self.lstm_2 = nn.LSTM(input_size=32, hidden_size=64, num_layers=1, batch_first=True, dropout=0.1)
-        self.output_projector_ = nn.Sequential(
-            nn.ReLU(),
-            nn.Linear(64, 8),
-            nn.ReLU(),
-            nn.Linear(8, 8),
-            nn.ReLU(),
-            nn.Dropout(0.1),
-            nn.Linear(8, self.output_size)
+        self.network_ = nn.Sequential(
+            weight_norm(nn.Conv1d(self.num_features_, 10, kernel_size=10, stride=1, padding='same')),
+            nn.BatchNorm1d(10),
+            nn.Tanh(),
+
+            weight_norm(nn.Conv1d(10, 10, kernel_size=10, stride=1, padding='same')),
+            nn.BatchNorm1d(10),
+            nn.Tanh(),
+
+            weight_norm(nn.Conv1d(10, 10, kernel_size=10, stride=1, padding='same')),
+            nn.BatchNorm1d(10),
+            nn.Tanh(),
+
+            weight_norm(nn.Conv1d(10, 10, kernel_size=10, stride=1, padding='same')),
+            nn.BatchNorm1d(10),
+            nn.Tanh(),
+
+            weight_norm(nn.Conv1d(10, 3, kernel_size=10, stride=1, padding='same')),
+            nn.BatchNorm1d(3),
+            nn.Tanh(),
         )
+        self.linear = nn.Sequential(nn.Dropout(0.5), nn.Linear(3, 100))
+        self.output_projector_ = nn.Linear(100, self.output_size)
 
         return self
-
-    def forward(self, x: torch.Tensor, device: torch.device, output_seq: bool = True) -> torch.Tensor:
-        h_0 = torch.zeros(1, x.size(0), 32).to(device)
-        c_0 = torch.zeros(1, x.size(0), 32).to(device)
-        output, _ = self.lstm_1(x, (h_0, c_0))
-
-        h_1 = torch.zeros(1, x.size(0), 64).to(device)
-        c_1 = torch.zeros(1, x.size(0), 64).to(device)
-        output, (hn_2, cn) = self.lstm_2(output, (h_1, c_1))
-
-        hn_o = hn_2.view(-1, 64)
-        out = self.output_projector_(hn_o)
-        return out
 
     @staticmethod
     def get_hyperparameter_search_space(dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
@@ -67,9 +66,17 @@ class FixedAdamOptimizer(AdamOptimizer):
         return cs
 
 
-class LSTMRegressionPipeline(NNPanelRegressionPipeline):
+class FixedLearningRateScheduler(LearningRateScheduler):
+
+    def fit(self, X: NN_DATA, y: Any = None) -> AutoSktimeComponent:
+        optimizer = X['optimizer']
+        self.scheduler = StepLR(optimizer, step_size=200, gamma=0.1)
+        return self
+
+
+class CNNRegressionPipeline(NNPanelRegressionPipeline):
     """
-    Implementation of "Long Short-Term Memory Network for Remaining Useful Life estimation"
+    Implementation of "Remaining Useful Life Estimation in Prognostics Using Deep Convolution Neural Networks"
     Source code adapted from https://github.com/jiaxiang-cheng/PyTorch-LSTM-for-RUL-Prediction
     Disable pynisher (use_pynisher) and multi-fidelity approximations (use_multi_fidelity) when selecting this template.
     Furthermore, use a short timeout as the config space contains only a single configuration (see https://github.com/automl/SMAC3/issues/21)
@@ -81,17 +88,17 @@ class LSTMRegressionPipeline(NNPanelRegressionPipeline):
             ('variance_threshold', VarianceThresholdComponent(random_state=self.random_state)),
             ('dict', DictionaryInput()),
             ('data_loader', ChunkedDataLoaderComponent(random_state=self.random_state)),
-            ('network', FixedLSTM(random_state=self.random_state)),
+            ('network', Fixed1dCNN(random_state=self.random_state)),
             ('optimizer', FixedAdamOptimizer(random_state=self.random_state)),
-            ('lr_scheduler', LearningRateScheduler()),
-            ('trainer', TrainerComponent(use_timeout=False, random_state=self.random_state)),
+            ('lr_scheduler', FixedLearningRateScheduler()),
+            ('trainer', TrainerComponent(iterations=250, use_timeout=False, random_state=self.random_state)),
         ])
 
         steps = [
             ('reduction', FixedRecursivePanelReducer(
                 transformers=[
                     ('operation_condition', SwappedInput(KMeansOperationCondition(random_state=self.random_state))),
-                    ('scaling', SwappedInput(DataScaler())),
+                    ('scaling', SwappedInput(MinMaxScalerComponent(feature_range=(-1, 1)))),
                 ],
                 estimator=pipeline,
                 random_state=self.random_state,
