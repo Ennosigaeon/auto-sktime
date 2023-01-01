@@ -7,7 +7,7 @@ import dataclasses
 
 from ConfigSpace import ConfigurationSpace, CategoricalHyperparameter, UnParametrizedHyperparameter
 from autosktime.data import DatasetProperties
-from autosktime.data.benchmark import PHME20Benchmark, CMAPSS1Benchmark, CMAPSS2Benchmark
+from autosktime.data.benchmark import PHME20Benchmark, CMAPSS1Benchmark, CMAPSS2Benchmark, FemtoBenchmark
 from autosktime.pipeline.components.base import AutoSktimePreprocessingAlgorithm, COMPONENT_PROPERTIES
 from autosktime.pipeline.components.reduction.panel import RecursivePanelReducer
 from autosktime.pipeline.templates.base import get_pipeline_search_space
@@ -48,6 +48,14 @@ phme20 = BenchmarkSettings(
     8
 )
 
+femto_bearing = BenchmarkSettings(
+    FemtoBenchmark.name(),
+    ['acc_h', 'acc_v'],
+    [],
+    [],
+    0
+)
+
 
 def find_benchmark_settings(X: pd.DataFrame) -> BenchmarkSettings:
     for settings in filter(lambda o: isinstance(o, BenchmarkSettings), globals().values()):
@@ -68,19 +76,23 @@ class KMeansOperationCondition(AutoSktimePreprocessingAlgorithm):
     def fit(self, X: pd.DataFrame, y: pd.Series):
         settings = find_benchmark_settings(X)
 
-        sample_df = X.sample(frac=0.05)
-        X_train_for_kmeans = sample_df[settings.setting_names].values
-        estimator = KMeans(n_clusters=settings.n_profiles, max_iter=10, random_state=self.random_state)
-        estimator.fit_predict(X_train_for_kmeans)
-        self.estimator = estimator
+        if settings.n_profiles > 0:
+            sample_df = X.sample(frac=0.05)
+            X_train_for_kmeans = sample_df[settings.setting_names].values
+            estimator = KMeans(n_clusters=settings.n_profiles, max_iter=10, random_state=self.random_state)
+            estimator.fit_predict(X_train_for_kmeans)
+            self.estimator = estimator
 
         return self
 
     def transform(self, X: pd.DataFrame) -> pd.DataFrame:
         settings = find_benchmark_settings(X)
         X = X.copy()
-        # noinspection PyUnresolvedReferences
-        X['Kmeans_Profile'] = self.estimator.predict(X[settings.setting_names].values)
+        if settings.n_profiles > 0:
+            # noinspection PyUnresolvedReferences
+            X['Kmeans_Profile'] = self.estimator.predict(X[settings.setting_names].values)
+        else:
+            X['Kmeans_Profile'] = 0
         return X
 
     @staticmethod
