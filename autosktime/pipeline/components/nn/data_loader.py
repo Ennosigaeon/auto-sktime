@@ -165,14 +165,16 @@ class ChunkedDataLoaderComponent(SequenceDataLoaderComponent):
         splits = np.cumsum(config.get_config(self.config_id, key, default=[0])[:-1])
 
         xs = np.split(X, splits)
+        ys = np.split(y, splits)
 
         # Subsample data sets if too large
         max_count = np.max([x_.shape[0] for x_ in xs])
         stride = max(1, max_count // 5000)
 
         Xt = np.concatenate([self._generate_lookback(x_, self.window_length, stride=stride) for x_ in xs])
+        yt = np.concatenate([y_[::stride]for y_ in ys])
 
-        return torch.tensor(Xt).float(), torch.tensor(y).float()
+        return torch.tensor(Xt).float(), torch.tensor(yt).float()
 
     @staticmethod
     def _generate_lookback(array: np.ndarray, window_length: int, stride: int = 1):

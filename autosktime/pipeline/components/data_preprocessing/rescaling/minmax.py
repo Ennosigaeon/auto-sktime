@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from typing import Tuple
 
 from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, IGNORES_EXOGENOUS_X, SUPPORTED_INDEX_TYPES, \
     HANDLES_PANEL
@@ -9,10 +10,11 @@ from autosktime.pipeline.util import Int64Index
 
 
 class MinMaxScalerComponent(AutoSktimePreprocessingAlgorithm):
-    def __init__(self, random_state: np.random.RandomState = None):
+    def __init__(self, feature_range: Tuple = (0, 1), random_state: np.random.RandomState = None):
         super().__init__()
         from sklearn.preprocessing import MinMaxScaler
-        self.estimator = MinMaxScaler(copy=False)
+        self.estimator = MinMaxScaler(feature_range=feature_range, copy=False)
+        self.feature_range = feature_range
         self.random_state = random_state
 
     @staticmethod
