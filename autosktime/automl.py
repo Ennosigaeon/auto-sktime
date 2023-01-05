@@ -51,6 +51,7 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
     def __init__(self,
                  time_left_for_this_task: int,
                  per_run_time_limit: int,
+                 runcount_limit: int = None,
                  working_directory: Optional[str] = None,
                  delete_tmp_folder_after_terminate: bool = True,
                  ensemble_size: int = 1,
@@ -121,6 +122,9 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
             raise ValueError(f'time_left_for_this_task not of type integer, but {type(self._time_for_task)}')
         if not isinstance(self._per_run_time_limit, int):
             raise ValueError(f'per_run_time_limit not of type integer, but {type(self._per_run_time_limit)}')
+        self._runcount_limit = runcount_limit
+        if self._runcount_limit is not None and not isinstance(self._runcount_limit, int):
+            raise ValueError(f'runcount_limit not of type integer, but {type(self._runcount_limit)}')
 
         # Tracks how many runs have been launched. It can be seen as an identifier for each configuration saved to disk
         self.num_run_: int = 0
@@ -293,6 +297,7 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
                 backend=self._backend,
                 total_walltime_limit=time_left_for_smac,
                 func_eval_time_limit=per_run_time_limit,
+                runcount_limit=self._runcount_limit,
                 memory_limit=self._memory_limit,
                 n_jobs=self._n_jobs,
                 dask_client=self._dask_client,

@@ -120,6 +120,7 @@ class AutoMLSMBO:
             backend: Backend,
             total_walltime_limit: float,
             func_eval_time_limit: float,
+            runcount_limit: int,
             memory_limit: float,
             n_jobs: int,
             dask_client: dask.distributed.Client,
@@ -161,6 +162,7 @@ class AutoMLSMBO:
         self.worst_possible_result = get_cost_of_crash(self.metric)
         self.total_walltime_limit = int(total_walltime_limit)
         self.func_eval_time_limit = int(func_eval_time_limit)
+        self.runcount_limit = runcount_limit
         self.memory_limit = memory_limit
         self.seed = seed
         self.random_state = random_state
@@ -194,7 +196,7 @@ class AutoMLSMBO:
         return self.runhistory, self.trajectory
 
     def _get_smac(self):
-        scenario = Scenario({
+        scenario_kwargs = {
             'abort_on_first_run_crash': False,
             'save-results-instantly': True,
             'cs': self.config_space,
@@ -206,7 +208,10 @@ class AutoMLSMBO:
             'wallclock_limit': self.total_walltime_limit,
             'cost_for_crash': self.worst_possible_result,
             'intens_min_chall': 1,
-        })
+        }
+        if self.runcount_limit is not None:
+            scenario_kwargs['runcount_limit'] = self.runcount_limit
+        scenario = Scenario(scenario_kwargs)
 
         ta_kwargs = {
             'backend': copy.deepcopy(self.backend),

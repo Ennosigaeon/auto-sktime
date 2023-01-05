@@ -79,8 +79,8 @@ class RandomForestPipeline(PanelRegressionPipeline):
     """
     Implementation of "Remaining Useful Life Prediction for Experimental Filtration System: A Data Challenge"
     Source code adapted from https://github.com/zakkum42/phme20-public
-    Disable pynisher (use_pynisher) and multi-fidelity approximations (use_multi_fidelity) when selecting this template.
-    Furthermore, use a short timeout as the config space contains only a single configuration (see https://github.com/automl/SMAC3/issues/21)
+    Disable pynisher (use_pynisher) and multi-fidelity approximations (use_multi_fidelity) and set runcount_limit to 1
+    when selecting this template.
     """
 
     def _get_pipeline_steps(self) -> List[Tuple[str, AutoSktimeComponent]]:
