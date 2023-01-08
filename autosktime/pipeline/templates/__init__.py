@@ -16,6 +16,7 @@ from autosktime.pipeline.templates.nn_panel_regression import NNPanelRegressionP
 from autosktime.pipeline.templates.preconstructed.cnn import CNNRegressionPipeline
 from autosktime.pipeline.templates.preconstructed.lstm import LSTMRegressionPipeline
 from autosktime.pipeline.templates.preconstructed.random_forest import RandomForestPipeline
+from autosktime.pipeline.templates.preconstructed.svm import SVMRegressionPipeline
 from autosktime.pipeline.templates.preconstructed.transformers import TransformerRegressionPipeline
 from autosktime.pipeline.templates.regression import RegressionPipeline
 from autosktime.pipeline.templates.univariate_endogenous import UnivariateEndogenousPipeline
@@ -167,6 +168,7 @@ class TemplateChoice(NotVectorizedMixin, AutoSktimePredictor):
             'baseline_lstm': LSTMRegressionPipeline,
             'baseline_cnn': CNNRegressionPipeline,
             'baseline_transformer': TransformerRegressionPipeline,
+            'baseline_svm': SVMRegressionPipeline,
         }
 
     def _fit(self, y: pd.Series, X: pd.DataFrame = None, fh: ForecastingHorizon = None):

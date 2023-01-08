@@ -1,11 +1,11 @@
 import numpy as np
 import os
-
-import pickle
-
 import pandas as pd
+import pickle
 import seaborn as sns
 from matplotlib import pyplot as plt
+from scipy.stats import ttest_ind
+from scipy.stats._stats_py import Ttest_indResult
 from smac.runhistory.runhistory import RunHistory
 from smac.tae import StatusType
 
@@ -52,7 +52,7 @@ def print_raw_performance():
     print('Kuersat2020\n', pd.DataFrame(random_forest).describe())
 
     # Zheng2017 (baseline_lstm)
-    random_forest = {
+    lstm = {
         'cmapss': [14.628966, 14.832887, 14.906107, 16.035446, 14.210275, 14.488895, 14.484894, 14.782675, 14.092878,
                    15.357895],
         'cmapss_2': [17.766856, 18.411374, 16.634752, 17.413341, 19.367612, 17.504524, 18.053524, 18.098999, 17.968152,
@@ -68,10 +68,10 @@ def print_raw_performance():
         'ppm': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         'phm08': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     }
-    print('Zheng2017\n', pd.DataFrame(random_forest).describe())
+    print('Zheng2017\n', pd.DataFrame(lstm).describe())
 
     # Li2018b (baseline_cnn)
-    random_forest = {
+    cnn = {
         'cmapss': [17.729213, 16.880596, 16.124352, 15.996100, 16.970271, 17.615540, 17.599030, 15.871664, 16.977988,
                    16.800957],
         'cmapss_2': [21.162352, 24.103969, 23.059695, 23.370648, 23.680346, 23.755606, 23.960246, 23.644329, 24.807948,
@@ -87,7 +87,7 @@ def print_raw_performance():
         'ppm': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         'phm08': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     }
-    print('Li2018b\n', pd.DataFrame(random_forest).describe())
+    print('Li2018b\n', pd.DataFrame(cnn).describe())
 
     # Mo2021a (baseline_transformers)
     transformers = {
@@ -107,6 +107,47 @@ def print_raw_performance():
         'phm08': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     }
     print('Mo2021a\n', pd.DataFrame(transformers).describe())
+
+    # Nieto2015 (baseline_svm)
+    svm = {
+        'cmapss': [13.985249, 13.643011, 14.326570, 13.685853, 14.155676, 13.971911, 14.203493, 13.972439, 13.865017,
+                   13.511654],
+        'cmapss_2': [20.165094, 19.841232, 19.820924, 20.467202, 19.799738, 21.329561, 20.410972, 20.221130, 19.850274,
+                     19.912705],
+        'cmapss_3': [12.849954, 12.516817, 12.462559, 12.174377, 13.111373, 12.813108, 12.368642, 12.539270, 12.667587,
+                     13.111124],
+        'cmapss_4': [16.302016, 16.589758, 15.792411, 16.053102, 15.013072, 16.020558, 16.415584, 16.750024, 16.228248,
+                     16.061023],
+        'phme20': [27.063639, 27.865125, 33.608650, 31.299890, 26.948634, 27.781249, 33.523778, 31.429802, 27.378507,
+                   27.806960],
+        'femto_bearing': [27.031654, 30.327764, 25.598859, 27.326580, 28.801493, 29.076716, 28.621050, 28.950722,
+                          27.618004, 25.663182],
+        'ppm': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        'phm08': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    }
+    print('Nieto2015\n', pd.DataFrame(svm).describe())
+
+    results = {
+        'autorul': autorul,
+        'random_forest': random_forest,
+        'lstm': lstm,
+        'cnn': cnn,
+        'transformers': transformers,
+        'svm': svm
+    }
+
+    for dataset in svm.keys():
+        best = min(results, key=lambda k: np.average(results[k][dataset]))
+        equivalent = []
+        for method in results.keys():
+            if method == best:
+                continue
+            a = np.array(results[best][dataset])
+            b = np.array(results[method][dataset])
+            res: Ttest_indResult = ttest_ind(a, b)
+            if res.pvalue > 0.05:
+                equivalent.append((method, res.pvalue))
+        print(dataset, best, equivalent)
 
 
 def plot_any_time_performance():
