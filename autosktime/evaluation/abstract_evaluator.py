@@ -207,6 +207,19 @@ class AbstractEvaluator:
             y_ens: SUPPORTED_Y_TYPES,
             y_test: Optional[SUPPORTED_Y_TYPES]
     ) -> None:
+        # Results have to be stored as float32
+        y_pred = y_pred.astype(dtype=np.float32)
+        y_ens = y_ens.astype(dtype=np.float32)
+        y_test = y_test.astype(dtype=np.float32) if y_test is not None else None
+
+        # Fail-fast if any prediction contains illegal values
+        if y_pred is not None and (np.isinf(y_pred).any().any() or np.isnan(y_pred).any().any()):
+            raise ValueError('"y_pred" predictions contain nan, inf or values larger that float32')
+        if y_ens is not None and (np.isinf(y_ens).any().any() or np.isnan(y_ens).any().any()):
+            raise ValueError('"y_ens" predictions contain nan, inf or values larger that float32')
+        if y_test is not None and (np.isinf(y_test).any().any() or np.isnan(y_test).any().any()):
+            raise ValueError('"y_test" predictions contain nan, inf or values larger that float32')
+
         self.backend.save_numrun_to_dir(
             seed=self.seed,
             idx=self.num_run,
