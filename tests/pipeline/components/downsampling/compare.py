@@ -3,7 +3,7 @@ import unittest
 import matplotlib.pyplot as plt
 import numpy as np
 
-from autosktime.data.benchmark import PPMBenchmark
+from autosktime.data.benchmark import FiltrationBenchmark
 from autosktime.pipeline.components.downsampling.convolution import ConvolutionDownSampler
 from autosktime.pipeline.components.downsampling.elimination import EliminationDownSampler
 from autosktime.pipeline.components.downsampling.resampling import ResamplingDownSampling
@@ -12,7 +12,7 @@ from autosktime.pipeline.components.downsampling.resampling import ResamplingDow
 class AutoMLTest(unittest.TestCase):
 
     def test_compare_downsampling(self, plot: bool = False):
-        X, y = PPMBenchmark().get_data()
+        X, y = FiltrationBenchmark().get_data()
         X = X.loc[1, 'Differenzdruck']
         y = y.loc[1]
 

@@ -3,7 +3,7 @@ from autosktime.data.benchmark.cmapss import CMAPSSBenchmark, CMAPSS2Benchmark, 
 from autosktime.data.benchmark.femto_bearing import FemtoBenchmark
 from autosktime.data.benchmark.phm08 import PHM08Benchmark
 from autosktime.data.benchmark.phme20 import PHME20Benchmark
-from autosktime.data.benchmark.ppm import PPMBenchmark
+from autosktime.data.benchmark.filtration import FiltrationBenchmark
 
 BENCHMARKS = {
     CMAPSSBenchmark.name(): CMAPSS1Benchmark,
@@ -12,7 +12,7 @@ BENCHMARKS = {
     CMAPSS3Benchmark.name(): CMAPSS3Benchmark,
     CMAPSS4Benchmark.name(): CMAPSS4Benchmark,
     FemtoBenchmark.name(): FemtoBenchmark,
-    PPMBenchmark.name(): PPMBenchmark,
+    FiltrationBenchmark.name(): FiltrationBenchmark,
     PHM08Benchmark.name(): PHM08Benchmark,
     PHME20Benchmark.name(): PHME20Benchmark
 }

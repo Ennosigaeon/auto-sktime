@@ -7,7 +7,8 @@ import dataclasses
 
 from ConfigSpace import ConfigurationSpace, CategoricalHyperparameter, UnParametrizedHyperparameter
 from autosktime.data import DatasetProperties
-from autosktime.data.benchmark import PHME20Benchmark, CMAPSS1Benchmark, CMAPSS2Benchmark, FemtoBenchmark
+from autosktime.data.benchmark import PHME20Benchmark, CMAPSS1Benchmark, CMAPSS2Benchmark, FemtoBenchmark, \
+    FiltrationBenchmark
 from autosktime.pipeline.components.base import AutoSktimePreprocessingAlgorithm, COMPONENT_PROPERTIES
 from autosktime.pipeline.components.reduction.panel import RecursivePanelReducer
 from autosktime.pipeline.templates.base import get_pipeline_search_space
@@ -54,6 +55,14 @@ femto_bearing = BenchmarkSettings(
     [],
     [],
     0
+)
+
+filtration = BenchmarkSettings(
+    FiltrationBenchmark.name(),
+    ['Differenzdruck'],
+    ['Vorschub', 'Filter', 'Staub', 'Durchmesser'],
+    [],
+    4
 )
 
 

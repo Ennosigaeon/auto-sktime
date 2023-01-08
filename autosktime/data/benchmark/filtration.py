@@ -12,12 +12,12 @@ from autosktime.data.benchmark.base import Benchmark
 __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
 
 
-class PPMBenchmark(Benchmark):
+class FiltrationBenchmark(Benchmark):
 
     def __init__(
             self,
             folds: int = 10,
-            base_dir: str = f'{Path(__location__)}/data/rul/',
+            base_dir: str = f'{Path(__location__)}/data/filtration/',
             cache_dir: str = f'{Path.home()}/.cache/auto-sktime/'
     ):
         self.folds = folds
@@ -61,13 +61,21 @@ class PPMBenchmark(Benchmark):
 
     @staticmethod
     def name() -> str:
-        return 'ppm'
+        return 'filtration'
 
 
 def _read_overview(base_dir: str) -> pd.DataFrame:
     candidates = glob.glob(os.path.join(base_dir, '_Overview_*.csv'))
     assert len(candidates) == 1
     overview = pd.read_csv(candidates[0], index_col='lfd_Nummer')
+
+    overview['Filter'] = overview[['Filter']].astype('category')
+    overview['Staub'] = overview[['Staub']].astype('category')
+
+    # TODO handling of categorical data is missing
+    overview['Filter'] = overview['Filter'].cat.codes
+    overview['Staub'] = overview['Staub'].cat.codes
+
     return overview
 
 
@@ -78,9 +86,8 @@ def _read_single_experiment(file_name: str, overview: pd.DataFrame) -> pd.DataFr
     regex = r'Data_No_(\d+)_'
     match = re.search(regex, file_name)
     no = int(match.group(1))
-    # TODO handling of categorical data is missing
-    # const_data = overview.loc[no, ['Filter', 'Staub', 'Durchmesser']]
-    const_data = overview.loc[no, ['Durchmesser']]
+
+    const_data = overview.loc[no, ['Filter', 'Staub', 'Durchmesser']]
     const_data = pd.concat([const_data] * df.shape[0], axis=1).T
     const_data.index = df.index
 

@@ -9,7 +9,7 @@ from sktime.utils._testing.hierarchical import _bottom_hier_datagen
 
 from autosktime.automl import AutoML
 from autosktime.constants import SUPPORTED_Y_TYPES
-from autosktime.data.benchmark import PPMBenchmark
+from autosktime.data.benchmark import FiltrationBenchmark
 from autosktime.data.splitter import PanelHoldoutSplitter
 from autosktime.metrics import calculate_loss
 from autosktime.util import resolve_index
@@ -155,7 +155,7 @@ class AutoMLTest(unittest.TestCase):
 
     @unittest.skip('Panel without exogenous data not supported')
     def test_panel_endogenous_different_size(self):
-        X, y = PPMBenchmark().get_data()
+        X, y = FiltrationBenchmark().get_data()
         automl, loss = fit_and_predict(y, panel=True)
 
         if len(automl.runhistory_.get_all_configs()) == 3:
@@ -164,14 +164,14 @@ class AutoMLTest(unittest.TestCase):
             self.assertAlmostEqual(0.07232810928942789, loss)
 
     def test_panel_exogenous(self):
-        X, y = PPMBenchmark().get_data()
+        X, y = FiltrationBenchmark().get_data()
         automl, loss = fit_and_predict(y, X, panel=True)
 
         self.assertAlmostEqual(0.31632010197592714, loss)
 
     @unittest.skip('Panel without exogenous data not supported')
     def test_panel_relative_forecast_horizon(self):
-        X, y = PPMBenchmark().get_data()
+        X, y = FiltrationBenchmark().get_data()
         _, loss = fit_and_predict(
             y,
             panel=True,
