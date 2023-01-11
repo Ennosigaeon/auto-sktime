@@ -47,7 +47,24 @@ to run a single benchmark data set. To view the available benchmarks and all con
 python remaining_useful_lifetime.py --help
 ```
 
-For the experiments in the paper, only the benchmark is provided and all remaining default configurations are used.
+### Reproducing results
+
+You can use the following commands to recreate the reported baseline results in the experiments of the paper. 
+
+```bash
+python remaining_useful_lifetime.py <BENCHMARK> --runcount_limit 1 --timeout 3600 --multi_fidelity False --include baseline_lstm
+python remaining_useful_lifetime.py <BENCHMARK> --runcount_limit 1 --timeout 3600 --multi_fidelity False --include baseline_cnn
+python remaining_useful_lifetime.py <BENCHMARK> --runcount_limit 1 --timeout 3600 --multi_fidelity False --include baseline_transformer
+python remaining_useful_lifetime.py <BENCHMARK> --runcount_limit 1 --timeout 7200 --multi_fidelity False --include baseline_rf
+python remaining_useful_lifetime.py <BENCHMARK> --runcount_limit 200 --timeout 7200 --multi_fidelity False --ensemble_size 1 --include baseline_svm
+```
+
+with `<BENCHMARK>` being one of `{cmapss,cmapss_1,cmapss_2,cmapss_3,cmapss_4,femto_bearing,filtration,phm08,phme20}`. For 
+the _AutoRUL_ evaluation only the benchmark is provided and all remaining default configurations are used.
+
+```bash
+python remaining_useful_lifetime.py <BENCHMARK>
+```
 
 ## Note
 

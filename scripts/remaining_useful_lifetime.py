@@ -14,6 +14,7 @@ from autosktime.constants import PANEL_INDIRECT_FORECAST
 from autosktime.data.benchmark import BENCHMARKS
 from autosktime.data.splitter import multiindex_split
 from autosktime.metrics import RootMeanSquaredError
+from autosktime.pipeline.templates import TemplateChoice
 from autosktime.util import resolve_index
 from autosktime.util.arg_types import fold_type, parse_folds
 from autosktime.util.plotting import plot_grouped_series
@@ -25,11 +26,19 @@ pd.set_option('display.width', 1000)
 
 parser = ArgumentParser()
 parser.add_argument('benchmark', type=str, help='The benchmark to run', choices=BENCHMARKS.keys())
-parser.add_argument('--runtime', type=int, default=36000, help='Total optimization time in seconds')
+parser.add_argument('--runtime', type=int, default=36000,
+                    help='Total optimization time in seconds. Is combined with runcount_limit.')
 parser.add_argument('--timeout', type=int, default=300, help='Timeout to fit a single configuration in seconds')
+parser.add_argument('--runcount_limit', type=int, default=None,
+                    help='Maximum number of configuration evaluations. Is combined with runtime.')
+parser.add_argument('--ensemble_size', type=int, default=10,
+                    help='Maximum number of models used to construct an ensemble.')
 parser.add_argument('--folds', type=fold_type, default='*',
                     help='Number of fold to run. Must be \'*\', an integer or a range like \'0-5\'')
-parser.add_argument('--cleanup', type=bool, default=False, help='Delete results of prior executions')
+parser.add_argument('--cleanup', action='store_true', help='Delete results of prior executions')
+parser.add_argument('--multi_fidelity', type=bool, default=True, help='Use multi-fidelity approximations')
+parser.add_argument('--include', type=str, default=None, choices=TemplateChoice.get_baseline_components(),
+                    help='Only include a specific baseline pipeline template.')
 
 args = parser.parse_args()
 
@@ -56,7 +65,8 @@ for fold, ((_, train), (_, val), (_, test)) in enumerate(
     automl = AutoML(
         time_left_for_this_task=args.runtime,
         per_run_time_limit=args.timeout,
-        ensemble_size=10,
+        runcount_limit=args.runcount_limit,
+        ensemble_size=args.ensemble_size,
         ensemble_nbest=50,
         n_jobs=1,
         seed=fold,
@@ -66,8 +76,9 @@ for fold, ((_, train), (_, val), (_, test)) in enumerate(
         resampling_strategy_arguments={'train_ids': [train], 'test_ids': [val]},
         delete_tmp_folder_after_terminate=True,
         use_pynisher=True,
-        use_multi_fidelity=True,
-        verbose=True
+        use_multi_fidelity=args.multi_fidelity,
+        verbose=True,
+        include={args.include: None} if args.include is not None else None
     )
 
     automl.fit(y, X, dataset_name='rul', task=PANEL_INDIRECT_FORECAST, y_test=y_test, X_test=X_test)

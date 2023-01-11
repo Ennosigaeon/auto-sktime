@@ -78,16 +78,19 @@ def create(
         delete_tmp_folder_after_terminate: bool = True,
         delete_output_folder_after_terminate: bool = True,
 ) -> Backend:
-    context = BackendContext(
-        temporary_directory,
-        output_directory,
-        delete_tmp_folder_after_terminate,
-        delete_output_folder_after_terminate,
-        prefix=prefix,
-    )
-    backend = Backend(context, prefix)
+    try:
+        context = BackendContext(
+            temporary_directory,
+            output_directory,
+            delete_tmp_folder_after_terminate,
+            delete_output_folder_after_terminate,
+            prefix=prefix,
+        )
+        backend = Backend(context, prefix)
 
-    return backend
+        return backend
+    except FileExistsError as ex:
+        raise FileExistsError(f'Directory {ex.filename} already exists. Delete old results first.')
 
 
 ConfigId = int
