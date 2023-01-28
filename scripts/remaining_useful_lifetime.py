@@ -7,6 +7,7 @@ import pickle
 import shutil
 from argparse import ArgumentParser
 from matplotlib import pyplot as plt
+from sklearn.utils import assert_all_finite
 from sktime.forecasting.base import ForecastingHorizon
 
 from autosktime.automl import AutoML
@@ -89,12 +90,20 @@ for fold, ((_, train), (_, val), (_, test)) in enumerate(
         json.dump(automl.ensemble_configurations_, f)
 
     y_pred = automl.predict(ForecastingHorizon(resolve_index(y_test.index), is_relative=False), X_test)
-    benchmark.score_solutions(y_pred, y_test)
-    with open(os.path.join(workdir, 'predictions.npy'), 'wb') as f:
+    result_file = os.path.join(workdir, 'predictions.npy')
+    with open(result_file, 'wb') as f:
         y_pred.to_pickle(f)
+    with open(result_file.replace('.npy', '.csv'), 'w') as f:
+        y_pred.to_csv(f)
 
-    plot_grouped_series(None, y_test, y_pred)
-    plt.savefig(os.path.join(workdir, 'plot.pdf'))
+    try:
+        assert_all_finite(y_test)
 
-    df = pd.DataFrame(benchmark.performance)
-    automl._logger.info(f'Fold results\n{df}\n{df.describe()}')
+        benchmark.score_solutions(y_pred, y_test)
+        plot_grouped_series(None, y_test, y_pred)
+        plt.savefig(os.path.join(workdir, 'plot.pdf'))
+
+        df = pd.DataFrame(benchmark.performance)
+        automl._logger.info(f'Fold results\n{df}\n{df.describe()}')
+    except ValueError as ex:
+        print(f'Failed to score final predictions. Predictions are available in {result_file}.', ex)

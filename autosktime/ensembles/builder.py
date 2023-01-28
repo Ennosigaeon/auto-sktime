@@ -478,7 +478,7 @@ class EnsembleBuilder:
 
                 # Try to load test predictions if available
                 y_test = self._read_np_fn(model_loss.test_fn)
-                if y_test is not None:
+                if y_test is not None and self.y_true_test is not None:
                     model_loss.test_loss = calculate_loss(solution=self.y_true_test,
                                                           prediction=y_test,
                                                           task_type=self.task_type,

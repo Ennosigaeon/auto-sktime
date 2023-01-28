@@ -27,28 +27,21 @@ class PHM08Benchmark(Benchmark):
         self.logger = logging.getLogger('benchmark')
 
     def get_data(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
-        # TODO
-        self.logger.warning(f'Test data does not contain ground truth. Currently only using train data!')
         index_names = ['experiment', 'timestamp']
         setting_names = ['setting_1', 'setting_2', 'setting_3']
         sensor_names = ['s_{}'.format(i + 1) for i in range(0, 21)]
         col_names = index_names + setting_names + sensor_names
 
         train = pd.read_csv(os.path.join(self.base_dir, 'train.txt'), sep='\s+', header=None, names=col_names)
-        test = pd.read_csv(os.path.join(self.base_dir, 'test.txt'), sep='\s+', header=None, names=col_names)
-        final_test = pd.read_csv(os.path.join(self.base_dir, 'final_test.txt'), sep='\s+', header=None, names=col_names)
-        y_test = pd.read_csv(os.path.join(self.base_dir, f'RUL_test.txt'), sep='\s+', header=None)[0]
-        y_test.index += 1
-        y_final_test = pd.read_csv(os.path.join(self.base_dir, f'RUL_final_test.txt'), sep='\s+', header=None)[0]
-        y_final_test.index += 1
-
         train = _add_remaining_useful_life(train, threshold=125)
-        test = _add_remaining_useful_life(test, threshold=125)
-        final_test = _add_remaining_useful_life(final_test, threshold=125)
-        test['experiment'] += train['experiment'].max()
-        final_test['experiment'] *= -1
 
-        Xy = pd.concat((train, test, final_test))
+        final_test = pd.read_csv(os.path.join(self.base_dir, 'final_test.txt'), sep='\s+', header=None, names=col_names)
+        # The true RUL data of PHM08 are not publicly available on purpose. We will just create the predictions are send
+        # them to the original authors for scoring.
+        final_test['RUL'] = np.nan
+        final_test['experiment'] += train['experiment'].max()
+
+        Xy = pd.concat((train, final_test))
         Xy.index = pd.MultiIndex.from_frame(Xy[['experiment', 'timestamp']])
         y = pd.DataFrame(Xy.pop('RUL'), columns=['RUL'])
         X = Xy.drop(columns=['experiment', 'timestamp'])
@@ -57,16 +50,34 @@ class PHM08Benchmark(Benchmark):
 
     def get_train_test_splits(self):
         train, val = train_test_split(np.arange(1, 219), test_size=0.2, random_state=42)
+        test = np.arange(219, 654)
 
         return (
             pd.DataFrame([train] * self.folds),
-            pd.DataFrame([train] * self.folds),
             pd.DataFrame([val] * self.folds),
-            # pd.DataFrame([np.arange(1, 219, 1)] * self.folds),
-            # pd.DataFrame([np.arange(219, 437, 1)] * self.folds),
-            # pd.DataFrame([np.arange(-1, -436, -1)] * self.folds)
+            pd.DataFrame([test] * self.folds),
         )
 
     @staticmethod
     def name() -> str:
         return 'phm08'
+
+
+def aggregate_results(input_dir: str) -> pd.DataFrame:
+    import glob
+    folds = []
+    for file in sorted(glob.glob(os.path.join(input_dir, '*', 'predictions.npy'))):
+        df = pd.read_pickle(file)
+        # TODO reset experiment id to 1...434
+
+        df = df.rename(columns={'RUL': file.split('/')[-2]})
+        folds.append(df)
+
+    df = pd.concat(folds, axis=1)
+    return df
+
+
+if __name__ == '__main__':
+    base_dir = os.path.join(Path(__file__).parents[3], 'scripts', 'results', 'phm08')
+    df = aggregate_results(base_dir)
+    df.to_csv(os.path.join(base_dir, 'aggregated_results.csv'))

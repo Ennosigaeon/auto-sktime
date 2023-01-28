@@ -1,5 +1,6 @@
 import os
 import tempfile
+from sklearn.utils import assert_all_finite
 from typing import Optional, Any, Dict, Union
 
 import numpy as np
@@ -16,7 +17,12 @@ class Backend(Backend_):
         return self._save_targets_ensemble(targets, self._get_targets_ensemble_filename())
 
     def save_targets_test(self, targets: SUPPORTED_Y_TYPES) -> str:
-        return self._save_targets_ensemble(targets, self._get_targets_test_filename())
+        try:
+            assert_all_finite(targets)
+            return self._save_targets_ensemble(targets, self._get_targets_test_filename())
+        except ValueError:
+            # Not storing test targets as input is not finite
+            pass
 
     def _save_targets_ensemble(self, targets: SUPPORTED_Y_TYPES, filepath: str) -> str:
         if targets is None:
