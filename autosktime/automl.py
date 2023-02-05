@@ -199,6 +199,8 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
         return super().fit(y, X, fh)
 
     def _fit(self, y: SUPPORTED_Y_TYPES, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
+        # TODO train/test splitting is not applied
+
         # Check if specific configs should be fitted instead of searching for optimal configuration
         if self.__configs is not None:
             res = self._fit_configs(self.__configs, y, X)

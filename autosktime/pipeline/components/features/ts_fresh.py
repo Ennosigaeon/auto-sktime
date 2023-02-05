@@ -61,6 +61,10 @@ class TSFreshFeatureGenerator(BaseFeatureGenerator):
     def transform(self, X: np.ndarray) -> np.ndarray:
         Xt = self._calc_features(X)
         Xt = Xt[self._selected_columns]
+
+        assert Xt.shape[1] == self._selected_columns.shape[
+            0], "DataFrame does not have the expected number of columns. Verify that column names are unique!"
+
         return Xt.values
 
     def _calc_features(self, X: np.ndarray) -> pd.DataFrame:
@@ -76,10 +80,9 @@ class TSFreshFeatureGenerator(BaseFeatureGenerator):
             Xt = pd.DataFrame(np.concatenate(features, axis=1))
 
             # Construct feature names
-            columns = np.repeat(fnames, X.shape[2])
-            for feat in range(X.shape[2]):
-                columns[feat::X.shape[2]] = np.char.add(columns[feat::X.shape[2]], f'_{feat}')
-            Xt.columns = columns
+            columns = np.repeat(fnames, X.shape[2]).astype(str)
+            suffixes = np.char.add('_', np.tile(np.arange(0, X.shape[2]), len(fnames)).astype(str))
+            Xt.columns = np.char.add(columns, suffixes)
 
             return Xt
 
