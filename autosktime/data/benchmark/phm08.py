@@ -1,4 +1,7 @@
 import logging
+import shutil
+import tempfile
+
 import numpy as np
 import os
 import pandas as pd
@@ -81,3 +84,11 @@ if __name__ == '__main__':
     base_dir = os.path.join(Path(__file__).parents[3], 'scripts', 'results', 'phm08')
     df = aggregate_results(base_dir)
     df.to_csv(os.path.join(base_dir, 'aggregated_results.csv'))
+
+    with tempfile.TemporaryDirectory() as work_dir:
+        last_entries = df.loc[df.groupby(['experiment'])['timestamp'].idxmax()]
+
+        for i in range(10):
+            last_entries[f'fold_{i}'].to_csv(os.path.join(work_dir, f'{i}.csv'), index=False, header=False)
+
+        shutil.make_archive(os.path.join(base_dir, 'phm08'), 'zip', work_dir)
