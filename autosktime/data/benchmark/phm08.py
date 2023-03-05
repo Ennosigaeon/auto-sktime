@@ -29,6 +29,10 @@ class PHM08Benchmark(Benchmark):
         self.start = 5
         self.logger = logging.getLogger('benchmark')
 
+    def get_piecewise_cutoff(self) -> int:
+        return 125
+
+
     def get_data(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
         index_names = ['experiment', 'timestamp']
         setting_names = ['setting_1', 'setting_2', 'setting_3']
@@ -36,7 +40,7 @@ class PHM08Benchmark(Benchmark):
         col_names = index_names + setting_names + sensor_names
 
         train = pd.read_csv(os.path.join(self.base_dir, 'train.txt'), sep='\s+', header=None, names=col_names)
-        train = _add_remaining_useful_life(train, threshold=125)
+        train = _add_remaining_useful_life(train, threshold=self.get_piecewise_cutoff())
 
         final_test = pd.read_csv(os.path.join(self.base_dir, 'final_test.txt'), sep='\s+', header=None, names=col_names)
         # The true RUL data of PHM08 are not publicly available on purpose. We will just create the predictions are send

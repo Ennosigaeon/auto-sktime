@@ -1,4 +1,6 @@
 import abc
+import sys
+
 import pandas as pd
 from typing import Tuple, Dict, List
 
@@ -20,6 +22,9 @@ class Benchmark(abc.ABC):
     def name() -> str:
         pass
 
+    def get_piecewise_cutoff(self) -> int:
+        return sys.maxsize * 2 + 1
+
     def get_n_splits(self) -> int:
         df, _, _ = self.get_train_test_splits()
         return df.shape[0]
@@ -30,7 +35,6 @@ class Benchmark(abc.ABC):
         if not sequence:
             y_test = y_test.groupby(level=0).tail(1)
             y_pred = y_pred.groupby(level=0).tail(1)
-
 
         if not hasattr(self, 'performance'):
             self.performance: Dict[str, List[float]] = {

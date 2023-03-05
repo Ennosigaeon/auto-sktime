@@ -38,8 +38,8 @@ class CMAPSSBenchmark(Benchmark):
         y_test = pd.read_csv(os.path.join(self.base_dir, f'RUL_FD00{self.number}.txt'), sep='\s+', header=None)[0]
         y_test.index += 1
 
-        train = _add_remaining_useful_life(train, threshold=125)
-        test = _add_remaining_useful_life(test, threshold=125, y=y_test)
+        train = _add_remaining_useful_life(train, threshold=self.get_piecewise_cutoff())
+        test = _add_remaining_useful_life(test, threshold=self.get_piecewise_cutoff(), y=y_test)
         test['experiment'] *= -1
 
         Xy = pd.concat((train, test))
@@ -57,6 +57,9 @@ class CMAPSSBenchmark(Benchmark):
             pd.DataFrame([val] * self.folds),
             pd.DataFrame([np.arange(-1, -101, -1)] * self.folds)
         )
+
+    def get_piecewise_cutoff(self) -> int:
+        return 125
 
     @staticmethod
     def name() -> str:

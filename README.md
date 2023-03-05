@@ -49,7 +49,7 @@ python remaining_useful_lifetime.py --help
 
 ### Reproducing results
 
-You can use the following commands to recreate the reported baseline results in the experiments of the paper. 
+You can use the following commands to recreate the reported baseline results in the experiments of the paper.
 
 ```bash
 python remaining_useful_lifetime.py <BENCHMARK> --runcount_limit 1 --timeout 3600 --multi_fidelity False --include baseline_lstm
@@ -59,12 +59,15 @@ python remaining_useful_lifetime.py <BENCHMARK> --runcount_limit 1 --timeout 720
 python remaining_useful_lifetime.py <BENCHMARK> --runcount_limit 200 --timeout 7200 --multi_fidelity False --ensemble_size 1 --include baseline_svm
 ```
 
-with `<BENCHMARK>` being one of `{cmapss,cmapss_1,cmapss_2,cmapss_3,cmapss_4,femto_bearing,filtration,phm08,phme20}`. For 
-the _AutoRUL_ evaluation only the benchmark is provided and all remaining default configurations are used.
+with `<BENCHMARK>` being one of `{cmapss,cmapss_1,cmapss_2,cmapss_3,cmapss_4,femto_bearing,filtration,phm08,phme20}`.
+For the _AutoRUL_ evaluation only the benchmark is provided and all remaining default configurations are used.
 
 ```bash
 python remaining_useful_lifetime.py <BENCHMARK>
 ```
+
+To reproduce the results from AutoCoevoRUL, checkout the [repository](https://github.com/Ennosigaeon/AutoCoevoRUL) from
+Github and use the [autocoevorul.py](scripts/autocoevorul.py) file to either export the data sets or import the results.
 
 ## Note
 
@@ -74,6 +77,7 @@ information on PyScaffold see https://pyscaffold.org/.
 ## Building
 
 To create a new release of `auto-sktime` you will have to install `build` and `twine`
+
 ```bash
 pip install build twine
 python -m build
