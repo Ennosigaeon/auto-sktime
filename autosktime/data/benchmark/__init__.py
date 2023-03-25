@@ -6,7 +6,6 @@ from autosktime.data.benchmark.phme20 import PHME20Benchmark
 from autosktime.data.benchmark.filtration import FiltrationBenchmark
 
 BENCHMARKS = {
-    CMAPSSBenchmark.name(): CMAPSS1Benchmark,
     CMAPSS1Benchmark.name(): CMAPSS1Benchmark,
     CMAPSS2Benchmark.name(): CMAPSS2Benchmark,
     CMAPSS3Benchmark.name(): CMAPSS3Benchmark,
