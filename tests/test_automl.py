@@ -44,6 +44,7 @@ def fit_and_predict(
 ):
     try:
         shutil.rmtree('tmp')
+        shutil.rmtree('tmp__tmp__')
         shutil.rmtree('output')
     except FileNotFoundError:
         pass

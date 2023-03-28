@@ -4,6 +4,7 @@ from typing import Optional, Dict, Type, Union, List, Tuple
 
 import numpy as np
 import pandas as pd
+from pandas import MultiIndex
 from sklearn.model_selection import train_test_split, KFold
 from sktime.forecasting.base import ForecastingHorizon
 from sktime.forecasting.model_selection import (
@@ -173,7 +174,8 @@ def _safe_index(df: Union[pd.DataFrame, pd.Series], idx) -> Union[pd.DataFrame, 
         sub_df = df.loc[idx]
     except KeyError:
         sub_df = df.iloc[idx]
-    sub_df.index = sub_df.index.remove_unused_levels()
+    index = sub_df.index.remove_unused_levels() if isinstance(df.index, MultiIndex) else sub_df.index
+    sub_df.index = index
     return sub_df
 
 

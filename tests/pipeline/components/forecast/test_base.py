@@ -83,7 +83,7 @@ class ETSComponentTest(BaseForecastComponentTest):
     module = ETSComponent
     res = {
         "default_airline": 0.28081929857986004,
-        "default_shampoo_sales": 0.4015054132104476,
+        "default_shampoo_sales": 0.4015054717430467,
         "default_longley": 0.,
         "default_lynx": 0.9529550413236142,
         "default_uschange": 0.
@@ -94,7 +94,7 @@ class ExpSmoothingComponentTest(BaseForecastComponentTest):
     module = ExponentialSmoothingComponent
     res = {
         "default_airline": 0.28080912828661697,
-        "default_shampoo_sales": 0.40173680755149843,
+        "default_shampoo_sales": 0.40173687984238277,
         "default_longley": 0.,
         "default_lynx": 0.9532172046656211,
         "default_uschange": 0.

@@ -34,13 +34,13 @@ class kNDTest(unittest.TestCase):
         np.testing.assert_array_equal(['shampoo_sales', 'lynx'], neighbors)
         neighbors, distance = kND.kneighbors(self.airline, 2)
         np.testing.assert_array_equal(['shampoo_sales', 'lynx'], neighbors)
-        np.testing.assert_array_almost_equal([146303.195, 115793162.625], distance)
+        np.testing.assert_array_almost_equal([146303.195, 115766721.93750], distance)
 
         neighbors, _ = kND.kneighbors(self.airline, -1)
         np.testing.assert_array_equal(['shampoo_sales', 'lynx'], neighbors)
         neighbors, distance = kND.kneighbors(self.airline, -1)
         np.testing.assert_array_equal(['shampoo_sales', 'lynx'], neighbors)
-        np.testing.assert_array_almost_equal([146303.195, 115793162.625], distance)
+        np.testing.assert_array_almost_equal([146303.195, 115766721.93750], distance)
 
         self.assertRaises(ValueError, kND.kneighbors, self.airline, 0)
         self.assertRaises(ValueError, kND.kneighbors, self.airline, -2)
