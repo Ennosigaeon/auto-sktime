@@ -29,10 +29,10 @@ pip install auto-sktime[all_extras]
 ## Remaining Useful Life Predictions (AutoRUL)
 
 This section describes how to reproduce the results in the _AutoRUL_ paper. First, checkout the exact code that was used
-to create the results. Therefore, you can use the tag [TODO](https://github.com/Ennosigaeon/auto-sktime)
+to create the results. Therefore, you can use the tag [v0.1.0](https://github.com/Ennosigaeon/auto-sktime/tree/v0.1.0)
 
 ```bash
-git checkout -t <TODO>
+git checkout tags/v0.1.0 -b autorul
 ```
 
 Next, switch to the `scripts` directory and use
