@@ -198,7 +198,7 @@ def print_raw_performance():
 
         df = pd.DataFrame(data)
 
-        fig, ax = plt.subplots(figsize=(8, 4))
+        fig, ax = plt.subplots(figsize=(6, 3))
         sns.boxplot(data=df, x="method", y="value", ax=ax)
         ax.set(xlabel=None, ylabel='RMSE', title=dataset)
         plt.tight_layout()
@@ -253,10 +253,10 @@ def evaluate_generated_pipelines():
         configs = [config.get_dictionary() for config in value]
         algorithms = []
         for config in configs:
-            algorithms.append([f'{key}:{value}' for key, value in config.items() if '__choice__' in key])
+            algorithms += [f'{key}:{value}' for key, value in config.items() if '__choice__' in key or
+                           'nn-panel-regression:reduction:estimator:network:rnn:cell_type' in key]
         df = pd.Series(algorithms)
         print(df.value_counts().sort_index() / len(configs), end='\n\n\n')
-        pass
 
 
 def plot_any_time_performance():
