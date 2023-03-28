@@ -119,7 +119,7 @@ def _read_single_experiment(folder: str, remainder: float = 0, step_size: int = 
         if pd.isna(df).any().any():
             df = pd.read_csv(file, names=['hour', 'minute', 'second', 'ms', 'acc_h', 'acc_v'], sep=';')
 
-        df2 = df[['acc_h', 'acc_v']].rolling(step_size, step=step_size).mean().loc[step_size:]
+        df2 = df[['acc_h', 'acc_v']].rolling(step_size).mean().loc[step_size::step_size]
         df2[['hour', 'minute', 'second', 'ms']] = df.loc[df2.index, ['hour', 'minute', 'second', 'ms']]
         acc.append(df2)
     acc = pd.concat(acc).reset_index(drop=True)
