@@ -1,9 +1,10 @@
 import json
-
-import numpy as np
 import os
-import pandas as pd
 import pickle
+
+import matplotlib
+import numpy as np
+import pandas as pd
 import seaborn as sns
 from matplotlib import pyplot as plt
 from scipy.stats import wilcoxon
@@ -16,6 +17,9 @@ from autosktime.data.benchmark import BENCHMARKS
 pd.set_option('display.float_format', '{:,.2f}'.format)
 pd.set_option('display.max_columns', 500)
 pd.set_option('display.width', 1000)
+
+matplotlib.rcParams['pdf.fonttype'] = 42
+matplotlib.rcParams['ps.fonttype'] = 42
 
 
 def print_raw_performance():
