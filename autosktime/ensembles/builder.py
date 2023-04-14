@@ -24,13 +24,14 @@ from autosktime.data import DataManager
 from autosktime.ensembles.selection import EnsembleSelection
 from autosktime.ensembles.util import PrefittedEnsembleForecaster
 from autosktime.metrics import calculate_loss
+from autosktime.pipeline.components.base import AutoSktimePredictor
 from autosktime.util.backend import Backend
 from autosktime.util.dask_single_thread_client import SingleThreadedClient
-from smac.callbacks import IncorporateRunResultCallback
-from smac.optimizer.smbo import SMBO
-from smac.runhistory.runhistory import RunInfo, RunValue
-from smac.tae.base import StatusType
-from smac.tae.dask_runner import DaskParallelRunner
+from smac import Callback
+from smac.main.smbo import SMBO
+from smac.runhistory.runhistory import TrialInfo, TrialValue
+from smac.runhistory.enumerations import StatusType
+from smac.runner.dask_runner import DaskParallelRunner
 
 Y_ENSEMBLE = 0
 Y_VALID = 1
@@ -39,7 +40,7 @@ Y_TEST = 2
 MODEL_FN_RE = r'_([0-9]*)_([0-9]*)_([0-9]{1,3}\.[0-9]*)\.npy'
 
 
-class EnsembleBuilderManager(IncorporateRunResultCallback):
+class EnsembleBuilderManager(Callback):
     def __init__(
             self,
             start_time: float,
@@ -92,6 +93,8 @@ class EnsembleBuilderManager(IncorporateRunResultCallback):
             A list with the performance history of this ensemble, of the form
             [[pandas_timestamp, train_performance, val_performance, test_performance], ...]
         """
+        super().__init__()
+
         self.start_time = start_time
         self.time_left_for_ensembles = time_left_for_ensembles
         self.backend = backend
@@ -116,18 +119,12 @@ class EnsembleBuilderManager(IncorporateRunResultCallback):
         # Keep track of when we started to know when we need to finish!
         self.start_time = time.time()
 
-    def __call__(
-            self,
-            smbo: SMBO,
-            run_info: RunInfo,
-            result: RunValue,
-            time_left: float,
-    ):
-        if result.status in (StatusType.STOP, StatusType.ABORT) or smbo._stop:
+    def on_tell_end(self, smbo: SMBO, info: TrialInfo, value: TrialValue) -> bool | None:
+        if value.status in (StatusType.TIMEOUT, StatusType.CRASHED, StatusType.MEMORYOUT) or smbo._stop:
             return
 
-        if isinstance(smbo.tae_runner, DaskParallelRunner):
-            self.build_ensemble(smbo.tae_runner.client)
+        if isinstance(smbo._runner, DaskParallelRunner):
+            self.build_ensemble(smbo._runner._client)
         else:
             self.build_ensemble(SingleThreadedClient())
 
@@ -186,9 +183,10 @@ class EnsembleBuilderManager(IncorporateRunResultCallback):
         if ensemble is None:
             return None
 
-        forecasters = self.backend.load_models_by_identifiers(ensemble.identifiers_)
+        # noinspection PyTypeChecker
+        forecasters: List[AutoSktimePredictor] = self.backend.load_models_by_identifiers(ensemble.identifiers_).values()
         ens = PrefittedEnsembleForecaster(
-            forecasters=forecasters.values(),
+            forecasters=forecasters,
             weights=ensemble.weights_
         )
         ens.fit(datamanager.y_ens, X=datamanager.X_ens)
@@ -356,15 +354,10 @@ class EnsembleBuilder:
                 time_left = end_at - current_time
             wall_time_in_s = int(time_left - time_buffer)
 
-            safe_ensemble_script = pynisher.enforce_limits(
-                wall_time_in_s=wall_time_in_s,
-                logger=self.logger,
-            )(self._run)
-            safe_ensemble_script(iteration)
-
-            if safe_ensemble_script.exit_status == 0:
-                return safe_ensemble_script.result
-            else:
+            try:
+                safe_ensemble_script = pynisher.limit(self._run, wall_time=wall_time_in_s)
+                return safe_ensemble_script(iteration)
+            except Exception:
                 return time.time(), np.inf, self.ensemble_nbest
         else:
             try:

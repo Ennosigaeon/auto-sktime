@@ -20,7 +20,6 @@ from autosktime.pipeline.templates import TemplateChoice
 from autosktime.util import resolve_index
 from autosktime.util.backend import ConfigContext, ConfigId
 from autosktime.util.plotting import plot_grouped_series
-from smac.tae import StatusType
 
 __all__ = [
     'AbstractEvaluator'
@@ -186,7 +185,6 @@ class AbstractEvaluator:
             y_pred: SUPPORTED_Y_TYPES,
             y_ens: SUPPORTED_Y_TYPES,
             y_test: Optional[SUPPORTED_Y_TYPES],
-            status: StatusType,
     ) -> TaFuncResult:
         self.file_output(y_pred, y_ens, y_test)
 
@@ -199,7 +197,7 @@ class AbstractEvaluator:
             'num_run': self.num_run
         }
 
-        return TaFuncResult(loss=loss, additional_run_info=additional_run_info, status=status)
+        return loss, additional_run_info
 
     def file_output(
             self,

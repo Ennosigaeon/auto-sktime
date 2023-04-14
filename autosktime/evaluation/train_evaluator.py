@@ -17,7 +17,6 @@ from autosktime.evaluation.abstract_evaluator import AbstractEvaluator, _fit_and
 from autosktime.pipeline.components.base import AutoSktimePredictor
 from autosktime.pipeline.templates import TemplateChoice
 from autosktime.util.backend import Backend
-from smac.tae import StatusType
 
 EvalResult = NamedTuple('EvalResult', [
     ('y_pred', pd.Series),
@@ -128,7 +127,6 @@ class TrainEvaluator(AbstractEvaluator):
             y_pred=val_pred,
             y_ens=y_ens,
             y_test=y_test,
-            status=StatusType.SUCCESS
         )
 
     def _fit_and_predict_fold_standard(

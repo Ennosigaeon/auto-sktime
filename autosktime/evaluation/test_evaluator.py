@@ -10,7 +10,6 @@ from autosktime.evaluation import TaFuncResult
 # noinspection PyProtectedMember
 from autosktime.evaluation.abstract_evaluator import AbstractEvaluator, _fit_and_suppress_warnings
 from autosktime.util.backend import Backend
-from smac.tae import StatusType
 
 
 class TestEvaluator(AbstractEvaluator):
@@ -36,7 +35,6 @@ class TestEvaluator(AbstractEvaluator):
             y_pred=test_pred,
             y_ens=test_pred,
             y_test=test_pred,
-            status=StatusType.SUCCESS
         )
 
 

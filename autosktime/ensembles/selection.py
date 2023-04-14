@@ -1,5 +1,5 @@
 from collections import Counter
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -217,7 +217,7 @@ class EnsembleSelection(AbstractEnsemble):
 
         return output
 
-    def predict(self, base_models_predictions: List[pd.DataFrame]) -> pd.DataFrame:
+    def predict(self, base_models_predictions: List[Union[pd.DataFrame, pd.Series]]) -> pd.DataFrame:
         predictions = np.array(base_models_predictions)
         pred = np.average(predictions[self.indices_], weights=self.weights_[self.indices_], axis=0)
         return pd.DataFrame(pred, columns=base_models_predictions[0].columns, index=base_models_predictions[0].index)

@@ -10,7 +10,7 @@ from matplotlib import pyplot as plt
 from scipy.stats import wilcoxon
 from scipy.stats._morestats import WilcoxonResult
 from smac.runhistory.runhistory import RunHistory
-from smac.tae import StatusType
+from smac.runhistory.enumerations import StatusType
 
 from autosktime.data.benchmark import BENCHMARKS
 

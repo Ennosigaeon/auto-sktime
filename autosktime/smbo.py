@@ -1,6 +1,8 @@
 import copy
 import logging
 import os
+import sys
+from pathlib import Path
 from typing import Optional, Tuple, List, Dict, Type, Any
 
 import dask.distributed
@@ -13,23 +15,24 @@ from ConfigSpace import ConfigurationSpace, Configuration
 from autosktime.automl_common.common.utils.backend import Backend
 from autosktime.data import DataManager
 from autosktime.data.splitter import BaseSplitter
-from autosktime.evaluation import ExecuteTaFunc, get_cost_of_crash
+from autosktime.evaluation import ExecuteTaFunc
 from autosktime.metalearning.meta_base import MetaBase
-from autosktime.metrics import METRIC_TO_STRING
+from autosktime.metrics import METRIC_TO_STRING, get_cost_of_crash
+from autosktime.smac.acquisition import PriorAcquisitionFunction
 from autosktime.smac.prior import Prior
-from smac.callbacks import IncorporateRunResultCallback
-from smac.facade.smac_ac_facade import SMAC4AC
-from smac.intensification.simple_intensifier import SimpleIntensifier
-from smac.intensification.successive_halving import SuccessiveHalving
+from smac import Callback, AlgorithmConfigurationFacade, MultiFidelityFacade
+from smac.facade import AbstractFacade
+from smac.initial_design import DefaultInitialDesign
+from smac.intensifier import SuccessiveHalving
+from smac.intensifier.intensifier import Intensifier
+from smac.runhistory.dataclasses import TrajectoryItem
 from smac.runhistory.runhistory import RunHistory
-from smac.runhistory.runhistory2epm import RunHistory2EPM4LogCost
-from smac.scenario.scenario import Scenario
-from smac.utils.io.traj_logging import TrajEntry
+from smac.scenario import Scenario
 
 
 class IntensifierGenerator:
 
-    def __call__(self, *args, **kwargs) -> SMAC4AC:
+    def __call__(self, *args, **kwargs) -> AbstractFacade:
         pass
 
 
@@ -38,76 +41,75 @@ class SimpleIntensifierGenerator(IntensifierGenerator):
     def __call__(
             self,
             scenario: Scenario,
-            seed: int,
             ta_kwargs: Dict,
-            n_jobs: int,
-            dask_client: dask.distributed.Client,
             initial_configurations: List[Configuration],
             hp_priors: bool,
-            priors: Dict[str, Prior]
-    ) -> SMAC4AC:
-        return SMAC4AC(
+            priors: Dict[str, Prior],
+            callbacks: List[Callback]
+    ) -> AbstractFacade:
+        ta_kwargs['scenario'] = scenario
+
+        initial_design = None
+        if initial_configurations is not None and len(initial_configurations) > 0:
+            initial_design = DefaultInitialDesign(
+                scenario=scenario,
+                n_configs=0,
+                additional_configs=initial_configurations,
+            )
+
+        acquisition_function = AlgorithmConfigurationFacade.get_acquisition_function(scenario)
+        if hp_priors:
+            acquisition_function = PriorAcquisitionFunction(acquisition_function, decay_beta=10, priors=priors)
+
+        return AlgorithmConfigurationFacade(
             scenario=scenario,
-            rng=seed,
-            runhistory2epm=RunHistory2EPM4LogCost,
-            tae_runner=ExecuteTaFunc,
-            tae_runner_kwargs=ta_kwargs,
-            run_id=seed,
-            dask_client=dask_client,
-            n_jobs=n_jobs,
-            intensifier=SimpleIntensifier,
-            initial_configurations=initial_configurations,
-            user_priors=hp_priors,
-            user_prior_kwargs={
-                'decay_beta': 10,
-                'priors': priors
-            },
+            target_function=ExecuteTaFunc(**ta_kwargs),
+            intensifier=Intensifier(scenario),
+            initial_design=initial_design,
+            callbacks=callbacks,
+            acquisition_function=acquisition_function
         )
 
 
 class SHIntensifierGenerator(IntensifierGenerator):
 
     # Use eta and initial_budget as (2.0, 50.0) for 2 candidates per iteration with 50% elimination
-    def __init__(self, budget_type: str = 'iterations', eta: float = 4.0, initial_budget: float = 5.0):
+    def __init__(self, budget_type: str = 'iterations', eta: int = 4.0):
         self.budget_type = budget_type
         self.eta = eta
-        self.initial_budget = initial_budget
 
     def __call__(
             self,
             scenario: Scenario,
             seed: int,
             ta_kwargs: Dict,
-            n_jobs: int,
-            dask_client: dask.distributed.Client,
             initial_configurations: List[Configuration],
             hp_priors: bool,
-            priors: Dict[str, Prior]
-    ) -> SMAC4AC:
+            priors: Dict[str, Prior],
+            callbacks: List[Callback]
+    ) -> AbstractFacade:
+        ta_kwargs['scenario'] = scenario
         ta_kwargs['budget_type'] = self.budget_type
 
-        return SMAC4AC(
+        initial_design = None
+        if initial_configurations is not None and len(initial_configurations) > 0:
+            initial_design = DefaultInitialDesign(
+                scenario=scenario,
+                n_configs=0,
+                additional_configs=initial_configurations,
+            )
+
+        acquisition_function = MultiFidelityFacade.get_acquisition_function(scenario)
+        if hp_priors:
+            acquisition_function = PriorAcquisitionFunction(acquisition_function, decay_beta=10, priors=priors)
+
+        return MultiFidelityFacade(
             scenario=scenario,
-            rng=seed,
-            runhistory2epm=RunHistory2EPM4LogCost,
-            tae_runner=ExecuteTaFunc,
-            tae_runner_kwargs=ta_kwargs,
-            run_id=seed,
-            dask_client=dask_client,
-            n_jobs=n_jobs,
-            intensifier=SuccessiveHalving,
-            intensifier_kwargs={
-                'initial_budget': self.initial_budget,
-                'max_budget': 100,
-                'eta': self.eta,
-                'min_chall': 1,
-            },
-            initial_configurations=initial_configurations,
-            user_priors=hp_priors,
-            user_prior_kwargs={
-                'decay_beta': 10,
-                'priors': priors
-            },
+            target_function=ExecuteTaFunc(**ta_kwargs),
+            intensifier=SuccessiveHalving(scenario, eta=self.eta, seed=seed),
+            initial_design=initial_design,
+            callbacks=callbacks,
+            acquisition_function=acquisition_function
         )
 
 
@@ -121,7 +123,7 @@ class AutoMLSMBO:
             total_walltime_limit: float,
             func_eval_time_limit: float,
             runcount_limit: int,
-            memory_limit: float,
+            memory_limit: int,
             n_jobs: int,
             dask_client: dask.distributed.Client,
             metric: BaseForecastingErrorMetric,
@@ -135,8 +137,8 @@ class AutoMLSMBO:
             num_metalearning_configs: int = -1,
             hp_priors: bool = False,
             verbose: bool = False,
-            ensemble_callback: Optional[IncorporateRunResultCallback] = None,
-            trials_callback: Optional[IncorporateRunResultCallback] = None
+            ensemble_callback: Optional[Callback] = None,
+            trials_callback: Optional[Callback] = None
     ):
         # data related
         self.datamanager = datamanager
@@ -178,40 +180,40 @@ class AutoMLSMBO:
         self.verbose = verbose
         self.logger = logging.getLogger(__name__)
 
-    def optimize(self) -> Tuple[RunHistory, List[TrajEntry]]:
         if self.num_metalearning_configs > 0 and self.hp_priors:
             raise ValueError(f"'num_metalearning_configs' ({self.num_metalearning_configs}) and "
                              f"'hp_priors' {self.hp_priors} both set.")
 
         self.config_space.seed(self.seed)
+        self.smac = self._get_smac()
 
-        smac = self._get_smac()
-
+    def optimize(self) -> Tuple[RunHistory, List[TrajectoryItem]]:
         # Main optimization loop
-        smac.optimize()
+        self.smac.optimize()
 
-        self.runhistory = smac.solver.runhistory
-        self.trajectory = smac.solver.intensifier.traj_logger.trajectory
+        self.runhistory = self.smac.runhistory
+        self.trajectory = self.smac.intensifier.trajectory
 
         return self.runhistory, self.trajectory
 
-    def _get_smac(self):
-        scenario_kwargs = {
-            'abort_on_first_run_crash': False,
-            'save-results-instantly': True,
-            'cs': self.config_space,
-            'cutoff_time': self.func_eval_time_limit,
-            'deterministic': 'true',
-            'memory_limit': self.memory_limit,
-            'output-dir': self.backend.get_smac_output_directory(),
-            'run_obj': 'quality',
-            'wallclock_limit': self.total_walltime_limit,
-            'cost_for_crash': self.worst_possible_result,
-            'intens_min_chall': 1,
-        }
-        if self.runcount_limit is not None:
-            scenario_kwargs['runcount_limit'] = self.runcount_limit
-        scenario = Scenario(scenario_kwargs)
+    def _get_smac(self, initial_budget: float = 5.0):
+        scenario = Scenario(
+            configspace=self.config_space,
+            name="run",
+            output_directory=Path(self.backend.get_smac_output_directory()),
+            deterministic=True,
+            crash_cost=self.worst_possible_result,
+            termination_cost_threshold=np.inf,
+            walltime_limit=self.total_walltime_limit,
+            trial_walltime_limit=self.func_eval_time_limit,
+            trial_memory_limit=self.memory_limit,
+            n_trials=self.runcount_limit if self.runcount_limit is not None else sys.maxsize,
+            instance_features=None,
+            min_budget=initial_budget,
+            max_budget=100,
+            seed=self.seed,
+            n_workers=self.n_jobs
+        )
 
         ta_kwargs = {
             'backend': copy.deepcopy(self.backend),
@@ -219,7 +221,6 @@ class AutoMLSMBO:
             'random_state': self.random_state,
             'splitter': self.splitter,
             'metric': self.metric,
-            'memory_limit': self.memory_limit,
             'use_pynisher': self.use_pynisher,
             'verbose': self.verbose,
         }
@@ -228,21 +229,21 @@ class AutoMLSMBO:
         initial_configs = self.get_initial_configs(y)
         priors = self.get_hp_priors(y)
 
+        callbacks = []
+        if self.ensemble_callback is not None:
+            callbacks.append(self.ensemble_callback)
+        if self.trials_callback is not None:
+            callbacks.append(self.trials_callback)
+
         smac = self.intensifier_generator(
             scenario=scenario,
             seed=self.seed,
             ta_kwargs=ta_kwargs,
-            n_jobs=self.n_jobs,
-            dask_client=self.dask_client,
             initial_configurations=initial_configs,
+            callbacks=callbacks,
             hp_priors=self.hp_priors,
             priors=priors
         )
-
-        if self.ensemble_callback is not None:
-            smac.register_callback(self.ensemble_callback)
-        if self.trials_callback is not None:
-            smac.register_callback(self.trials_callback)
 
         return smac
 

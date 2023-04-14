@@ -74,7 +74,7 @@ class Backend(Backend_):
         return os.path.join(self.output_directory, "smac3-output")
 
     def get_smac_output_directory_for_run(self, seed: int) -> str:
-        return os.path.join(self.output_directory, "smac3-output", "run_%d" % seed)
+        return os.path.join(self.output_directory, "smac3-output", "run", str(seed))
 
 
 def create(

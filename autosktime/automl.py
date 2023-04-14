@@ -1,12 +1,10 @@
 import copy
-import json
 import logging.handlers
 import os
 import platform
 import sys
 import tempfile
 import time
-import unittest.mock
 import uuid
 from typing import Any, Dict, Optional, List, Tuple, Union
 
@@ -37,9 +35,9 @@ from autosktime.smbo import AutoMLSMBO, SHIntensifierGenerator, SimpleIntensifie
 from autosktime.util.backend import create, Backend
 from autosktime.util.logging_ import setup_logger
 from autosktime.util.stopwatch import StopWatch
-from smac.runhistory.runhistory import RunInfo
-from smac.stats.stats import Stats
-from smac.tae import StatusType
+from smac import Scenario
+from smac.runhistory.runhistory import TrialInfo
+from smac.runhistory.enumerations import StatusType
 
 
 class AutoML(NotVectorizedMixin, AutoSktimePredictor):
@@ -264,8 +262,7 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
                 ensemble_size=self._ensemble_size,
                 ensemble_nbest=self._ensemble_nbest,
                 max_models_on_disc=self._max_models_on_disc,
-                # SMAC always uses seed 0 internally
-                seed=0,
+                seed=self._seed,
                 random_state=self._random_state
             )
 
@@ -315,13 +312,11 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
                 verbose=self._verbose,
                 ensemble_callback=proc_ensemble,
             )
+            # Reconfigure logger because smac overrides logging configuration
+            self._get_logger(self._dataset_name)
 
             try:
                 self.runhistory_, self.trajectory_ = _proc_smac.optimize()
-                traj_file = os.path.join(self._backend.get_smac_output_directory_for_run(self._seed), 'trajectory.json')
-                with open(traj_file, 'w') as f:
-                    json.dump([list(entry[:2]) + [entry[2].get_dictionary()] + list(entry[3:])
-                               for entry in self.trajectory_], f)
             except Exception as e:
                 self._logger.exception(e)
                 raise
@@ -348,7 +343,7 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
         self._logger.info('Finished loading models...')
         self._build_ensemble()
 
-        self.num_run_ = len(self.runhistory_.data)
+        self.num_run_ = len(self.runhistory_)
         self._fit_cleanup()
 
         return self
@@ -445,7 +440,6 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
             configs: List[Tuple[float, float, Union[Configuration, Dict[str, Union[str, float, int]]]]],
             y: SUPPORTED_Y_TYPES,
             X: pd.DataFrame = None,
-            stats: Optional[Stats] = None
     ):
         self._logger.info(f'Creating ensemble of {len(configs)} provided configurations. No optimization performed.')
 
@@ -463,34 +457,25 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
                 config = Configuration(self.configuration_space, config)
             config.config_id = self.num_run_
 
-            if stats is None:
-                scenario_mock = unittest.mock.Mock()
-                scenario_mock.wallclock_limit = self._time_for_task
-                stats = Stats(scenario_mock)
-
             # Fit a pipeline, which will be stored on disk which we can later load via the backend
             ta = ExecuteTaFunc(
+                scenario=Scenario(self.configuration_space, name='run', seed=self._seed),
                 ta=autosktime.evaluation.test_evaluator.evaluate,
                 backend=self._backend,
                 seed=self._seed,
                 random_state=self._random_state,
                 splitter=None,
                 metric=self._metric,
-                stats=stats,
-                memory_limit=self._memory_limit,
                 use_pynisher=self._use_pynisher,
                 budget_type='iterations',
             )
 
             run_info, run_value = ta.run_wrapper(
-                RunInfo(
+                TrialInfo(
                     config=config,
                     instance=None,
-                    instance_specific='',
                     seed=self._seed,
                     budget=budget,
-                    cutoff=self._per_run_time_limit,
-                    capped=False,
                 )
             )
 
@@ -498,6 +483,7 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
                 raise ValueError(
                     f'Failed to fit configuration {config} with {run_value.status}: {run_value.additional_info}')
 
+            # noinspection PyUnresolvedReferences
             pipeline = self._backend.load_model_by_seed_and_id_and_budget(
                 seed=self._seed,
                 idx=run_info.config.config_id,
@@ -524,8 +510,7 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
         return predictions
 
     def _load_models(self) -> None:
-        # SMAC always uses seed 0 internally
-        ensemble_ = self._backend.load_ensemble(0)
+        ensemble_ = self._backend.load_ensemble(self._seed)
 
         # If no ensemble is loaded, try to get the best performing model
         if not ensemble_:
@@ -602,9 +587,8 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
         return performance_over_time
 
     def _get_runhistory_models_performance(self) -> pd.DataFrame:
-        data = self.runhistory_.data
         performance_list = []
-        for run_key, run_value in data.items():
+        for run_key, run_value in self.runhistory_.items():
             if run_value.status != StatusType.SUCCESS:
                 continue
 

@@ -61,9 +61,7 @@ class SingleBest(AbstractEnsemble):
         best_model_identifier = None
         best_model_score = get_cost_of_crash(self.metric)
 
-        for run_key in self.run_history.data.keys():
-            run_value = self.run_history.data[run_key]
-
+        for run_key, run_value in self.run_history.items():
             if run_value.cost < best_model_score:
                 # Make sure that the individual best model actually exists
                 model_dir = self.backend.get_numrun_directory(self.seed, run_key.config_id, run_key.budget)
