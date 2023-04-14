@@ -8,6 +8,7 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error
 # noinspection PyProtectedMember
 from sklearn.metrics._regression import _check_reg_targets
 from sklearn.utils import check_consistent_length
+from sktime.datatypes import VectorizedDF
 from sktime.performance_metrics.forecasting import (
     MeanAbsolutePercentageError as MeanAbsolutePercentageError_,
     MedianAbsolutePercentageError as MedianAbsolutePercentageError_,
@@ -84,6 +85,11 @@ class PrintableVectorizedMetric(BaseForecastingErrorMetric):
         y_true_inner, y_pred_inner, multioutput, multilevel, kwargs = self._check_ys(
             y_true, y_pred, multioutput, multilevel, **kwargs
         )
+
+        if isinstance(y_true_inner, VectorizedDF):
+            y_true_inner = y_true_inner.X
+        if isinstance(y_pred_inner, VectorizedDF):
+            y_pred_inner = y_pred_inner.X
 
         if hasattr(y_true_inner, 'index') and isinstance(y_true_inner.index, pd.MultiIndex):
             out_df = []

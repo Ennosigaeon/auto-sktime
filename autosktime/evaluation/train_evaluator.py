@@ -151,7 +151,8 @@ class TrainEvaluator(AbstractEvaluator):
             X_test = self.datamanager.X_test
 
         model = self.models[fold]
-        _fit_and_suppress_warnings(self.logger, self.configuration.config_id, model, y_train, X_train, fh=None)
+        _fit_and_suppress_warnings(self.logger, self.configuration.config_id, model, y_train, X_train,
+                                   fh=ForecastingHorizon(1))
 
         self.indices[fold] = (y_train.index, y_val.index)
 

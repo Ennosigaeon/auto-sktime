@@ -15,7 +15,7 @@ class PrefittedEnsembleForecaster(NotVectorizedMixin, EnsembleForecaster, AutoSk
 
     def __init__(
             self,
-            forecasters: List[AutoSktimePredictor],
+            forecasters: List[Tuple[str, AutoSktimePredictor]],
             n_jobs: int = None,
             aggfunc: str = "mean",
             weights: List[float] = None
@@ -37,7 +37,7 @@ class PrefittedEnsembleForecaster(NotVectorizedMixin, EnsembleForecaster, AutoSk
         res = []
         valid = []
 
-        for i, forecaster in enumerate(self.forecasters_):
+        for i, (_, forecaster) in enumerate(self.forecasters_):
             try:
                 res.append(forecaster.predict(fh=fh, X=X))
                 valid.append(i)

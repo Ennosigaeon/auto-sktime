@@ -527,7 +527,8 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
             # noinspection PyTypeChecker
             self.models_ = ensemble_.get_models_with_weights(models_)
             weights, models = tuple(map(list, zip(*self.models_)))
-            self.ensemble_ = PrefittedEnsembleForecaster(forecasters=models, weights=weights)
+            named_forecasters = [(str(f.config_id), f) for f in models]
+            self.ensemble_ = PrefittedEnsembleForecaster(forecasters=named_forecasters, weights=weights)
             self.ensemble_.fit(self._datamanager.y, self._datamanager.X)
         else:
             self.models_ = []

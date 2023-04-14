@@ -115,6 +115,9 @@ class AutoSktimeComponent(BaseEstimator):
     def set_config_id(self, config_id: ConfigId):
         self.config_id = config_id
 
+    def __hash__(self):
+        return hash(self.estimator)
+
 
 class AutoSktimePredictor(AutoSktimeComponent, BaseForecaster, ABC):
     _estimator_class: Type[BaseForecaster] = None
