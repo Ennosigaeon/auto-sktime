@@ -144,7 +144,7 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
     def _supports_task_type(cls, task_type: str) -> bool:
         raise NotImplementedError
 
-    def get_fitted_params(self):
+    def get_fitted_params(self, deep=True):
         raise NotImplementedError
 
     def reset(self):

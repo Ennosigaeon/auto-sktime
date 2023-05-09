@@ -64,7 +64,7 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
             SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.DatetimeIndex, pd.PeriodIndex, ]
         }
 
-    def get_fitted_params(self):
+    def get_fitted_params(self, deep=True):
         pass
 
     def _fit(self, y, X=None, fh=None):

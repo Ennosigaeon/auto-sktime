@@ -34,7 +34,8 @@ class AutoSktimeComponent(BaseEstimator):
 
     _tags = {
         'fit_is_empty': False,
-        'X-y-must-have-same-index': True
+        'X-y-must-have-same-index': True,
+        'requires-fh-in-fit': False
     }
 
     @staticmethod
@@ -86,6 +87,13 @@ class AutoSktimeComponent(BaseEstimator):
         tags.update(self._tags)
         return tags
 
+    def get_tag(self, tag_name, tag_value_default=None, raise_error=True):
+        try:
+            estimator = self.estimator if self.estimator is not None else self._estimator_class()
+            return estimator.get_tag(tag_name, tag_value_default, raise_error)
+        except (TypeError, AttributeError):
+            return super(AutoSktimeComponent, self).get_tag(tag_name, tag_value_default, raise_error)
+
     def set_hyperparameters(self, configuration: Union[Configuration, Dict], init_params: Dict[str, Any] = None):
         if isinstance(configuration, Configuration):
             params = configuration.get_dictionary()
@@ -124,7 +132,7 @@ class AutoSktimePredictor(AutoSktimeComponent, BaseForecaster, ABC):
     estimator: BaseForecaster = None
 
     # noinspection PyUnresolvedReferences
-    def get_fitted_params(self):
+    def get_fitted_params(self, deep=True):
         if self.estimator is None:
             raise NotImplementedError
         return self.estimator.get_fitted_params()
