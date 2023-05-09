@@ -65,7 +65,8 @@ def fit_and_predict(
         y_test_metric = y_test
 
     automl = AutoML(
-        time_left_for_this_task=10,
+        runcount_limit=10,
+        time_left_for_this_task=60,
         per_run_time_limit=10,
         working_directory='tmp',
         resampling_strategy='panel-holdout' if panel else 'temporal-holdout',
@@ -98,54 +99,64 @@ class AutoMLTest(unittest.TestCase):
             'linear:normalizer:box_cox:upper_bound': 2.0,
             'linear:outlier:n_sigma': 3.0,
             'linear:outlier:window_length': 5,
-        }, {
-            '__choice__': 'regression',
-            'regression:detrend:degree': 2,
-            'regression:detrend:with_intercept': False,
-            'regression:imputation:method': 'linear',
-            'regression:outlier:n_sigma': 4.1524233479073684,
-            'regression:outlier:window_length': 6,
-            'regression:reduction:preprocessing:rescaling:__choice__': 'minmax',
+        }, {'__choice__': 'regression',
+            'regression:detrend:degree': 1,
+            'regression:detrend:with_intercept': True,
+            'regression:imputation:method': 'nearest',
+            'regression:outlier:n_sigma': 3.8145365592351377,
+            'regression:outlier:window_length': 11,
+            'regression:reduction:preprocessing:rescaling:__choice__': 'none',
             'regression:reduction:preprocessing:selection:__choice__': 'pca',
-            'regression:reduction:preprocessing:selection:pca:keep_variance': 0.9750518438961764,
+            'regression:reduction:preprocessing:selection:pca:keep_variance': 0.5447925568158788,
             'regression:reduction:preprocessing:selection:pca:whiten': 'False',
-            'regression:reduction:regression:__choice__': 'random_forest',
-            'regression:reduction:regression:random_forest:bootstrap': 'True',
-            'regression:reduction:regression:random_forest:criterion': 'friedman_mse',
-            'regression:reduction:regression:random_forest:max_depth': 'None',
-            'regression:reduction:regression:random_forest:max_features': 0.22502824032754642,
-            'regression:reduction:regression:random_forest:max_leaf_nodes': 'None',
-            'regression:reduction:regression:random_forest:min_impurity_decrease': 0.0,
-            'regression:reduction:regression:random_forest:min_samples_leaf': 7,
-            'regression:reduction:regression:random_forest:min_samples_split': 8,
-            'regression:reduction:regression:random_forest:min_weight_fraction_leaf': 0.0,
+            'regression:reduction:regression:__choice__': 'passive_aggressive',
+            'regression:reduction:regression:passive_aggressive:C': 2.2394334138366582e-05,
+            'regression:reduction:regression:passive_aggressive:average': 'False',
+            'regression:reduction:regression:passive_aggressive:fit_intercept': 'True',
+            'regression:reduction:regression:passive_aggressive:loss': 'squared_epsilon_insensitive',
+            'regression:reduction:regression:passive_aggressive:tol': 0.00014831194342106356,
             'regression:reduction:strategy': 'recursive',
-            'regression:reduction:window_length': 3,
+            'regression:reduction:window_length': 7
+            }, {
+            '__choice__': 'regression',
+            'regression:detrend:degree': 1,
+            'regression:detrend:with_intercept': True,
+            'regression:imputation:method': 'mean',
+            'regression:outlier:n_sigma': 2.3561831568627323,
+            'regression:outlier:window_length': 4,
+            'regression:reduction:preprocessing:rescaling:__choice__': 'minmax',
+            'regression:reduction:preprocessing:selection:__choice__': 'none',
+            'regression:reduction:regression:__choice__': 'sgd',
+            'regression:reduction:regression:sgd:alpha': 0.018854220341167446,
+            'regression:reduction:regression:sgd:epsilon': 0.03910654323716942,
+            'regression:reduction:regression:sgd:fit_intercept': 'True',
+            'regression:reduction:regression:sgd:loss': 'epsilon_insensitive',
+            'regression:reduction:regression:sgd:penalty': 'l2',
+            'regression:reduction:regression:sgd:tol': 0.0022644276012169754,
+            'regression:reduction:strategy': 'recursive',
+            'regression:reduction:window_length': 2
         }]
-        perf = [2147483648., 0.1609, 0.1378]
+        perf = [0.1219190910993419, 0.12043029777776044, 0.11097340803946293]
 
-        for i in range(3):
+        for _ in range(3):
             automl, _ = fit_and_predict(y)
-            self.assertEqual(incumbents[0], automl.trajectory_[0].incumbent.get_dictionary())
-            self.assertEqual(perf[0], automl.trajectory_[0].train_perf)
 
-            self.assertEqual(incumbents[0], automl.trajectory_[1].incumbent.get_dictionary())
-            self.assertEqual(perf[1], automl.trajectory_[1].train_perf)
-
-            # self.assertEqual(incumbents[1], automl.trajectory_[2].incumbent.get_dictionary())
-            # self.assertEqual(perf[1], automl.trajectory_[1].train_perf)
+            for i in range(3):
+                self.assertEqual(incumbents[i],
+                                 automl.runhistory_.ids_config[automl.trajectory_[i].config_ids[0]].get_dictionary())
+                self.assertEqual(perf[i], automl.trajectory_[i].costs[0])
 
     def test_univariate_endogenous(self):
         y = load_airline()
 
         _, loss = fit_and_predict(y)
-        self.assertAlmostEqual(0.17396103403628044, loss)
+        self.assertAlmostEqual(0.15817264895091435, loss)
 
     def test_univariate_exogenous(self):
         y, X = load_longley()
 
         _, loss = fit_and_predict(y, X)
-        self.assertAlmostEqual(0.014263033367200383, loss)
+        self.assertAlmostEqual(0.03530212266123195, loss)
 
     @unittest.skip('Panel without exogenous data not supported')
     def test_panel_endogenous(self):

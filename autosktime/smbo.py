@@ -41,6 +41,7 @@ class SimpleIntensifierGenerator(IntensifierGenerator):
     def __call__(
             self,
             scenario: Scenario,
+            seed: int,
             ta_kwargs: Dict,
             initial_configurations: List[Configuration],
             hp_priors: bool,
@@ -86,7 +87,7 @@ class SHIntensifierGenerator(IntensifierGenerator):
             initial_configurations: List[Configuration],
             hp_priors: bool,
             priors: Dict[str, Prior],
-            callbacks: List[Callback]
+            callbacks: List[Callback],
     ) -> AbstractFacade:
         ta_kwargs['scenario'] = scenario
         ta_kwargs['budget_type'] = self.budget_type

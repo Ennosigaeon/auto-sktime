@@ -1,24 +1,22 @@
 import logging
-import math
 import time
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pynisher
+from ConfigSpace import Configuration
 # noinspection PyProtectedMember
 from sktime.performance_metrics.forecasting._classes import BaseForecastingErrorMetric
+from smac import Scenario
+from smac.runhistory import StatusType
+from smac.runhistory.runhistory import TrialInfo, TrialValue
+from smac.runner import TargetFunctionRunner
 
-from ConfigSpace import Configuration
 from autosktime.automl_common.common.utils.backend import Backend
 from autosktime.data.splitter import BaseSplitter
 from autosktime.pipeline.templates import TemplateChoice
 from autosktime.util.backend import ConfigContext
 from autosktime.util.context import Restorer
-from smac import Scenario
-from smac.runhistory import StatusType
-from smac.runhistory.runhistory import TrialInfo, TrialValue
-
-from smac.runner import TargetFunctionRunner
 
 TaFuncResult = Tuple[float, Dict[str, Any]]
 
@@ -112,8 +110,8 @@ class ExecuteTaFunc(TargetFunctionRunner):
         TrialValue:
             Contains information about the status/performance of config
         """
-        if self.budget_type is None and run_info.budget != 0:
-            raise ValueError(f'If budget_type is None, budget must be 0.0, but is {run_info.budget}')
+        if self.budget_type is None and run_info.budget:
+            raise ValueError(f'If budget_type is None, budget must not be given, but is {run_info.budget}')
 
         if run_info.config.config_id is None:
             run_info.config.config_id = self.num_run

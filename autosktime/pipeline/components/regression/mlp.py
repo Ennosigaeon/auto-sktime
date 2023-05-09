@@ -3,11 +3,9 @@ import warnings
 
 import numpy as np
 import pandas as pd
-from ConfigSpace.conditions import InCondition
 from ConfigSpace.configuration_space import ConfigurationSpace
-from ConfigSpace.hyperparameters import UniformFloatHyperparameter, \
-    UniformIntegerHyperparameter, UnParametrizedHyperparameter, Constant, \
-    CategoricalHyperparameter
+from ConfigSpace.hyperparameters import UniformFloatHyperparameter, UniformIntegerHyperparameter, \
+    UnParametrizedHyperparameter, Constant, CategoricalHyperparameter
 from sklearn.exceptions import ConvergenceWarning
 
 from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, HANDLES_PANEL, IGNORES_EXOGENOUS_X, \
@@ -27,7 +25,6 @@ class MLPClassifier(AutoSktimeRegressionAlgorithm):
             activation: str = 'relu',
             alpha: float = 0.0001,
             learning_rate_init: float = 0.001,
-            early_stopping: bool = True,
             solver: str = 'adam',
             batch_size: int = 'auto',
             n_iter_no_change: int = 32,
@@ -36,7 +33,6 @@ class MLPClassifier(AutoSktimeRegressionAlgorithm):
             beta_1: float = 0.9,
             beta_2: float = 0.999,
             epsilon: float = 1e-8,
-            validation_fraction: float = None,
             random_state: np.random.RandomState = None,
             verbose: bool = False,
             iterations: int = None,
@@ -49,9 +45,7 @@ class MLPClassifier(AutoSktimeRegressionAlgorithm):
         self.activation = activation
         self.alpha = alpha
         self.learning_rate_init = learning_rate_init
-        self.early_stopping = early_stopping
         self.n_iter_no_change = n_iter_no_change
-        self.validation_fraction = validation_fraction
         self.tol = tol
         self.solver = solver
         self.batch_size = batch_size
@@ -86,18 +80,8 @@ class MLPClassifier(AutoSktimeRegressionAlgorithm):
         self.activation = str(self.activation)
         self.alpha = float(self.alpha)
         self.learning_rate_init = float(self.learning_rate_init)
-        self.early_stopping = str(self.early_stopping)
         self.tol = float(self.tol)
         self.n_iter_no_change = int(self.n_iter_no_change)
-
-        if self.early_stopping == 'train':
-            self.validation_fraction = 0.0
-            self.early_stopping_val = False
-        elif self.early_stopping == 'valid':
-            self.validation_fraction = float(self.validation_fraction)
-            self.early_stopping_val = True
-        else:
-            raise ValueError(f'Set early stopping to unknown value {self.early_stopping}')
 
         try:
             self.batch_size = int(self.batch_size)
@@ -125,8 +109,6 @@ class MLPClassifier(AutoSktimeRegressionAlgorithm):
             random_state=copy.copy(self.random_state),
             verbose=self.verbose,
             warm_start=True,
-            early_stopping=self.early_stopping_val,
-            validation_fraction=self.validation_fraction,
             n_iter_no_change=self.n_iter_no_change,
             tol=self.tol,
             beta_1=self.beta_2,
@@ -174,10 +156,8 @@ class MLPClassifier(AutoSktimeRegressionAlgorithm):
 
         learning_rate_init = UniformFloatHyperparameter('learning_rate_init', lower=1e-4, upper=0.5, default_value=1e-3,
                                                         log=True)
-        early_stopping = CategoricalHyperparameter('early_stopping', choices=['valid', 'train'])
 
         n_iter_no_change = Constant(name='n_iter_no_change', value=32)  # default=10 is too low
-        validation_fraction = Constant(name='validation_fraction', value=0.1)
         tol = UnParametrizedHyperparameter(name='tol', value=1e-4)
         solver = Constant(name='solver', value='adam')
 
@@ -188,10 +168,7 @@ class MLPClassifier(AutoSktimeRegressionAlgorithm):
         epsilon = UnParametrizedHyperparameter(name='epsilon', value=1e-8)
 
         cs.add_hyperparameters([
-            hidden_layer_depth, num_nodes_per_layer, activation, alpha, learning_rate_init, early_stopping,
-            n_iter_no_change, validation_fraction, tol, solver, batch_size, shuffle, beta_1, beta_2, epsilon
+            hidden_layer_depth, num_nodes_per_layer, activation, alpha, learning_rate_init, n_iter_no_change, tol,
+            solver, batch_size, shuffle, beta_1, beta_2, epsilon
         ])
-
-        validation_fraction_cond = InCondition(validation_fraction, early_stopping, ['valid'])
-        cs.add_conditions([validation_fraction_cond])
         return cs

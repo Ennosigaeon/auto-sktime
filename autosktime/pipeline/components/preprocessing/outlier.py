@@ -50,10 +50,9 @@ class HampelFilterComponent(AutoSktimeTransformer):
 
     @staticmethod
     def get_hyperparameter_search_space(dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
-        # TODO ValueError: The `window_length` and the forecasting horizon are incompatible with the length of `y`.
-        #  Found `window_length`=99, `max(fh)`=1, but len(y)=92. It is required that the window length plus maximum
-        #  forecast horizon is smaller than the length of the time series `y` itself.
-        window_length = UniformIntegerHyperparameter('window_length', lower=3, upper=100, default_value=5, log=True)
+        window_length = UniformIntegerHyperparameter('window_length', lower=3, log=True,
+                                                     upper=min(dataset_properties.series_length - 1, 100),
+                                                     default_value=min(dataset_properties.series_length - 1, 5))
         n_sigma = UniformFloatHyperparameter('n_sigma', lower=2, upper=5, default_value=3)
 
         cs = ConfigurationSpace()

@@ -107,7 +107,9 @@ class ReductionComponent(AutoSktimePredictor):
     @staticmethod
     def get_hyperparameter_search_space(dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
         strategy = CategoricalHyperparameter('strategy', choices=['recursive'])
-        window_length = UniformIntegerHyperparameter('window_length', lower=1, upper=100, default_value=10, log=True)
+        window_length = UniformIntegerHyperparameter('window_length', lower=1, log=True,
+                                                     upper=min(dataset_properties.series_length - 1, 100),
+                                                     default_value=min(dataset_properties.series_length - 1, 10))
 
         # TODO include and exclude missing
         preprocessing = DataPreprocessingPipeline() \

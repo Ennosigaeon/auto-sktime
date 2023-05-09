@@ -2,16 +2,22 @@ from collections.abc import MutableMapping
 from typing import Any, Dict, Optional, Union, Iterator, Type
 
 import pandas as pd
+from sktime.forecasting.model_selection._split import BaseSplitter
+
+from autosktime.data.splitter import TemporalHoldoutSplitter
 
 
 class DatasetProperties(MutableMapping):
 
-    def __init__(self, task: int, index_type: pd.Index, **kwargs):
+    def __init__(self, task: int, index_type: pd.Index, splitter: Optional[BaseSplitter] = None, **kwargs):
         if isinstance(index_type, pd.MultiIndex):
             series_length = index_type.to_frame().groupby(level=0).size().min()
             index_type = index_type.levels[-1]
         else:
             series_length = index_type.size
+
+        if isinstance(splitter, TemporalHoldoutSplitter):
+            series_length -= len(splitter.fh)
 
         self._data = dict(
             kwargs,
@@ -62,7 +68,8 @@ class DataManager:
             X_ens: Optional[pd.DataFrame] = None,
             y_test: Optional[pd.Series] = None,
             X_test: Optional[pd.DataFrame] = None,
-            dataset_name: str = ''
+            dataset_name: str = '',
+            splitter: Optional[BaseSplitter] = None
     ):
         self._data = {
             'y_train': y,
@@ -76,7 +83,7 @@ class DataManager:
             'task': task
         }
         self._name = dataset_name
-        self.dataset_properties = DatasetProperties(task, y.index)
+        self.dataset_properties = DatasetProperties(task, y.index, splitter=splitter)
 
     @property
     def name(self) -> str:

@@ -27,7 +27,7 @@ class TemporalHoldoutSplitter(SingleWindowSplitter_):
 
     def _split(self, y: pd.Index) -> SPLIT_GENERATOR_TYPE:
         n_timepoints = y.shape[0]
-        test_size = np.floor(n_timepoints * self.fh_) + 1
+        test_size = np.ceil(n_timepoints * self.fh_)
         self.fh = ForecastingHorizon(np.arange(1, test_size, dtype=int))
 
         return super()._split(y)

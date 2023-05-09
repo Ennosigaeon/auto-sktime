@@ -35,7 +35,8 @@ class AutoSktimeComponent(BaseEstimator):
     _tags = {
         'fit_is_empty': False,
         'X-y-must-have-same-index': True,
-        'requires-fh-in-fit': False
+        'requires-fh-in-fit': False,
+        'capability:inverse_transform': True,
     }
 
     @staticmethod
@@ -88,11 +89,14 @@ class AutoSktimeComponent(BaseEstimator):
         return tags
 
     def get_tag(self, tag_name, tag_value_default=None, raise_error=True):
-        try:
-            estimator = self.estimator if self.estimator is not None else self._estimator_class()
-            return estimator.get_tag(tag_name, tag_value_default, raise_error)
-        except (TypeError, AttributeError):
-            return super(AutoSktimeComponent, self).get_tag(tag_name, tag_value_default, raise_error)
+        if tag_name in self._tags:
+            return self._tags.get(tag_name)
+        else:
+            try:
+                estimator = self.estimator if self.estimator is not None else self._estimator_class()
+                return estimator.get_tag(tag_name, tag_value_default, raise_error)
+            except (TypeError, AttributeError):
+                return super(AutoSktimeComponent, self).get_tag(tag_name, tag_value_default, raise_error)
 
     def set_hyperparameters(self, configuration: Union[Configuration, Dict], init_params: Dict[str, Any] = None):
         if isinstance(configuration, Configuration):

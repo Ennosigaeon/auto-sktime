@@ -37,7 +37,7 @@ Y_ENSEMBLE = 0
 Y_VALID = 1
 Y_TEST = 2
 
-MODEL_FN_RE = r'_([0-9]*)_([0-9]*)_([0-9]{1,3}\.[0-9]*)\.npy'
+MODEL_FN_RE = r'_([0-9]*)_([0-9]*)_([0-9]{1,3}\.[0-9]*|None)\.npy'
 
 
 class EnsembleBuilderManager(Callback):
@@ -183,8 +183,9 @@ class EnsembleBuilderManager(Callback):
         if ensemble is None:
             return None
 
+        tmp = self.backend.load_models_by_identifiers(ensemble.identifiers_)
         # noinspection PyTypeChecker
-        forecasters: List[AutoSktimePredictor] = self.backend.load_models_by_identifiers(ensemble.identifiers_).values()
+        forecasters: List[Tuple[str, AutoSktimePredictor]] = [(str(k), v) for k, v in tmp.items()]
         ens = PrefittedEnsembleForecaster(
             forecasters=forecasters,
             weights=ensemble.weights_
@@ -432,17 +433,14 @@ class EnsembleBuilder:
         # First sort files chronologically
         to_read = []
         for y_ens_fn in self.y_ens_files:
-            match = self.model_fn_re.search(y_ens_fn)
-            _seed = int(match.group(1))
-            _num_run = int(match.group(2))
-            _budget = float(match.group(3))
+            _seed, _num_run, _budget = self._parse_file_name(y_ens_fn)
             mtime = os.path.getmtime(y_ens_fn)
 
-            to_read.append([y_ens_fn, match, _seed, _num_run, _budget, mtime])
+            to_read.append([y_ens_fn, _seed, _num_run, _budget, mtime])
 
         n_read_files = 0
         # Now read file wrt to num_run
-        for y_ens_fn, match, _seed, _num_run, _budget, mtime in sorted(to_read, key=lambda x: x[5]):
+        for y_ens_fn, _seed, _num_run, _budget, mtime in sorted(to_read, key=lambda x: x[4]):
             if not y_ens_fn.endswith('.npy'):
                 self.logger.info(f'Error loading file (not .npy): {y_ens_fn}')
                 continue
@@ -499,9 +497,7 @@ class EnsembleBuilder:
         match = self.model_fn_re.search(pred_path)
         if not match:
             raise ValueError(f'Invalid path format {pred_path}')
-        _seed = int(match.group(1))
-        _num_run = int(match.group(2))
-        _budget = float(match.group(3))
+        _seed, _num_run, _budget = self._parse_file_name(pred_path)
 
         stored_files_for_run = os.listdir(self.backend.get_numrun_directory(_seed, _num_run, _budget))
         stored_files_for_run = [
@@ -669,10 +665,7 @@ class EnsembleBuilder:
                 # Safety-net to prevent deleting used models, should not be necessary
                 continue
 
-            match = self.model_fn_re.search(pred_path)
-            _seed = int(match.group(1))
-            _num_run = int(match.group(2))
-            _budget = float(match.group(3))
+            _seed, _num_run, _budget = self._parse_file_name(pred_path)
 
             directory = self.backend.get_numrun_directory(_seed, _num_run, _budget)
             try:
@@ -693,3 +686,13 @@ class EnsembleBuilder:
             return predictions
         except FileNotFoundError:
             return None
+
+    def _parse_file_name(self, file_name: str) -> Tuple[int, int, Optional[float]]:
+        match = self.model_fn_re.search(file_name)
+        _seed = int(match.group(1))
+        _num_run = int(match.group(2))
+        if match.group(3) == 'None':
+            _budget = None
+        else:
+            _budget = float(match.group(3))
+        return _seed, _num_run, _budget

@@ -33,7 +33,7 @@ class MetaBaseTest(unittest.TestCase):
             'linear:imputation:method': 'random',
             'linear:normalizer:__choice__': 'log',
             'linear:outlier:n_sigma': 2.3176485168449408,
-            'linear:outlier:window_length': 17
+            'linear:outlier:window_length': 5
         }, {
             '__choice__': 'linear',
             'linear:forecaster:__choice__': 'theta',
@@ -42,7 +42,7 @@ class MetaBaseTest(unittest.TestCase):
             'linear:imputation:method': 'ffill',
             'linear:normalizer:__choice__': 'noop',
             'linear:outlier:n_sigma': 2.376676502499649,
-            'linear:outlier:window_length': 11
+            'linear:outlier:window_length': 5
         }]
 
         self.assertEqual(expected[0], actual.get_dictionary())
@@ -70,7 +70,7 @@ class MetaBaseTest(unittest.TestCase):
                 'linear:imputation:method': 'random',
                 'linear:normalizer:__choice__': 'log',
                 'linear:outlier:n_sigma': 2.3176485168449408,
-                'linear:outlier:window_length': 17
+                'linear:outlier:window_length': 5
             }, {
                 '__choice__': 'linear',
                 'linear:forecaster:__choice__': 'tbats',
@@ -82,7 +82,7 @@ class MetaBaseTest(unittest.TestCase):
                 'linear:imputation:method': 'bfill',
                 'linear:normalizer:__choice__': 'log',
                 'linear:outlier:n_sigma': 3.689896803394823,
-                'linear:outlier:window_length': 11
+                'linear:outlier:window_length': 5
             }]
 
         self.assertEqual(expected, [a.get_dictionary() for a in actual])

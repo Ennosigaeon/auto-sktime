@@ -230,7 +230,7 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
         self._backend.save_targets_ensemble(y_ens)
         self._backend.save_targets_test(self._test_data[0])
         self._datamanager = DataManager(self._task, y, X, y_ens, X_ens, self._test_data[0], self._test_data[1],
-                                        self._dataset_name)
+                                        self._dataset_name, splitter)
         self._backend.save_datamanager(self._datamanager)
         time_for_load_data = self._stopwatch.wall_elapsed(self._dataset_name)
 
