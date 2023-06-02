@@ -217,10 +217,15 @@ class EnsembleSelection(AbstractEnsemble):
 
         return output
 
-    def predict(self, base_models_predictions: List[Union[pd.DataFrame, pd.Series]]) -> pd.DataFrame:
+    def predict(self, base_models_predictions: List[Union[pd.DataFrame, pd.Series]]) -> Union[pd.DataFrame, pd.Series]:
         predictions = np.array(base_models_predictions)
         pred = np.average(predictions[self.indices_], weights=self.weights_[self.indices_], axis=0)
-        return pd.DataFrame(pred, columns=base_models_predictions[0].columns, index=base_models_predictions[0].index)
+
+        base = base_models_predictions[0]
+        if isinstance(base, pd.DataFrame):
+            return pd.DataFrame(pred, columns=base.columns, index=base.index)
+        else:
+            return pd.Series(pred, name=base.name, index=base.index)
 
     def get_validation_performance(self) -> float:
         return self.trajectory_[-1]
