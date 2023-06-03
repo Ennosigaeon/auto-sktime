@@ -8,6 +8,7 @@ from sktime.forecasting.model_selection import temporal_train_test_split
 from sktime.performance_metrics.forecasting import MeanAbsolutePercentageError
 from sktime.utils.plotting import plot_series
 
+from scripts.benchmark._autogluon import evaluate_autogluon
 from scripts.benchmark._hyperts import evaluate_hyperts
 from scripts.benchmark._pyaf import evaluate_pyaf
 from scripts.benchmark._sktime import evaluate_arima, evaluate_prophet
@@ -16,7 +17,8 @@ methods = [
     ('pmdarima', evaluate_arima),
     ('prophet', evaluate_prophet),
     ('pyaf', evaluate_pyaf),
-    ('hyperts', evaluate_hyperts)
+    ('hyperts', evaluate_hyperts),
+    ('autogluon', evaluate_autogluon)
 ]
 fh = 12
 
