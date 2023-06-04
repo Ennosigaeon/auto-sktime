@@ -1,17 +1,23 @@
 import warnings
 from typing import Type
 
-import numpy as np
 import pandas as pd
 from sktime.forecasting.arima import AutoARIMA
-from sktime.forecasting.base import BaseForecaster
+from sktime.forecasting.base import BaseForecaster, ForecastingHorizon
 from sktime.forecasting.fbprophet import Prophet
+
+from scripts.benchmark.util import generate_fh
 
 warnings.filterwarnings("ignore")
 
 
-def evaluate(y: pd.Series, clazz: Type[BaseForecaster], fh: int):
-    fh = np.arange(1, fh + 1)
+def evaluate(y: pd.Series, clazz: Type[BaseForecaster], fh_: int):
+    fh = ForecastingHorizon(generate_fh(y.index, fh_), is_relative=False)
+
+    orig_freq = pd.infer_freq(y.index)
+    # See https://github.com/pandas-dev/pandas/issues/38914
+    freq = 'M' if orig_freq == 'MS' else orig_freq
+    y.index = y.index.to_period(freq)
 
     forecaster = clazz()
     forecaster.fit(y)
@@ -23,8 +29,8 @@ def evaluate(y: pd.Series, clazz: Type[BaseForecaster], fh: int):
 
 
 def evaluate_arima(y: pd.Series, fh: int):
-    return evaluate(y, AutoARIMA, fh=fh)
+    return evaluate(y, AutoARIMA, fh_=fh)
 
 
 def evaluate_prophet(y: pd.Series, fh: int):
-    return evaluate(y, Prophet, fh=fh)
+    return evaluate(y, Prophet, fh_=fh)
