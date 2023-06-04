@@ -9,6 +9,7 @@ from sktime.performance_metrics.forecasting import MeanAbsolutePercentageError
 from sktime.utils.plotting import plot_series
 
 from scripts.benchmark._autogluon import evaluate_autogluon
+from scripts.benchmark._autots import evaluate_autots
 from scripts.benchmark._hyperts import evaluate_hyperts
 from scripts.benchmark._pyaf import evaluate_pyaf
 from scripts.benchmark._sktime import evaluate_arima, evaluate_prophet
@@ -18,7 +19,8 @@ methods = [
     ('prophet', evaluate_prophet),
     ('pyaf', evaluate_pyaf),
     ('hyperts', evaluate_hyperts),
-    ('autogluon', evaluate_autogluon)
+    ('autogluon', evaluate_autogluon),
+    ('autots', evaluate_autots)
 ]
 fh = 12
 
