@@ -1,6 +1,9 @@
 import glob
+import math
 import pathlib
 import time
+import traceback
+from typing import Callable
 
 import pandas as pd
 from matplotlib import pyplot as plt
@@ -23,8 +26,26 @@ methods = [
     ('autots', evaluate_autots)
 ]
 fh = 12
+max_duration = 60
+metric = MeanAbsolutePercentageError(symmetric=True)
 
 results = {'method': [], 'dataset': [], 'smape': [], 'duration': []}
+
+
+def test_framework(y_train: pd.Series, y_test: pd.Series, evaluate: Callable):
+    start = time.time()
+    try:
+        y_pred, y_pred_ints = evaluate(y_train.copy(), fh, max_duration)
+        y_pred.index, y_pred_ints.index = y_test.index, y_test.index
+
+        score = metric(y_test, y_pred)
+
+        return y_pred, y_pred_ints, score, time.time() - start
+    except KeyboardInterrupt:
+        raise
+    except Exception:
+        traceback.print_exc()
+        return None, None, math.inf, time.time() - start
 
 
 def benchmark():
@@ -36,24 +57,14 @@ def benchmark():
         print(path.name)
 
         y = pd.read_csv(file, index_col='index', parse_dates=['index'])['y']
-
         y_train, y_test = temporal_train_test_split(y, test_size=fh)
-        metric = MeanAbsolutePercentageError(symmetric=True)
 
         for name, evaluate in methods:
-            start = time.time()
-            y_pred, y_pred_ints = evaluate(y_train.copy(), fh)
-            duration = time.time() - start
-
-            y_pred.index = y_test.index
-            if y_pred_ints is not None:
-                y_pred_ints.index = y_test.index
-
-            score = metric(y_test, y_pred)
-
-            plot_series(y_train, y_test, y_pred, labels=["y_train", "y_test", "y_pred"], pred_interval=y_pred_ints,
-                        title=f'{path.name} - {name}')
-            plt.show()
+            y_pred, y_pred_ints, score, duration = test_framework(y_train, y_test, evaluate)
+            if y_pred is not None:
+                plot_series(y_train, y_test, y_pred, labels=["y_train", "y_test", "y_pred"], pred_interval=y_pred_ints,
+                            title=f'{path.name} - {name}')
+                plt.show()
 
             results['method'].append(name)
             results['dataset'].append(path.name)

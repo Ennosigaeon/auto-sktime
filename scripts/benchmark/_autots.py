@@ -2,13 +2,14 @@ import pandas as pd
 from autots import AutoTS
 
 
-def evaluate_autots(y: pd.Series, fh: int):
+def evaluate_autots(y: pd.Series, fh: int, max_duration: int):
     df = y.to_frame()
 
     model = AutoTS(
         forecast_length=fh,
         prediction_interval=0.5,
-        max_generations=1
+        max_generations=500,
+        generation_timeout=max(1, max_duration // 60)
     )
     model = model.fit(df)
     output = model.predict()

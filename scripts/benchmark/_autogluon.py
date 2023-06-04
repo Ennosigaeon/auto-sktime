@@ -5,7 +5,7 @@ import pandas as pd
 from autogluon.timeseries import TimeSeriesDataFrame, TimeSeriesPredictor
 
 
-def evaluate_autogluon(y: pd.Series, fh: int):
+def evaluate_autogluon(y: pd.Series, fh: int, max_duration: int):
     y = y.reset_index()
     y['item_id'] = 0
 
@@ -28,7 +28,7 @@ def evaluate_autogluon(y: pd.Series, fh: int):
     predictor.fit(
         train_data,
         presets="high_quality",
-        time_limit=30,
+        time_limit=max_duration,
     )
 
     predictions = predictor.predict(train_data)

@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 from hyperts import make_experiment
 from hyperts.framework.compete import TSPipeline
@@ -5,11 +6,23 @@ from hyperts.framework.compete import TSPipeline
 from scripts.benchmark.util import generate_fh
 
 
-def evaluate_hyperts(y: pd.Series, fh: int):
+def evaluate_hyperts(y: pd.Series, fh: int, max_duration: int):
     fh = pd.DataFrame(generate_fh(y.index, fh).to_timestamp(), columns=['index'])
     y = y.reset_index()
 
-    model: TSPipeline = make_experiment(y, task='univariate-forecast', timestamp='index').run()
+    model: TSPipeline = make_experiment(
+        y,
+        task='univariate-forecast',
+        timestamp='index',
+        max_trials=500000,
+        early_stopping_time_limit=max_duration) \
+        .run()
 
     y_pred = model.predict(fh).set_index('index')
-    return y_pred['y'], None
+    y_pred_ints = pd.DataFrame(
+        np.tile(y_pred.values, 2),
+        columns=pd.MultiIndex.from_tuples([('Coverage', 0.5, 'lower'), ('Coverage', 0.5, 'upper')]),
+        index=y_pred.index
+    )
+
+    return y_pred['y'], y_pred_ints

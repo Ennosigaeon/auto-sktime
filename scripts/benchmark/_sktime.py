@@ -11,7 +11,7 @@ from scripts.benchmark.util import generate_fh
 warnings.filterwarnings("ignore")
 
 
-def evaluate(y: pd.Series, clazz: Type[BaseForecaster], fh_: int):
+def evaluate(y: pd.Series, clazz: Type[BaseForecaster], fh_: int, max_duration: int):
     fh = ForecastingHorizon(generate_fh(y.index, fh_), is_relative=False)
 
     orig_freq = pd.infer_freq(y.index)
@@ -28,9 +28,9 @@ def evaluate(y: pd.Series, clazz: Type[BaseForecaster], fh_: int):
     return y_pred, y_pred_ints
 
 
-def evaluate_arima(y: pd.Series, fh: int):
-    return evaluate(y, AutoARIMA, fh_=fh)
+def evaluate_arima(y: pd.Series, fh: int, max_duration: int):
+    return evaluate(y, AutoARIMA, fh_=fh, max_duration=max_duration)
 
 
-def evaluate_prophet(y: pd.Series, fh: int):
-    return evaluate(y, Prophet, fh_=fh)
+def evaluate_prophet(y: pd.Series, fh: int, max_duration: int):
+    return evaluate(y, Prophet, fh_=fh, max_duration=max_duration)
