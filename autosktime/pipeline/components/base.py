@@ -167,6 +167,11 @@ class AutoSktimePredictor(AutoSktimeComponent, BaseForecaster, ABC):
             raise NotImplementedError
         return self.estimator.predict(fh=fh, X=X)
 
+    def _predict_interval(self, fh: ForecastingHorizon, X: pd.DataFrame = None, coverage: float = 0.90):
+        if self.estimator is None:
+            raise NotImplementedError
+        return self.estimator.predict_interval(fh=fh, X=X)
+
     def _update(self, y: pd.Series, X: pd.Series = None, update_params: bool = True):
         if self.estimator is None:
             raise NotImplementedError

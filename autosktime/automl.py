@@ -43,7 +43,8 @@ from smac.runhistory.enumerations import StatusType
 class AutoML(NotVectorizedMixin, AutoSktimePredictor):
     _tags = {
         'requires-fh-in-fit': False,
-        'X-y-must-have-same-index': True
+        'X-y-must-have-same-index': True,
+        'capability:pred_int': True
     }
 
     def __init__(self,
@@ -497,7 +498,7 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
 
         return self
 
-    def _predict(self, fh: ForecastingHorizon = None, X: pd.DataFrame = None):
+    def check_is_fitted(self):
         if self.models_ is None or len(self.models_) == 0 or self.ensemble_ is None:
             self._load_models()
 
@@ -506,8 +507,13 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
         if self.ensemble_ is None:
             raise ValueError('Predict can only be called if ensemble_size != 0')
 
+    def _predict(self, fh: ForecastingHorizon = None, X: pd.DataFrame = None):
         predictions = self.ensemble_.predict(fh=fh, X=X)
         return predictions
+
+    def _predict_interval(self, fh: ForecastingHorizon = None, X: pd.DataFrame = None, coverage: float = 0.90):
+        predictions_int = self.ensemble_.predict_interval(fh=fh, X=X)
+        return predictions_int
 
     def _load_models(self) -> None:
         ensemble_ = self._backend.load_ensemble(self._seed)
