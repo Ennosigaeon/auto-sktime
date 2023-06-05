@@ -12,12 +12,15 @@ import dask
 import dask.distributed
 import numpy as np
 import pandas as pd
-from sktime.forecasting.base import BaseForecaster, ForecastingHorizon
-from sktime.performance_metrics.forecasting._classes import BaseForecastingErrorMetric
-
-import autosktime.evaluation.test_evaluator
 from ConfigSpace import ConfigurationSpace, Configuration
 from ConfigSpace.read_and_write import json as cs_json
+from sktime.forecasting.base import BaseForecaster, ForecastingHorizon
+from sktime.performance_metrics.forecasting._classes import BaseForecastingErrorMetric
+from smac import Scenario
+from smac.runhistory.enumerations import StatusType
+from smac.runhistory.runhistory import TrialInfo
+
+import autosktime.evaluation.test_evaluator
 from autosktime.automl_common.common.ensemble_building.abstract_ensemble import AbstractEnsemble
 from autosktime.constants import SUPPORTED_Y_TYPES, PANEL_FORECAST, MULTIVARIATE_FORECAST, UNIVARIATE_FORECAST, \
     PANEL_TASKS
@@ -35,9 +38,6 @@ from autosktime.smbo import AutoMLSMBO, SHIntensifierGenerator, SimpleIntensifie
 from autosktime.util.backend import create, Backend
 from autosktime.util.logging_ import setup_logger
 from autosktime.util.stopwatch import StopWatch
-from smac import Scenario
-from smac.runhistory.runhistory import TrialInfo
-from smac.runhistory.enumerations import StatusType
 
 
 class AutoML(NotVectorizedMixin, AutoSktimePredictor):
@@ -71,6 +71,7 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
                  metric: BaseForecastingErrorMetric = None,
                  use_pynisher: bool = False,
                  use_multi_fidelity: bool = True,
+                 refit: bool = False,
                  verbose: bool = False
                  ):
         super(AutoML, self).__init__()
@@ -106,6 +107,7 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
         self._use_pynisher = use_pynisher
         self._use_multi_fidelity = use_multi_fidelity
         self._verbose = verbose
+        self._refit = refit
 
         self._datamanager: Optional[DataManager] = None
         self._dataset_name: Optional[str] = None
@@ -198,13 +200,10 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
         return super().fit(y, X, fh)
 
     def _fit(self, y: SUPPORTED_Y_TYPES, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
-        # TODO train/test splitting is not applied
-
         # Check if specific configs should be fitted instead of searching for optimal configuration
         if self.__configs is not None:
             res = self._fit_configs(self.__configs, y, X)
             del self.__configs
-            self._build_ensemble()
             return res
 
         # If no dask client was provided, we create one, so that we can start an ensemble process in parallel to SMBO
@@ -310,6 +309,7 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
                 metadata_directory=self._metadata_directory,
                 num_metalearning_configs=self._num_metalearning_configs,
                 hp_priors=self._hp_priors,
+                refit=False,
                 verbose=self._verbose,
                 ensemble_callback=proc_ensemble,
             )
@@ -342,7 +342,10 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
         self._logger.info('Loading models...')
         self._load_models()
         self._logger.info('Finished loading models...')
-        self._build_ensemble()
+
+        if self._refit:
+            self._logger.info('Refitting ensemble on complete data')
+            self._fit_configs(self.ensemble_configurations_, y, X, fh)
 
         self.num_run_ = len(self.runhistory_)
         self._fit_cleanup()
@@ -430,17 +433,12 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
             self._backend.context.delete_directories(force=False)
         return
 
-    def _build_ensemble(self):
-        self.ensemble_configurations_ = []
-        for weight, model in self.models_:
-            self.ensemble_configurations_.append((weight, model.budget, model.config.get_dictionary()))
-        self._logger.info(f'Final weighted ensemble: {self.ensemble_configurations_}')
-
     def _fit_configs(
             self,
             configs: List[Tuple[float, float, Union[Configuration, Dict[str, Union[str, float, int]]]]],
             y: SUPPORTED_Y_TYPES,
             X: pd.DataFrame = None,
+            fh: ForecastingHorizon = None
     ):
         self._logger.info(f'Creating ensemble of {len(configs)} provided configurations. No optimization performed.')
 
@@ -468,6 +466,7 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
                 splitter=None,
                 metric=self._metric,
                 use_pynisher=self._use_pynisher,
+                refit=False,
                 budget_type='iterations',
             )
 
@@ -493,7 +492,8 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
             self.models_.append((weight, pipeline))
 
         weights, models = tuple(map(list, zip(*self.models_)))
-        self.ensemble_ = PrefittedEnsembleForecaster(forecasters=models, weights=weights)
+        named_forecasters = [(str(f.config_id), f) for f in models]
+        self.ensemble_ = PrefittedEnsembleForecaster(forecasters=named_forecasters, weights=weights)
         self.ensemble_.fit(self._datamanager.y, self._datamanager.X)
 
         return self
@@ -531,13 +531,18 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
 
             # AbstractEnsemble expects string identifiers, but we use PIPELINE_IDENTIFIER
             # noinspection PyTypeChecker
-            self.models_ = ensemble_.get_models_with_weights(models_)
+            self.models_: List[Tuple[float, TemplateChoice]] = ensemble_.get_models_with_weights(models_)
             weights, models = tuple(map(list, zip(*self.models_)))
             named_forecasters = [(str(f.config_id), f) for f in models]
             self.ensemble_ = PrefittedEnsembleForecaster(forecasters=named_forecasters, weights=weights)
             self.ensemble_.fit(self._datamanager.y, self._datamanager.X)
         else:
             self.models_ = []
+
+        self.ensemble_configurations_ = []
+        for weight, model in self.models_:
+            self.ensemble_configurations_.append((weight, model.budget, model.config.get_dictionary()))
+        self._logger.info(f'Final weighted ensemble: {self.ensemble_configurations_}')
 
     def _load_best_individual_model(self) -> Optional[AbstractEnsemble]:
         """

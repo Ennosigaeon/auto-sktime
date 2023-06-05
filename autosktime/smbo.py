@@ -132,6 +132,7 @@ class AutoMLSMBO:
             intensifier_generator: Type[IntensifierGenerator] = SimpleIntensifierGenerator,
             intensifier_generator_kwargs: Dict[str, Any] = None,
             use_pynisher: bool = True,
+            refit: bool = False,
             seed: int = 1,
             random_state: np.random.RandomState = None,
             metadata_directory: str = None,
@@ -160,6 +161,7 @@ class AutoMLSMBO:
         # Evaluation
         self.splitter = splitter
         self.use_pynisher = use_pynisher
+        self.refit = refit
 
         # and a bunch of useful limits
         self.worst_possible_result = get_cost_of_crash(self.metric)
@@ -223,6 +225,7 @@ class AutoMLSMBO:
             'splitter': self.splitter,
             'metric': self.metric,
             'use_pynisher': self.use_pynisher,
+            'refit': self.refit,
             'verbose': self.verbose,
         }
 

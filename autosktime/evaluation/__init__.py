@@ -48,6 +48,7 @@ class ExecuteTaFunc(TargetFunctionRunner):
             splitter: Optional[BaseSplitter],
             metric: BaseForecastingErrorMetric,
             budget_type: Optional[str] = None,
+            refit: bool = False,
             use_pynisher: bool = True,
             ta: Optional[Callable] = None,
             verbose: bool = False
@@ -71,6 +72,7 @@ class ExecuteTaFunc(TargetFunctionRunner):
                 metric=metric,
                 seed=self.seed,
                 budget=budget,
+                refit=refit,
                 **kwargs
             )
 

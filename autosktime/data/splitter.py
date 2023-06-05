@@ -138,6 +138,15 @@ class PreSplittedPanelSplitter(PanelSplitter):
         pass
 
 
+class NoSplitter(SingleWindowSplitter_):
+
+    def __init__(self, fh: float = 0):
+        super().__init__(1)
+
+    def _split(self, y: pd.Index) -> SPLIT_GENERATOR_TYPE:
+        return iter([(y.values, y.values)])
+
+
 splitter_types: Dict[str, Type[BaseSplitter]] = {
     'temporal-holdout': TemporalHoldoutSplitter,
     'sliding-window': SlidingWindowSplitter,

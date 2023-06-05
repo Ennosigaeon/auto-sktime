@@ -43,10 +43,12 @@ class TrainEvaluator(AbstractEvaluator):
             num_run: int = 0,
             budget: Optional[float] = None,
             budget_type: Optional[str] = None,
+            refit: bool = False,
             verbose: bool = False,
     ):
         super().__init__(backend, metric, configuration, seed, random_state, num_run, budget, budget_type, verbose)
         self.splitter = splitter
+        self.refit = refit
 
         self.models: List[TemplateChoice] = []
         self.indices: List[Tuple[pd.Index, pd.Index]] = []
@@ -118,7 +120,7 @@ class TrainEvaluator(AbstractEvaluator):
         test_loss = np.average(test_loss)
 
         # Retrain model on complete data
-        self.model, y_ens, y_test = self._fit_and_predict_final_model()
+        self.model, y_ens, y_test = self._fit_and_predict_final_model(refit=self.refit)
 
         return self.finish_up(
             loss=val_loss,
@@ -245,6 +247,7 @@ def evaluate(
         splitter: BaseSplitter,
         budget: Optional[float] = 100.0,
         budget_type: Optional[str] = None,
+        refit: bool = False,
         verbose: bool = False,
 ) -> TaFuncResult:
     instance = MultiFidelityTrainEvaluator if budget_type == 'iterations' else TrainEvaluator
@@ -258,6 +261,7 @@ def evaluate(
         num_run=num_run,
         budget=budget,
         budget_type=budget_type,
+        refit=refit,
         verbose=verbose,
     )
     result = evaluator.fit_predict_and_loss()

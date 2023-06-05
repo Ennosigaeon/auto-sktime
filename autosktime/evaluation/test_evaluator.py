@@ -1,3 +1,4 @@
+import os.path
 from typing import Optional
 
 import numpy as np
@@ -20,13 +21,19 @@ class TestEvaluator(AbstractEvaluator):
 
         self.model = self._get_model()
 
-        if self.model.budget != 0.0:
+        if self.model.budget is not None and self.model.budget != 0.0:
             n_iter = int(np.ceil(self.budget / 100 * self.model.get_max_iter()))
             self.config_context.set_config(self.configuration.config_id, key='iterations', value=n_iter)
 
         _fit_and_suppress_warnings(self.logger, self.configuration.config_id, self.model, y, X, fh=None)
         test_pred = self.predict_function(self.datamanager.y_ens, self.datamanager.X_ens, self.model)
         loss = self._loss(y, test_pred, error='raise')
+
+        if os.path.exists(self.backend.get_numrun_directory(self.seed, self.num_run, self.budget)):
+            os.rename(
+                self.backend.get_numrun_directory(self.seed, self.num_run, self.budget),
+                self.backend.get_numrun_directory(self.seed, self.num_run, self.budget) + '_partial',
+            )
 
         return self.finish_up(
             loss=loss,
@@ -46,6 +53,7 @@ def evaluate(
         random_state: np.random.RandomState,
         num_run: int,
         splitter: BaseSplitter,
+        refit: bool = False,
         budget: Optional[float] = 100.0,
         budget_type: Optional[str] = None,
         verbose: bool = False,
