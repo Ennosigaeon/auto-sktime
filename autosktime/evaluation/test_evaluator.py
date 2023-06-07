@@ -2,10 +2,12 @@ import os.path
 from typing import Optional
 
 import numpy as np
+import pandas as pd
+from ConfigSpace import Configuration
 # noinspection PyProtectedMember
 from sktime.performance_metrics.forecasting._classes import BaseForecastingErrorMetric
 
-from ConfigSpace import Configuration
+from autosktime.constants import Budget
 from autosktime.data.splitter import BaseSplitter
 from autosktime.evaluation import TaFuncResult
 # noinspection PyProtectedMember
@@ -21,12 +23,16 @@ class TestEvaluator(AbstractEvaluator):
 
         self.model = self._get_model()
 
-        if self.model.budget is not None and self.model.budget != 0.0:
-            n_iter = int(np.ceil(self.budget / 100 * self.model.get_max_iter()))
-            self.config_context.set_config(self.configuration.config_id, key='iterations', value=n_iter)
+        if self.budget_type is None:
+            fit_and_predict = self._fit_and_predict_standard
+        elif self.budget_type == Budget.Iterations and self.model.supports_iterative_fit():
+            fit_and_predict = self._fit_and_predict_iterative
+        elif self.budget_type == Budget.SeriesLength:
+            fit_and_predict = self._fit_and_predict_standard
+        else:
+            fit_and_predict = self._fit_and_predict_standard
 
-        _fit_and_suppress_warnings(self.logger, self.configuration.config_id, self.model, y, X, fh=None)
-        test_pred = self.predict_function(self.datamanager.y_ens, self.datamanager.X_ens, self.model)
+        test_pred = fit_and_predict(y, X)
         loss = self._loss(y, test_pred, error='raise')
 
         if os.path.exists(self.backend.get_numrun_directory(self.seed, self.num_run, self.budget)):
@@ -44,6 +50,16 @@ class TestEvaluator(AbstractEvaluator):
             y_test=test_pred,
         )
 
+    def _fit_and_predict_standard(self, y: pd.Series, X: pd.DataFrame):
+        _fit_and_suppress_warnings(self.logger, self.configuration.config_id, self.model, y, X, fh=None)
+        test_pred = self.predict_function(self.datamanager.y_ens, self.datamanager.X_ens, self.model)
+        return test_pred
+
+    def _fit_and_predict_iterative(self, y: pd.Series, X: pd.DataFrame):
+        n_iter = int(np.ceil(self.budget / 100 * self.model.get_max_iter()))
+        self.config_context.set_config(self.configuration.config_id, key='iterations', value=n_iter)
+        return self._fit_and_predict_standard(y, X)
+
 
 def evaluate(
         config: Configuration,
@@ -55,7 +71,7 @@ def evaluate(
         splitter: BaseSplitter,
         refit: bool = False,
         budget: Optional[float] = 100.0,
-        budget_type: Optional[str] = None,
+        budget_type: Optional[Budget] = None,
         verbose: bool = False,
 ) -> TaFuncResult:
     evaluator = TestEvaluator(

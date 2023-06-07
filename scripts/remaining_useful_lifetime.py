@@ -11,7 +11,7 @@ from sklearn.utils import assert_all_finite
 from sktime.forecasting.base import ForecastingHorizon
 
 from autosktime.automl import AutoML
-from autosktime.constants import PANEL_INDIRECT_FORECAST
+from autosktime.constants import PANEL_INDIRECT_FORECAST, Budget
 from autosktime.data.benchmark import BENCHMARKS
 from autosktime.data.splitter import multiindex_split
 from autosktime.metrics import RootMeanSquaredError
@@ -77,7 +77,7 @@ for fold, ((_, train), (_, val), (_, test)) in enumerate(
         resampling_strategy_arguments={'train_ids': [train], 'test_ids': [val]},
         delete_tmp_folder_after_terminate=True,
         use_pynisher=True,
-        use_multi_fidelity=args.multi_fidelity,
+        budget=Budget.Iterations if args.multi_fidelity else None,
         verbose=True,
         include={args.include: None} if args.include is not None else None
     )

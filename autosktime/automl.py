@@ -23,7 +23,7 @@ from smac.runhistory.runhistory import TrialInfo
 import autosktime.evaluation.test_evaluator
 from autosktime.automl_common.common.ensemble_building.abstract_ensemble import AbstractEnsemble
 from autosktime.constants import SUPPORTED_Y_TYPES, PANEL_FORECAST, MULTIVARIATE_FORECAST, UNIVARIATE_FORECAST, \
-    PANEL_TASKS
+    Budget
 from autosktime.data import DataManager, DatasetProperties
 from autosktime.data.splitter import BaseSplitter, splitter_types, get_ensemble_data
 from autosktime.ensembles.builder import EnsembleBuilderManager
@@ -70,7 +70,7 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
                  logging_config: Dict[str, Any] = None,
                  metric: BaseForecastingErrorMetric = None,
                  use_pynisher: bool = False,
-                 use_multi_fidelity: bool = True,
+                 budget: Optional[Budget] = None,
                  refit: bool = False,
                  verbose: bool = False
                  ):
@@ -105,7 +105,7 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
 
         self._metric = metric
         self._use_pynisher = use_pynisher
-        self._use_multi_fidelity = use_multi_fidelity
+        self._budget = budget
         self._verbose = verbose
         self._refit = refit
 
@@ -302,7 +302,9 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
                 dask_client=self._dask_client,
                 metric=self._metric,
                 splitter=splitter,
-                intensifier_generator=self._determine_intensification(),
+                intensifier_generator=SimpleIntensifierGenerator if self._budget is None else SHIntensifierGenerator,
+                intensifier_generator_kwargs={} if self._budget is None else {'budget_type': self._budget},
+                initial_budget=25.0 if self._budget == Budget.SeriesLength else 5.0,
                 use_pynisher=self._use_pynisher,
                 seed=self._seed,
                 random_state=self._random_state,
@@ -405,16 +407,6 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
             raise ValueError(f'Unable to create {type(BaseSplitter)} from = {self._resampling_strategy}')
         return splitter
 
-    def _determine_intensification(self):
-        intensifier = SimpleIntensifierGenerator
-        if self._use_multi_fidelity:
-            if self._task in PANEL_TASKS:
-                intensifier = SHIntensifierGenerator
-            else:
-                self._logger.warning('Multi-fidelity approximations are currently only available for panel '
-                                     'forecast tasks')
-        return intensifier
-
     def _fit_cleanup(self):
         if (
                 hasattr(self, '_is_dask_client_internally_created')
@@ -467,7 +459,7 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
                 metric=self._metric,
                 use_pynisher=self._use_pynisher,
                 refit=False,
-                budget_type='iterations',
+                budget_type=Budget.Iterations,
             )
 
             run_info, run_value = ta.run_wrapper(

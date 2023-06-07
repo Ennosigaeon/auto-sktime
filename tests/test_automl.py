@@ -70,8 +70,7 @@ def fit_and_predict(
         per_run_time_limit=10,
         working_directory='tmp',
         resampling_strategy='panel-holdout' if panel else 'temporal-holdout',
-        seed=0,
-        use_multi_fidelity=False
+        seed=0
     )
 
     automl.fit(y_train, X_train, dataset_name='test')

@@ -12,7 +12,7 @@ from sktime.performance_metrics.forecasting._classes import BaseForecastingError
 
 from ConfigSpace import Configuration
 from autosktime.automl_common.common.utils.backend import Backend
-from autosktime.constants import FORECAST_TASK, SUPPORTED_Y_TYPES
+from autosktime.constants import FORECAST_TASK, SUPPORTED_Y_TYPES, Budget
 from autosktime.data import DataManager
 from autosktime.evaluation import TaFuncResult
 from autosktime.metrics import calculate_loss, get_cost_of_crash
@@ -73,7 +73,7 @@ class AbstractEvaluator:
             random_state: np.random.RandomState = None,
             num_run: int = 0,
             budget: Optional[float] = None,
-            budget_type: Optional[str] = None,
+            budget_type: Optional[Budget] = None,
             verbose: bool = False
     ):
         self.configuration = configuration

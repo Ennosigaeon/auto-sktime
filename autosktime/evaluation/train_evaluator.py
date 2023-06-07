@@ -9,13 +9,14 @@ from sktime.forecasting.base import ForecastingHorizon
 from sktime.performance_metrics.forecasting._classes import BaseForecastingErrorMetric
 
 from ConfigSpace import Configuration
-from autosktime.constants import SUPPORTED_Y_TYPES
+from autosktime.constants import SUPPORTED_Y_TYPES, Budget, MIN_SEQUENCE_LENGTH
 from autosktime.data.splitter import BaseSplitter
 from autosktime.evaluation import TaFuncResult
 # noinspection PyProtectedMember
 from autosktime.evaluation.abstract_evaluator import AbstractEvaluator, _fit_and_suppress_warnings
 from autosktime.pipeline.components.base import AutoSktimePredictor
 from autosktime.pipeline.templates import TemplateChoice
+from autosktime.pipeline.util import frequency_to_sp
 from autosktime.util.backend import Backend
 
 EvalResult = NamedTuple('EvalResult', [
@@ -42,7 +43,7 @@ class TrainEvaluator(AbstractEvaluator):
             random_state: np.random.RandomState = None,
             num_run: int = 0,
             budget: Optional[float] = None,
-            budget_type: Optional[str] = None,
+            budget_type: Optional[Budget] = None,
             refit: bool = False,
             verbose: bool = False,
     ):
@@ -74,10 +75,12 @@ class TrainEvaluator(AbstractEvaluator):
         for i, (train_split, val_split) in enumerate(self.splitter.split(y)):
             if self.budget_type is None:
                 fit_and_predict = self._fit_and_predict_fold_standard
-            elif self.budget_type == 'iterations' and self.models[i].supports_iterative_fit():
+            elif self.budget_type == Budget.Iterations and self.models[i].supports_iterative_fit():
                 fit_and_predict = self._fit_and_predict_fold_iterative
+            elif self.budget_type == Budget.SeriesLength:
+                fit_and_predict = self._fit_and_predict_fold_series_length
             else:
-                fit_and_predict = self._fit_and_predict_fold_budget
+                fit_and_predict = self._fit_and_predict_fold_standard
 
             train_pred, val_pred, test_pred = fit_and_predict(i, train=train_split, val=val_split)
 
@@ -176,13 +179,20 @@ class TrainEvaluator(AbstractEvaluator):
 
         return self._fit_and_predict_fold_standard(fold, train, val)
 
-    def _fit_and_predict_fold_budget(
+    def _fit_and_predict_fold_series_length(
             self,
             fold: int,
             train: np.ndarray,
             val: np.ndarray,
     ) -> Tuple[SUPPORTED_Y_TYPES, SUPPORTED_Y_TYPES, Optional[SUPPORTED_Y_TYPES]]:
-        raise ValueError('Budgets not supported yet')
+        model = self.models[fold]
+        model.budget = self.budget
+
+        budget = int(np.ceil(self.budget / 100 * len(train)))
+        frequency = frequency_to_sp(self.datamanager.dataset_properties.frequency)[0]
+        max_length = max(budget, 2 * frequency, MIN_SEQUENCE_LENGTH)
+
+        return self._fit_and_predict_fold_standard(fold, train[-max_length:], val)
 
     def _fit_and_predict_final_model(
             self,
@@ -195,7 +205,7 @@ class TrainEvaluator(AbstractEvaluator):
 
             model = self._get_model()
 
-            if self.budget_type == 'iterations' and model.supports_iterative_fit():
+            if self.budget_type == Budget.Iterations and model.supports_iterative_fit():
                 n_iter = int(np.ceil(self.budget / 100 * model.get_max_iter()))
                 self.config_context.set_config(self.configuration.config_id, key='iterations', value=n_iter)
 
@@ -246,11 +256,11 @@ def evaluate(
         num_run: int,
         splitter: BaseSplitter,
         budget: Optional[float] = 100.0,
-        budget_type: Optional[str] = None,
+        budget_type: Optional[Budget] = None,
         refit: bool = False,
         verbose: bool = False,
 ) -> TaFuncResult:
-    instance = MultiFidelityTrainEvaluator if budget_type == 'iterations' else TrainEvaluator
+    instance = MultiFidelityTrainEvaluator if budget_type is not None else TrainEvaluator
     evaluator = instance(
         backend=backend,
         metric=metric,

@@ -13,6 +13,7 @@ from sktime.performance_metrics.forecasting._classes import BaseForecastingError
 import autosktime
 from ConfigSpace import ConfigurationSpace, Configuration
 from autosktime.automl_common.common.utils.backend import Backend
+from autosktime.constants import Budget
 from autosktime.data import DataManager
 from autosktime.data.splitter import BaseSplitter
 from autosktime.evaluation import ExecuteTaFunc
@@ -75,7 +76,7 @@ class SimpleIntensifierGenerator(IntensifierGenerator):
 class SHIntensifierGenerator(IntensifierGenerator):
 
     # Use eta and initial_budget as (2.0, 50.0) for 2 candidates per iteration with 50% elimination
-    def __init__(self, budget_type: str = 'iterations', eta: int = 4.0):
+    def __init__(self, budget_type: Budget, eta: int = 4.0):
         self.budget_type = budget_type
         self.eta = eta
 
@@ -133,6 +134,7 @@ class AutoMLSMBO:
             intensifier_generator_kwargs: Dict[str, Any] = None,
             use_pynisher: bool = True,
             refit: bool = False,
+            initial_budget: float = 5.0,
             seed: int = 1,
             random_state: np.random.RandomState = None,
             metadata_directory: str = None,
@@ -162,6 +164,7 @@ class AutoMLSMBO:
         self.splitter = splitter
         self.use_pynisher = use_pynisher
         self.refit = refit
+        self.initial_budget = initial_budget
 
         # and a bunch of useful limits
         self.worst_possible_result = get_cost_of_crash(self.metric)
@@ -212,7 +215,7 @@ class AutoMLSMBO:
             trial_memory_limit=self.memory_limit,
             n_trials=self.runcount_limit if self.runcount_limit is not None else sys.maxsize,
             instance_features=None,
-            min_budget=initial_budget,
+            min_budget=self.initial_budget,
             max_budget=100,
             seed=self.seed,
             n_workers=self.n_jobs

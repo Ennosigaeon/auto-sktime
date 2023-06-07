@@ -13,6 +13,7 @@ from smac.runhistory.runhistory import TrialInfo, TrialValue
 from smac.runner import TargetFunctionRunner
 
 from autosktime.automl_common.common.utils.backend import Backend
+from autosktime.constants import Budget
 from autosktime.data.splitter import BaseSplitter
 from autosktime.pipeline.templates import TemplateChoice
 from autosktime.util.backend import ConfigContext
@@ -47,7 +48,7 @@ class ExecuteTaFunc(TargetFunctionRunner):
             random_state: np.random.RandomState,
             splitter: Optional[BaseSplitter],
             metric: BaseForecastingErrorMetric,
-            budget_type: Optional[str] = None,
+            budget_type: Optional[Budget] = None,
             refit: bool = False,
             use_pynisher: bool = True,
             ta: Optional[Callable] = None,

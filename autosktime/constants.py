@@ -1,3 +1,4 @@
+import enum
 from typing import Union
 
 import numpy as np
@@ -43,5 +44,11 @@ IGNORES_EXOGENOUS_X = 'ignores-exogenous-X'
 SUPPORTED_INDEX_TYPES = 'supported-index-types'
 
 MAXINT = 2 ** 31 - 1
+MIN_SEQUENCE_LENGTH = 250
 
 SUPPORTED_Y_TYPES = Union[pd.Series, pd.DataFrame, np.ndarray]
+
+
+class Budget(enum.Enum):
+    Iterations = 'iterations'
+    SeriesLength = 'series_length'

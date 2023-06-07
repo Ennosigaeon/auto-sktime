@@ -48,10 +48,16 @@ class ReductionComponent(AutoSktimePredictor):
         if self.estimator is None:
             raise ValueError('Call set_hyperparameter before fitting')
 
-        # Monkey-patch _predict_in_sample which is not implemented as of sktime 0.12.0
+        # Monkey-patch _predict_in_sample which is not implemented as of sktime 0.18.0
         self.estimator._predict_in_sample = _predict_in_sample.__get__(self.estimator, _Reducer)
         self.estimator.fit(y, X=X, fh=fh)
         return self
+
+    def _update(self, y: pd.Series, X: pd.Series = None, update_params: bool = True):
+        # Monkey-patch _predict_in_sample which is not implemented as of sktime 0.18.0
+        self.estimator._predict_in_sample = _predict_in_sample.__get__(self.estimator, _Reducer)
+
+        return super()._update(y, X, update_params)
 
     def set_hyperparameters(self, configuration: Configuration, init_params: Dict[str, Any] = None):
         if self.estimator is not None:
