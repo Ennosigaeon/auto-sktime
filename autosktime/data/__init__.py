@@ -23,7 +23,8 @@ class DatasetProperties(MutableMapping):
             kwargs,
             index_type=type(index_type),
             task=task,
-            series_length=series_length
+            series_length=series_length,
+            freq=index_type.freq
         )
 
     @property
@@ -37,6 +38,10 @@ class DatasetProperties(MutableMapping):
     @property
     def series_length(self) -> int:
         return self._data['series_length']
+
+    @property
+    def frequency(self) -> Optional[pd.offsets.BaseOffset]:
+        return self._data['freq']
 
     def __setitem__(self, k: str, v: Any) -> None:
         self._data[k] = v

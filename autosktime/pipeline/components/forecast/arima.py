@@ -2,15 +2,15 @@ from typing import Union
 
 import numpy as np
 import pandas as pd
+from ConfigSpace import ConfigurationSpace, UniformIntegerHyperparameter, CategoricalHyperparameter, \
+    Constant, ForbiddenGreaterThanRelation
 from sktime.forecasting.base import ForecastingHorizon
 
-from ConfigSpace import ConfigurationSpace, UniformIntegerHyperparameter, CategoricalHyperparameter, \
-    Constant, InCondition, ForbiddenGreaterThanRelation
 from autosktime.constants import IGNORES_EXOGENOUS_X, HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, SUPPORTED_INDEX_TYPES, \
     HANDLES_PANEL
 from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import AutoSktimePredictor, COMPONENT_PROPERTIES
-from autosktime.pipeline.util import Int64Index
+from autosktime.pipeline.util import Int64Index, frequency_to_sp
 
 
 class ARIMAComponent(AutoSktimePredictor):
@@ -94,21 +94,21 @@ class ARIMAComponent(AutoSktimePredictor):
         P = UniformIntegerHyperparameter('P', lower=0, upper=2, default_value=0)
         D = UniformIntegerHyperparameter('D', lower=0, upper=1, default_value=0)
         Q = UniformIntegerHyperparameter('Q', lower=0, upper=2, default_value=0)
-        sp = CategoricalHyperparameter('sp', choices=[0, 2, 4, 7, 12], default_value=0)
+        sp = CategoricalHyperparameter('sp', choices=frequency_to_sp(dataset_properties.frequency))
 
-        P_depends_on_sp = InCondition(P, sp, [2, 4, 7, 12])
-        D_depends_on_sp = InCondition(D, sp, [2, 4, 7, 12])
-        Q_depends_on_sp = InCondition(Q, sp, [2, 4, 7, 12])
+        # P_depends_on_sp = InCondition(P, sp, [2, 4, 7, 12])
+        # D_depends_on_sp = InCondition(D, sp, [2, 4, 7, 12])
+        # Q_depends_on_sp = InCondition(Q, sp, [2, 4, 7, 12])
 
-        p_must_be_smaller_than_sp = ForbiddenGreaterThanRelation(sp, p)
-        q_must_be_smaller_than_sp = ForbiddenGreaterThanRelation(sp, q)
+        p_must_be_smaller_than_sp = ForbiddenGreaterThanRelation(p, sp)
+        q_must_be_smaller_than_sp = ForbiddenGreaterThanRelation(q, sp)
 
         maxiter = Constant('maxiter', 50)
         with_intercept = Constant('with_intercept', 'True')
 
         cs = ConfigurationSpace()
         cs.add_hyperparameters([p, d, q, P, D, Q, sp, maxiter, with_intercept])
-        cs.add_conditions([P_depends_on_sp, D_depends_on_sp, Q_depends_on_sp])
+        # cs.add_conditions([P_depends_on_sp, D_depends_on_sp, Q_depends_on_sp])
         cs.add_forbidden_clauses([p_must_be_smaller_than_sp, q_must_be_smaller_than_sp])
 
         return cs

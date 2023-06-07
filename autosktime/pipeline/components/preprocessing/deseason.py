@@ -8,7 +8,7 @@ from autosktime.constants import IGNORES_EXOGENOUS_X, HANDLES_UNIVARIATE, HANDLE
     HANDLES_PANEL
 from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import COMPONENT_PROPERTIES, AutoSktimeTransformer
-from autosktime.pipeline.util import Int64Index
+from autosktime.pipeline.util import Int64Index, frequency_to_sp
 
 
 class DeseasonalizerComponent(AutoSktimeTransformer):
@@ -40,7 +40,7 @@ class DeseasonalizerComponent(AutoSktimeTransformer):
     @staticmethod
     def get_hyperparameter_search_space(dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
         model = CategoricalHyperparameter('model', ['additive', 'multiplicative'], default_value='additive')
-        sp = CategoricalHyperparameter('sp', [0, 1, 2, 4, 7, 12])
+        sp = CategoricalHyperparameter('sp', frequency_to_sp(dataset_properties.frequency))
 
         cs = ConfigurationSpace()
         cs.add_hyperparameters([model, sp])

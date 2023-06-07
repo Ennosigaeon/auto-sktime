@@ -1,4 +1,4 @@
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Tuple, Optional, List
 
 import pandas as pd
 from sktime.datatypes import check_is_scitype
@@ -68,6 +68,34 @@ def sub_configuration(params: Dict[str, Any], init_params: Dict[str, Any]) -> Tu
             new_params[param] = value
 
     return choice, new_params
+
+
+def frequency_to_sp(freq: Optional[pd.offsets.BaseOffset]) -> List[int]:
+    if freq.name is None:
+        return [1, 4, 5, 7, 12, 24, 365]
+
+    if freq.name in ('D', 'C'):
+        return [7, 1, 30, 96, 365]
+    elif freq.name in ('B',):
+        return [5, 1, 20]
+    elif freq.name in ('BMS', 'BM', 'CBMS', 'CBM', 'MS', 'M', 'LWOM-MON'):
+        return [12, 1, 4]
+    elif freq.name in ('SM-15', 'SMS-15'):
+        return [6, 1, 2]
+    elif freq.name in ('BH', 'CBH', 'H'):
+        return [24, 1, 4, 6, 12]
+    elif freq.name in ('AS-JAN', 'BAS-JAN', 'A-DEC', 'BA-DEC', 'RE-N-JAN-MON', 'W'):
+        return [52, 1]
+    elif freq in ('QS-MAR', 'BQS-MAR', 'Q-MAR', 'BQ-MAR', 'REQ-N-JAN-MON-1', 'WOM-1MON'):
+        return [4, 1]
+    elif freq.name in ('T',):
+        return [60, 1]
+    elif freq.name in ('S',):
+        return [60, 1, 3600]
+    elif freq.name in ('L', 'U', 'N'):
+        return [1000, 1]
+    else:
+        return [1, 4, 5, 7, 12, 24, 365]
 
 
 # noinspection PyUnresolvedReferences

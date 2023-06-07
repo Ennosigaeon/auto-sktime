@@ -10,7 +10,7 @@ from autosktime.constants import IGNORES_EXOGENOUS_X, HANDLES_UNIVARIATE, HANDLE
     HANDLES_PANEL
 from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import AutoSktimePredictor, COMPONENT_PROPERTIES
-from autosktime.pipeline.util import Int64Index
+from autosktime.pipeline.util import Int64Index, frequency_to_sp
 
 
 class BATSComponent(AutoSktimePredictor):
@@ -71,7 +71,7 @@ class BATSComponent(AutoSktimePredictor):
         use_damped_trend_depends_on_trend = EqualsCondition(use_damped_trend, use_trend, True)
 
         # TODO BATS supports multiple seasonal periods
-        sp = CategoricalHyperparameter('sp', [1, 2, 4, 7, 12])
+        sp = CategoricalHyperparameter('sp', frequency_to_sp(dataset_properties.frequency))
 
         use_arma_errors = CategoricalHyperparameter('use_arma_errors', [False, True], default_value=True)
 

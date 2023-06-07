@@ -9,7 +9,7 @@ from autosktime.constants import IGNORES_EXOGENOUS_X, HANDLES_UNIVARIATE, HANDLE
     HANDLES_PANEL
 from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import COMPONENT_PROPERTIES, AutoSktimeTransformer
-from autosktime.pipeline.util import Int64Index
+from autosktime.pipeline.util import Int64Index, frequency_to_sp
 
 
 class BoxCoxComponent(AutoSktimeTransformer):
@@ -60,11 +60,11 @@ class BoxCoxComponent(AutoSktimeTransformer):
 
         method = CategoricalHyperparameter('method', choices=['pearsonr', 'mle', 'guerrero'],
                                            default_value='mle')
-        sp = CategoricalHyperparameter('sp', choices=[0, 2, 4, 7, 12], default_value=0)
+        sp = CategoricalHyperparameter('sp', choices=frequency_to_sp(dataset_properties.frequency))
 
         guerrero_requires_sp_greater_zero = ForbiddenAndConjunction(
             ForbiddenEqualsClause(method, 'guerrero'),
-            ForbiddenEqualsClause(sp, 0)
+            ForbiddenEqualsClause(sp, 1)
         )
 
         cs = ConfigurationSpace()

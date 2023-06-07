@@ -8,7 +8,7 @@ from autosktime.constants import IGNORES_EXOGENOUS_X, HANDLES_UNIVARIATE, HANDLE
     HANDLES_PANEL
 from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import AutoSktimePredictor, COMPONENT_PROPERTIES
-from autosktime.pipeline.util import Int64Index
+from autosktime.pipeline.util import Int64Index, frequency_to_sp
 
 
 class ExponentialSmoothingComponent(AutoSktimePredictor):
@@ -64,7 +64,7 @@ class ExponentialSmoothingComponent(AutoSktimePredictor):
         damped_trend = CategoricalHyperparameter('damped_trend', [False, True])
         damped_trend_depends_on_trend = InCondition(damped_trend, trend, ['add', 'mul'])
 
-        sp = CategoricalHyperparameter('sp', [1, 2, 4, 7, 12])
+        sp = CategoricalHyperparameter('sp', frequency_to_sp(dataset_properties.frequency))
         seasonal_sp = ForbiddenAndConjunction(
             ForbiddenInClause(seasonal, ['add', 'mul']),
             ForbiddenEqualsClause(sp, 1)
