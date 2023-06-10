@@ -23,7 +23,7 @@ from smac.runhistory.runhistory import TrialInfo
 import autosktime.evaluation.test_evaluator
 from autosktime.automl_common.common.ensemble_building.abstract_ensemble import AbstractEnsemble
 from autosktime.constants import SUPPORTED_Y_TYPES, PANEL_FORECAST, MULTIVARIATE_FORECAST, UNIVARIATE_FORECAST, \
-    Budget
+    Budget, MIN_SEQUENCE_LENGTH
 from autosktime.data import DataManager, DatasetProperties
 from autosktime.data.splitter import BaseSplitter, splitter_types, get_ensemble_data
 from autosktime.ensembles.builder import EnsembleBuilderManager
@@ -290,6 +290,8 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
                 self._logger.warning(f'Capping the per_run_time_limit to {per_run_time_limit} to have time for a least '
                                      f'2 models in each process.')
 
+            use_multi_fidelity = self._budget and len(y) > MIN_SEQUENCE_LENGTH
+
             _proc_smac = AutoMLSMBO(
                 config_space=self.configuration_space,
                 datamanager=self._datamanager,
@@ -302,7 +304,7 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
                 dask_client=self._dask_client,
                 metric=self._metric,
                 splitter=splitter,
-                intensifier_generator=SimpleIntensifierGenerator if self._budget is None else SHIntensifierGenerator,
+                intensifier_generator=SimpleIntensifierGenerator if use_multi_fidelity is None else SHIntensifierGenerator,
                 intensifier_generator_kwargs={} if self._budget is None else {'budget_type': self._budget},
                 initial_budget=25.0 if self._budget == Budget.SeriesLength else 5.0,
                 use_pynisher=self._use_pynisher,
