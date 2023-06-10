@@ -88,7 +88,7 @@ class ARIMAComponent(AutoSktimePredictor):
         # order
         p = UniformIntegerHyperparameter('p', lower=0, upper=5, default_value=1)
         d = UniformIntegerHyperparameter('d', lower=0, upper=2, default_value=0)
-        q = UniformIntegerHyperparameter('q', lower=0, upper=5, default_value=0)
+        q = UniformIntegerHyperparameter('q', lower=0, upper=2, default_value=0)
 
         # seasonal_order
         P = UniformIntegerHyperparameter('P', lower=0, upper=2, default_value=0)

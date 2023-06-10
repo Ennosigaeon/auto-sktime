@@ -62,5 +62,5 @@ class ScaledLogitComponent(AutoSktimeTransformer):
         upper_bound = UniformFloatHyperparameter('upper_bound', 1, 2, default_value=1.25)
 
         cs = ConfigurationSpace()
-        cs.add_hyperparameters([lower_bound, upper_bound])
+        # cs.add_hyperparameters([lower_bound, upper_bound])
         return cs
