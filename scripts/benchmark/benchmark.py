@@ -1,9 +1,13 @@
 import glob
+import logging
 import math
 import pathlib
 import time
 import traceback
 from typing import Callable
+
+logging.getLogger('numba').setLevel(logging.WARNING)
+logging.getLogger('graphviz').setLevel(logging.WARNING)
 
 import pandas as pd
 from matplotlib import pyplot as plt
@@ -49,12 +53,13 @@ def test_framework(y_train: pd.Series, y_test: pd.Series, evaluate: Callable):
 
 
 def benchmark():
-    for file in sorted(glob.glob('../data/univariate/real/*.csv'), key=str.casefold):
+    files = sorted(glob.glob('../data/univariate/real/*.csv'), key=str.casefold)
+    for i, file in enumerate(files):
         path = pathlib.Path(file)
         if '_hourly' in path.name:
             continue
 
-        print(path.name)
+        print(f'{path.name} - {i}/{len(files)}')
 
         y = pd.read_csv(file, index_col='index', parse_dates=['index'])['y']
         y_train, y_test = temporal_train_test_split(y, test_size=fh)
