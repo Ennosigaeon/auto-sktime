@@ -36,10 +36,10 @@ metric = MeanAbsolutePercentageError(symmetric=True)
 results = {'method': [], 'dataset': [], 'smape': [], 'duration': []}
 
 
-def test_framework(y_train: pd.Series, y_test: pd.Series, evaluate: Callable):
+def test_framework(y_train: pd.Series, y_test: pd.Series, name: str, evaluate: Callable):
     start = time.time()
     try:
-        y_pred, y_pred_ints = evaluate(y_train.copy(), fh, max_duration)
+        y_pred, y_pred_ints = evaluate(y_train.copy(), fh, max_duration, name)
         y_pred.index, y_pred_ints.index = y_test.index, y_test.index
 
         score = metric(y_test, y_pred)
@@ -65,7 +65,7 @@ def benchmark():
         y_train, y_test = temporal_train_test_split(y, test_size=fh)
 
         for name, evaluate in methods:
-            y_pred, y_pred_ints, score, duration = test_framework(y_train, y_test, evaluate)
+            y_pred, y_pred_ints, score, duration = test_framework(y_train, y_test, path.name, evaluate)
             if y_pred is not None:
                 plot_series(y_train, y_test, y_pred, labels=["y_train", "y_test", "y_pred"], pred_interval=y_pred_ints,
                             title=f'{path.name} - {name}')

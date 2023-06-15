@@ -2,7 +2,7 @@ import pandas as pd
 from autots import AutoTS
 
 
-def evaluate_autots(y: pd.Series, fh: int, max_duration: int):
+def evaluate_autots(y: pd.Series, fh: int, max_duration: int, name: str):
     df = y.to_frame()
 
     model = AutoTS(

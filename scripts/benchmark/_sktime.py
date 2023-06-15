@@ -24,9 +24,9 @@ def evaluate(y: pd.Series, clazz: Type[BaseForecaster], fh_: int, max_duration: 
     return y_pred, y_pred_ints
 
 
-def evaluate_arima(y: pd.Series, fh: int, max_duration: int):
+def evaluate_arima(y: pd.Series, fh: int, max_duration: int, name: str):
     return evaluate(y, AutoARIMA, fh_=fh, max_duration=max_duration)
 
 
-def evaluate_prophet(y: pd.Series, fh: int, max_duration: int):
+def evaluate_prophet(y: pd.Series, fh: int, max_duration: int, name: str):
     return evaluate(y, Prophet, fh_=fh, max_duration=max_duration)

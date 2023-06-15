@@ -6,7 +6,7 @@ from hyperts.framework.compete import TSPipeline
 from scripts.benchmark.util import generate_fh
 
 
-def evaluate_hyperts(y: pd.Series, fh: int, max_duration: int):
+def evaluate_hyperts(y: pd.Series, fh: int, max_duration: int, name: str):
     fh = pd.DataFrame(generate_fh(y.index, fh).to_timestamp(), columns=['index'])
     y = y.reset_index()
 
