@@ -8,10 +8,18 @@ from typing import Optional, Tuple, List, Dict, Type, Any
 import dask.distributed
 import numpy as np
 import pandas as pd
-from sktime.performance_metrics.forecasting._classes import BaseForecastingErrorMetric
-
-import autosktime
 from ConfigSpace import ConfigurationSpace, Configuration
+from sktime.performance_metrics.forecasting._classes import BaseForecastingErrorMetric
+from smac import Callback, AlgorithmConfigurationFacade, MultiFidelityFacade
+from smac.acquisition.function import AbstractAcquisitionFunction
+from smac.facade import AbstractFacade
+from smac.initial_design import DefaultInitialDesign, RandomInitialDesign, AbstractInitialDesign
+from smac.intensifier import SuccessiveHalving
+from smac.intensifier.intensifier import Intensifier
+from smac.runhistory.dataclasses import TrajectoryItem
+from smac.runhistory.runhistory import RunHistory
+from smac.scenario import Scenario
+
 from autosktime.automl_common.common.utils.backend import Backend
 from autosktime.constants import Budget
 from autosktime.data import DataManager
@@ -21,20 +29,31 @@ from autosktime.metalearning.meta_base import MetaBase
 from autosktime.metrics import METRIC_TO_STRING, get_cost_of_crash
 from autosktime.smac.acquisition import PriorAcquisitionFunction
 from autosktime.smac.prior import Prior
-from smac import Callback, AlgorithmConfigurationFacade, MultiFidelityFacade
-from smac.facade import AbstractFacade
-from smac.initial_design import DefaultInitialDesign
-from smac.intensifier import SuccessiveHalving
-from smac.intensifier.intensifier import Intensifier
-from smac.runhistory.dataclasses import TrajectoryItem
-from smac.runhistory.runhistory import RunHistory
-from smac.scenario import Scenario
 
 
 class IntensifierGenerator:
 
     def __call__(self, *args, **kwargs) -> AbstractFacade:
         pass
+
+    @staticmethod
+    def _get_initial_design(scenario: Scenario, initial_configurations: List[Configuration]) -> AbstractInitialDesign:
+        if initial_configurations is not None and len(initial_configurations) > 0:
+            initial_design = DefaultInitialDesign(
+                scenario=scenario,
+                n_configs=0,
+                additional_configs=initial_configurations,
+            )
+        else:
+            initial_design = RandomInitialDesign(scenario=scenario, n_configs=10)
+        return initial_design
+
+    @staticmethod
+    def _get_acq_function(scenario: Scenario, priors: Optional[Dict[str, Prior]]) -> AbstractAcquisitionFunction:
+        acquisition_function = AlgorithmConfigurationFacade.get_acquisition_function(scenario)
+        if priors is not None:
+            acquisition_function = PriorAcquisitionFunction(acquisition_function, decay_beta=10, priors=priors)
+        return acquisition_function
 
 
 class SimpleIntensifierGenerator(IntensifierGenerator):
@@ -45,31 +64,18 @@ class SimpleIntensifierGenerator(IntensifierGenerator):
             seed: int,
             ta_kwargs: Dict,
             initial_configurations: List[Configuration],
-            hp_priors: bool,
-            priors: Dict[str, Prior],
+            priors: Optional[Dict[str, Prior]],
             callbacks: List[Callback]
     ) -> AbstractFacade:
         ta_kwargs['scenario'] = scenario
-
-        initial_design = None
-        if initial_configurations is not None and len(initial_configurations) > 0:
-            initial_design = DefaultInitialDesign(
-                scenario=scenario,
-                n_configs=0,
-                additional_configs=initial_configurations,
-            )
-
-        acquisition_function = AlgorithmConfigurationFacade.get_acquisition_function(scenario)
-        if hp_priors:
-            acquisition_function = PriorAcquisitionFunction(acquisition_function, decay_beta=10, priors=priors)
 
         return AlgorithmConfigurationFacade(
             scenario=scenario,
             target_function=ExecuteTaFunc(**ta_kwargs),
             intensifier=Intensifier(scenario),
-            initial_design=initial_design,
+            initial_design=SimpleIntensifierGenerator._get_initial_design(scenario, initial_configurations),
             callbacks=callbacks,
-            acquisition_function=acquisition_function
+            acquisition_function=SimpleIntensifierGenerator._get_acq_function(scenario, priors)
         )
 
 
@@ -86,32 +92,19 @@ class SHIntensifierGenerator(IntensifierGenerator):
             seed: int,
             ta_kwargs: Dict,
             initial_configurations: List[Configuration],
-            hp_priors: bool,
-            priors: Dict[str, Prior],
+            priors: Optional[Dict[str, Prior]],
             callbacks: List[Callback],
     ) -> AbstractFacade:
         ta_kwargs['scenario'] = scenario
         ta_kwargs['budget_type'] = self.budget_type
 
-        initial_design = None
-        if initial_configurations is not None and len(initial_configurations) > 0:
-            initial_design = DefaultInitialDesign(
-                scenario=scenario,
-                n_configs=0,
-                additional_configs=initial_configurations,
-            )
-
-        acquisition_function = MultiFidelityFacade.get_acquisition_function(scenario)
-        if hp_priors:
-            acquisition_function = PriorAcquisitionFunction(acquisition_function, decay_beta=10, priors=priors)
-
         return MultiFidelityFacade(
             scenario=scenario,
             target_function=ExecuteTaFunc(**ta_kwargs),
             intensifier=SuccessiveHalving(scenario, eta=self.eta, seed=seed),
-            initial_design=initial_design,
+            initial_design=SHIntensifierGenerator._get_initial_design(scenario, initial_configurations),
             callbacks=callbacks,
-            acquisition_function=acquisition_function
+            acquisition_function=SHIntensifierGenerator._get_acq_function(scenario, priors)
         )
 
 
@@ -186,10 +179,6 @@ class AutoMLSMBO:
         self.verbose = verbose
         self.logger = logging.getLogger(__name__)
 
-        if self.num_metalearning_configs > 0 and self.hp_priors:
-            raise ValueError(f"'num_metalearning_configs' ({self.num_metalearning_configs}) and "
-                             f"'hp_priors' {self.hp_priors} both set.")
-
         self.config_space.seed(self.seed)
         self.smac = self._get_smac()
 
@@ -248,7 +237,6 @@ class AutoMLSMBO:
             ta_kwargs=ta_kwargs,
             initial_configurations=initial_configs,
             callbacks=callbacks,
-            hp_priors=self.hp_priors,
             priors=priors
         )
 
@@ -275,11 +263,6 @@ class AutoMLSMBO:
             return None
 
     def _get_metabase(self) -> MetaBase:
-        if self.metadata_directory is None:
-            metalearning_directory = os.path.dirname(autosktime.metalearning.__file__)
-            metadata_directory = os.path.join(metalearning_directory, 'files')
-            self.metadata_directory = metadata_directory
-
         if not os.path.exists(self.metadata_directory):
             raise ValueError(f'The specified metadata directory \'{self.metadata_directory}\' does not exist!')
 

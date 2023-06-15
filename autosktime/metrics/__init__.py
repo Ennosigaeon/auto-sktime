@@ -379,4 +379,4 @@ STRING_TO_METRIC = {
     'owa': OverallWeightedAverage,
 
 }
-METRIC_TO_STRING = {type(value): key for key, value in STRING_TO_METRIC.items()}
+METRIC_TO_STRING = {value: key for key, value in STRING_TO_METRIC.items()}

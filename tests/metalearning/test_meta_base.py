@@ -26,7 +26,7 @@ class MetaBaseTest(unittest.TestCase):
     def test_get_configuration(self):
         actual = self.base._get_configuration('Y1', 0)
         expected = [{
-            '__choice__': 'linear',
+            '__choice__': 'statistical',
             'linear:forecaster:__choice__': 'theta',
             'linear:forecaster:theta:deseasonalize': True,
             'linear:forecaster:theta:sp': 1.0,
@@ -35,7 +35,7 @@ class MetaBaseTest(unittest.TestCase):
             'linear:outlier:n_sigma': 2.3176485168449408,
             'linear:outlier:window_length': 5
         }, {
-            '__choice__': 'linear',
+            '__choice__': 'statistical',
             'linear:forecaster:__choice__': 'theta',
             'linear:forecaster:theta:deseasonalize': False,
             'linear:forecaster:theta:sp': 7.0,
@@ -63,7 +63,7 @@ class MetaBaseTest(unittest.TestCase):
 
         expected = [
             {
-                '__choice__': 'linear',
+                '__choice__': 'statistical',
                 'linear:forecaster:__choice__': 'theta',
                 'linear:forecaster:theta:deseasonalize': True,
                 'linear:forecaster:theta:sp': 1.0,
@@ -72,7 +72,7 @@ class MetaBaseTest(unittest.TestCase):
                 'linear:outlier:n_sigma': 2.3176485168449408,
                 'linear:outlier:window_length': 5
             }, {
-                '__choice__': 'linear',
+                '__choice__': 'statistical',
                 'linear:forecaster:__choice__': 'tbats',
                 'linear:forecaster:tbats:sp': 4.0,
                 'linear:forecaster:tbats:use_arma_errors': True,

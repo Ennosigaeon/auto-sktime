@@ -155,7 +155,7 @@ class TemplateChoice(NotVectorizedMixin, AutoSktimePredictor):
     @staticmethod
     def get_components() -> Dict[str, Type[ConfigurableTransformedTargetForecaster]]:
         return {
-            'linear': UnivariateEndogenousPipeline,
+            'statistical': UnivariateEndogenousPipeline,
             'regression': RegressionPipeline,
             'panel-regression': PanelRegressionPipeline,
             'nn-panel-regression': NNPanelRegressionPipeline,

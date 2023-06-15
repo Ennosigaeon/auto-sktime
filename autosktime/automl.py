@@ -1,11 +1,13 @@
 import copy
 import logging.handlers
 import os
+import pickle
 import platform
 import sys
 import tempfile
 import time
 import uuid
+from pathlib import Path
 from typing import Any, Dict, Optional, List, Tuple, Union
 
 import dask
@@ -23,14 +25,14 @@ from smac.runhistory.runhistory import TrialInfo
 import autosktime.evaluation.test_evaluator
 from autosktime.automl_common.common.ensemble_building.abstract_ensemble import AbstractEnsemble
 from autosktime.constants import SUPPORTED_Y_TYPES, PANEL_FORECAST, MULTIVARIATE_FORECAST, UNIVARIATE_FORECAST, \
-    Budget, MIN_SEQUENCE_LENGTH
+    Budget, MIN_SEQUENCE_LENGTH, TASK_TYPES_TO_STRING
 from autosktime.data import DataManager, DatasetProperties
 from autosktime.data.splitter import BaseSplitter, splitter_types, get_ensemble_data
 from autosktime.ensembles.builder import EnsembleBuilderManager
 from autosktime.ensembles.singlebest import SingleBest
 from autosktime.ensembles.util import PrefittedEnsembleForecaster
 from autosktime.evaluation import ExecuteTaFunc
-from autosktime.metrics import default_metric_for_task
+from autosktime.metrics import default_metric_for_task, METRIC_TO_STRING
 from autosktime.pipeline.components.base import AutoSktimePredictor, COMPONENT_PROPERTIES
 from autosktime.pipeline.templates import util, TemplateChoice
 from autosktime.pipeline.util import NotVectorizedMixin
@@ -62,9 +64,8 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
                  exclude: Optional[Dict[str, Optional[List[str]]]] = None,
                  resampling_strategy: str = 'temporal-holdout',
                  resampling_strategy_arguments: Dict[str, Any] = None,
-                 metadata_directory: str = None,
                  num_metalearning_configs: int = -1,
-                 hp_priors: bool = False,
+                 hp_priors: bool = True,
                  n_jobs: int = 1,
                  dask_client: Optional[dask.distributed.Client] = None,
                  logging_config: Dict[str, Any] = None,
@@ -72,6 +73,8 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
                  use_pynisher: bool = False,
                  budget: Optional[Budget] = None,
                  refit: bool = False,
+                 store_evaluations: bool = True,
+                 cache_dir: str = f'{Path.home()}/.cache/auto-sktime/',
                  verbose: bool = False
                  ):
         super(AutoML, self).__init__()
@@ -89,7 +92,6 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
         self._resampling_strategy = resampling_strategy
         res_strat = resampling_strategy_arguments if resampling_strategy_arguments is not None else {}
         self._resampling_strategy_arguments = res_strat
-        self._metadata_directory = metadata_directory
         self._num_metalearning_configs = num_metalearning_configs
         self._hp_priors = hp_priors
         self._n_jobs: int = n_jobs
@@ -108,11 +110,13 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
         self._budget = budget
         self._verbose = verbose
         self._refit = refit
+        self._store_evaluations = store_evaluations
+        self._cache_dir = cache_dir
 
         self._datamanager: Optional[DataManager] = None
         self._dataset_name: Optional[str] = None
         self._stopwatch = StopWatch()
-        self._task = None
+        self._task: Optional[int] = None
         self._test_data: Tuple[Optional[pd.Series], Optional[pd.DataFrame]] = (None, None)
 
         self.models_: List[Tuple[float, TemplateChoice]] = []
@@ -310,7 +314,7 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
                 use_pynisher=self._use_pynisher,
                 seed=self._seed,
                 random_state=self._random_state,
-                metadata_directory=self._metadata_directory,
+                metadata_directory=self._cache_dir,
                 num_metalearning_configs=self._num_metalearning_configs,
                 hp_priors=self._hp_priors,
                 refit=False,
@@ -421,6 +425,10 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
             del self._dask_client
             self._dask_client = None
             self._logger.info('Finished closing the dask infrastructure')
+
+        # Record optimization for meta-learning
+        if self._store_evaluations:
+            self._cache_evaluations_for_meta_learning()
 
         # Clean up the backend
         if self._delete_tmp_folder_after_terminate:
@@ -560,6 +568,44 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
             'estimator'
         )
         return ensemble
+
+    def _cache_evaluations_for_meta_learning(self):
+        evaluated_configs = []
+        hp_names = [hp.name for hp in self.configuration_space.get_hyperparameters()]
+
+        for k in self.runhistory_.keys():
+            if self._budget is None or k.budget == 100.0:
+                values = np.empty(len(hp_names) + 2, dtype='object')
+                values[0] = self._dataset_name
+                values[1] = self.runhistory_[k].cost
+                values[2:] = self.runhistory_.ids_config[k.config_id].get_array()
+                evaluated_configs.append(values)
+
+        df = pd.DataFrame(evaluated_configs, columns=['__dataset__', '__loss__'] + hp_names)
+
+        folder = os.path.join(
+            self._cache_dir,
+            f'{TASK_TYPES_TO_STRING[self._datamanager.info["task"]]}-{METRIC_TO_STRING[type(self._metric)]}'
+        )
+        if not os.path.exists(folder):
+            os.mkdir(folder)
+
+        configuration_file = os.path.join(folder, 'configurations.csv')
+        if os.path.exists(configuration_file):
+            df = pd.concat((pd.read_csv(configuration_file), df), ignore_index=True)
+        df.to_csv(configuration_file, index=False)
+
+        timeseries_file = os.path.join(folder, 'timeseries.npy.gz')
+        if os.path.exists(timeseries_file):
+            with open(timeseries_file, 'rb') as f:
+                timeseries = pickle.load(f)
+        else:
+            timeseries = {}
+
+        if self._dataset_name not in timeseries:
+            timeseries[self._dataset_name] = np.atleast_2d(self._datamanager.y)
+            with open(timeseries_file, 'wb') as f:
+                pickle.dump(timeseries, f)
 
     @property
     def performance_over_time_(self):

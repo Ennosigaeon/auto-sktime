@@ -86,7 +86,7 @@ class AutoMLTest(unittest.TestCase):
         y = load_airline()
 
         incumbents = [{
-            '__choice__': 'linear',
+            '__choice__': 'statistical',
             'linear:forecaster:__choice__': 'naive',
             'linear:forecaster:naive:sp': 1,
             'linear:forecaster:naive:strategy': 'last',

@@ -1,14 +1,15 @@
 import logging
-import math
 import os.path
 import pathlib
-from typing import List, SupportsFloat, Optional, Tuple, Dict
+import pickle
+import typing
+from typing import List, Optional, Tuple, Dict
 
 import numpy as np
 import pandas as pd
+from ConfigSpace import ConfigurationSpace
 from ConfigSpace.configuration_space import Configuration
 
-from ConfigSpace import ConfigurationSpace
 from autosktime.constants import TASK_TYPES_TO_STRING
 from autosktime.metalearning.kND import KNearestDataSets
 from autosktime.smac.prior import Prior, KdePrior, UniformPrior
@@ -40,13 +41,11 @@ class MetaBase:
         self._kND: Optional[KNearestDataSets] = None
         self._timeseries, self._configs = self._load_instances()
 
-    def _load_instances(self) -> Tuple[pd.DataFrame, pd.DataFrame]:
-        timeseries = pd.read_pickle(
-            os.path.join(self.base_dir, f'{TASK_TYPES_TO_STRING[self.task]}_{self.metric}', 'timeseries.npy.gz')
-        )
-        configs = pd.read_csv(
-            os.path.join(self.base_dir, f'{TASK_TYPES_TO_STRING[self.task]}_{self.metric}', 'configurations.csv')
-        )
+    def _load_instances(self) -> Tuple[typing.Dict[str, pd.Series], pd.DataFrame]:
+        folder = os.path.join(self.base_dir, f'{TASK_TYPES_TO_STRING[self.task]}-{self.metric}')
+        with open(os.path.join(folder, 'timeseries.npy.gz'), 'rb') as f:
+            timeseries = pickle.load(f)
+        configs = pd.read_csv(os.path.join(folder, 'configurations.csv')).convert_dtypes()
         return timeseries, configs
 
     def suggest_configs(
@@ -71,11 +70,27 @@ class MetaBase:
 
         return configurations[:num_initial_configurations]
 
+    def _get_neighbors(self, y: pd.Series, k: int = -1) -> Tuple[List[str], List[float]]:
+        if self._kND is None:
+            self._kND = KNearestDataSets(metric=self.distance_measure, logger=self.logger)
+            self._kND.fit(self._timeseries)
+
+        names, distances = self._kND.kneighbors(y, k=k)
+        return names, distances
+
+    def _get_configuration(self, dataset: str, index: int) -> Configuration:
+        dataset_configs = self._configs.loc[
+            self._configs['__dataset__'] == dataset,
+            self._configs.columns.difference(('__dataset__', '__loss__'))
+        ].sort_values(by='__loss__')
+
+        return Configuration(self.configuration_space, vector=dataset_configs.iloc[index].values)
+
     def suggest_univariate_prior(self, y: pd.Series, num_datasets: int, cutoff: float = 0.2) -> Dict[str, Prior]:
-        neighbors, distance = self._get_neighbors(y, num_datasets)
+        neighbors, distances = self._get_neighbors(y, num_datasets)
 
         configs = []
-        for neighbor, distance in zip(neighbors, distance):
+        for neighbor, distance in zip(neighbors, distances):
             df = self._get_configuration_array(neighbor, cutoff)
             df['weights'] = distance
             configs.append(df)
@@ -105,36 +120,14 @@ class MetaBase:
             priors[hp_name] = prior
         return priors
 
-    def _get_neighbors(self, y: pd.Series, k: int = -1) -> Tuple[List[str], List[float]]:
-        if self._kND is None:
-            self._kND = KNearestDataSets(metric=self.distance_measure, logger=self.logger)
-            self._kND.fit(self._timeseries)
-
-        names, distances = self._kND.kneighbors(y, k=k)
-        return names, distances
-
     def _get_configuration_array(self, dataset: str, cutoff: float) -> pd.DataFrame:
-        hp_names = self._configs.columns.difference(['dataset', 'id', 'train_score', 'test_score'])
+        hp_names = self._configs.columns.difference(['__dataset__', '__loss__'])
         dataset_configs = self._configs.loc[
-            self._configs['dataset'] == dataset,
+            self._configs['__dataset__'] == dataset,
             hp_names
         ]
+        if dataset_configs.shape[0] == 0:
+            return dataset_configs
 
-        index = range(int(cutoff * dataset_configs.shape[0]))
-
-        configs = dataset_configs.iloc[index, :] \
-            .apply(lambda row: dict_to_config(row, self.configuration_space).get_array(), axis=1)
-        return pd.DataFrame(configs.values.tolist(), columns=hp_names)
-
-    def _get_configuration(self, dataset: str, index: int) -> Configuration:
-        dataset_configs = self._configs.loc[
-            self._configs['dataset'] == dataset,
-            self._configs.columns.difference(['dataset', 'id', 'train_score', 'test_score'])
-        ]
-        return dict_to_config(dataset_configs.iloc[index, :], self.configuration_space)
-
-
-def dict_to_config(row: pd.Series, cs: ConfigurationSpace) -> Configuration:
-    config_dict = {key: value for key, value in row.to_dict().items()
-                   if not isinstance(value, SupportsFloat) or not math.isnan(value)}
-    return Configuration(cs, config_dict)
+        max_index = max(int(cutoff * dataset_configs.shape[0]), 1)
+        return dataset_configs.iloc[:max_index, :]

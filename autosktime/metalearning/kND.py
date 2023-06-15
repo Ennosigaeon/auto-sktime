@@ -1,4 +1,5 @@
 import logging
+import typing
 from typing import List, Tuple
 
 import numpy as np
@@ -17,12 +18,12 @@ class KNearestDataSets:
         self.metric = metric
 
     # noinspection PyAttributeOutsideInit
-    def fit(self, X: pd.DataFrame):
+    def fit(self, X: typing.Dict[str, pd.Series]):
         dt = np.zeros((1, 1))
         self.metric_callable_ = _resolve_metric_to_factory(self.metric, dt, dt, _METRIC_INFOS)
 
-        self.n_data_sets_ = X.shape[1]
-        self.timeseries_ = [(np.atleast_2d(X[name].dropna()), name) for name in X]
+        self.n_data_sets_ = len(X)
+        self.timeseries_ = {k: np.atleast_2d(ts) for k, ts in X.items()}
 
     def kneighbors(self, x: pd.Series, k: int = 1) -> Tuple[List[str], List[float]]:
         if k < -1 or k == 0:
@@ -34,9 +35,11 @@ class KNearestDataSets:
 
         distances = np.empty(self.n_data_sets_)
         names = np.empty(self.n_data_sets_, dtype='object')
-        for i, (y, name) in enumerate(self.timeseries_):
-            distances[i] = self.metric_callable_(x, y)
-            names[i] = name
+        for i, (name, y) in enumerate(self.timeseries_.items()):
+            d = self.metric_callable_(x, y)
+            if not np.isinf(d):
+                distances[i] = d
+                names[i] = name
 
         idx = np.argsort(distances)[:k]
         return names[idx], distances[idx]
