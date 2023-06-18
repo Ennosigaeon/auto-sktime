@@ -30,16 +30,17 @@ methods = [
     ('autots', evaluate_autots)
 ]
 fh = 12
-max_duration = 60
+max_duration = 10
+repetitions = 5
 metric = MeanAbsolutePercentageError(symmetric=True)
 
-results = {'method': [], 'dataset': [], 'smape': [], 'duration': []}
+results = {'method': [], 'seed': [], 'dataset': [], 'smape': [], 'duration': []}
 
 
-def test_framework(y_train: pd.Series, y_test: pd.Series, name: str, evaluate: Callable):
+def test_framework(y_train: pd.Series, y_test: pd.Series, evaluate: Callable, **kwargs):
     start = time.time()
     try:
-        y_pred, y_pred_ints = evaluate(y_train.copy(), fh, max_duration, name)
+        y_pred, y_pred_ints = evaluate(y_train.copy(), fh, max_duration, **kwargs)
         y_pred.index, y_pred_ints.index = y_test.index, y_test.index
 
         score = metric(y_test, y_pred)
@@ -65,16 +66,21 @@ def benchmark():
         y_train, y_test = temporal_train_test_split(y, test_size=fh)
 
         for name, evaluate in methods:
-            y_pred, y_pred_ints, score, duration = test_framework(y_train, y_test, path.name, evaluate)
-            if y_pred is not None:
-                plot_series(y_train, y_test, y_pred, labels=["y_train", "y_test", "y_pred"], pred_interval=y_pred_ints,
-                            title=f'{path.name} - {name}')
-                plt.show()
+            for seed in range(repetitions):
+                y_pred, y_pred_ints, score, duration = test_framework(
+                    y_train, y_test, evaluate,
+                    name=path.name, seed=seed
+                )
+                if y_pred is not None:
+                    plot_series(y_train, y_test, y_pred, labels=["y_train", "y_test", "y_pred"],
+                                pred_interval=y_pred_ints, title=f'{path.name} - {name}')
+                    plt.show()
 
-            results['method'].append(name)
-            results['dataset'].append(path.name)
-            results['smape'].append(score)
-            results['duration'].append(duration)
+                results['method'].append(name)
+                results['seed'].append(seed)
+                results['dataset'].append(path.name)
+                results['smape'].append(score)
+                results['duration'].append(duration)
 
         break
 

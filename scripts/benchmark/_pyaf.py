@@ -2,7 +2,7 @@ import pandas as pd
 import pyaf
 
 
-def evaluate_pyaf(y: pd.Series, fh: int, max_duration: int, name: str):
+def evaluate_pyaf(y: pd.Series, fh: int, max_duration: int, name: str, seed: int):
     y = y.reset_index()
 
     engine = pyaf.ForecastEngine.cForecastEngine()
