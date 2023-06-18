@@ -8,6 +8,7 @@ from scripts.benchmark.util import generate_fh
 
 def evaluate_hyperts(y: pd.Series, fh: int, max_duration: int, name: str):
     fh = pd.DataFrame(generate_fh(y.index, fh).to_timestamp(), columns=['index'])
+    fh.index += y.shape[0]
     y = y.reset_index()
 
     model: TSPipeline = make_experiment(
@@ -15,6 +16,7 @@ def evaluate_hyperts(y: pd.Series, fh: int, max_duration: int, name: str):
         task='univariate-forecast',
         timestamp='index',
         max_trials=500000,
+        early_stopping_rounds=500000,
         early_stopping_time_limit=max_duration) \
         .run()
 

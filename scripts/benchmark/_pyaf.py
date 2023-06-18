@@ -8,7 +8,9 @@ def evaluate_pyaf(y: pd.Series, fh: int, max_duration: int, name: str):
     engine = pyaf.ForecastEngine.cForecastEngine()
     engine.mOptions.mNbCores = 1
     engine.train(iInputDS=y, iTime='index', iSignal='y', iHorizon=fh)
-    print(engine.getModelInfo())
+    print('#########')
+    engine.getModelInfo()
+    print('#########')
 
     y_pred = engine.forecast(iInputDS=y, iHorizon=fh)
     y_pred_ints = pd.DataFrame(
