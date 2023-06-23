@@ -587,8 +587,7 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
             self._cache_dir,
             f'{TASK_TYPES_TO_STRING[self._datamanager.info["task"]]}-{METRIC_TO_STRING[type(self._metric)]}'
         )
-        if not os.path.exists(folder):
-            os.mkdir(folder)
+        os.makedirs(folder, exist_ok=True)
 
         configuration_file = os.path.join(folder, 'configurations.csv')
         if os.path.exists(configuration_file):

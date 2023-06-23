@@ -1,3 +1,6 @@
+import os
+import shutil
+
 import numpy as np
 import pandas as pd
 from hyperts import make_experiment
@@ -27,5 +30,8 @@ def evaluate_hyperts(y: pd.Series, fh: int, max_duration: int, name: str, seed: 
         columns=pd.MultiIndex.from_tuples([('Coverage', 0.5, 'lower'), ('Coverage', 0.5, 'upper')]),
         index=y_pred.index
     )
+
+    if os.path.exists('/tmp/workdir'):
+        shutil.rmtree('/tmp/workdir')
 
     return y_pred['y'], y_pred_ints
