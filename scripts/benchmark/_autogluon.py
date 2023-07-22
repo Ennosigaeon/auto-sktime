@@ -1,4 +1,5 @@
 import os
+import shutil
 
 import numpy as np
 import pandas as pd
@@ -6,6 +7,9 @@ from autogluon.timeseries import TimeSeriesDataFrame, TimeSeriesPredictor
 
 
 def evaluate_autogluon(y: pd.Series, fh: int, max_duration: int, name: str, seed: int):
+    if os.path.exists('./AutogluonModels'):
+        shutil.rmtree('./AutogluonModels')
+
     y = y.reset_index()
     y['item_id'] = 0
 
@@ -27,9 +31,10 @@ def evaluate_autogluon(y: pd.Series, fh: int, max_duration: int, name: str, seed
 
     predictor.fit(
         train_data,
-        presets="high_quality",
+        presets="best_quality",
         time_limit=max_duration,
-        random_seed=seed
+        random_seed=seed,
+        hyperparameter_tune_kwargs={'num_trials': 10000, 'scheduler': 'local', 'searcher': 'auto'}
     )
 
     predictions = predictor.predict(train_data)
