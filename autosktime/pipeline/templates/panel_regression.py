@@ -30,7 +30,7 @@ class PanelRegressionPipeline(NotVectorizedMixin, ConfigurableTransformedTargetF
         "X_inner_mtype": 'pd.DataFrame',
         "ignores-exogeneous-X": False,
         "requires-fh-in-fit": False,
-        "handles-missing-data": False,
+        "handles-missing-data": True,
         "capability:pred_int": True,
         'X-y-must-have-same-index': True,
         "vectorize_panel_data": True,

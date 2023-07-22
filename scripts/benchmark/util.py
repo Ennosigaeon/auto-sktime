@@ -10,6 +10,8 @@ def infer_frequency(index: pd.Index) -> str:
     # See https://github.com/pandas-dev/pandas/issues/38914
     if orig_freq == 'MS':
         freq = 'M'
+    elif orig_freq == 'AS-JAN':
+        freq = 'Y'
     elif orig_freq.startswith('QS'):
         freq = 'Q'
     else:

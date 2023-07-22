@@ -10,6 +10,7 @@ from autosktime.pipeline.components.base import AutoSktimeComponent, COMPONENT_P
 from autosktime.pipeline.components.preprocessing.detrend import DetrendComponent
 from autosktime.pipeline.components.preprocessing.impute import ImputerComponent
 from autosktime.pipeline.components.preprocessing.outlier import HampelFilterComponent
+from autosktime.pipeline.components.preprocessing.shift import ShiftTransformerComponent
 from autosktime.pipeline.components.reduction.reduction import ReductionComponent
 from autosktime.pipeline.templates.base import ConfigurableTransformedTargetForecaster
 from autosktime.pipeline.util import Int64Index
@@ -22,16 +23,17 @@ class RegressionPipeline(ConfigurableTransformedTargetForecaster):
         "X_inner_mtype": SUPPORTED_MTYPES,
         "ignores-exogeneous-X": False,
         "requires-fh-in-fit": False,
-        "handles-missing-data": False,
+        "handles-missing-data": True,
         "capability:pred_int": True,
         'X-y-must-have-same-index': True
     }
 
     def _get_pipeline_steps(self) -> List[Tuple[str, AutoSktimeComponent]]:
         steps = [
+            ('imputation', ImputerComponent(random_state=self.random_state)),
             ('detrend', DetrendComponent(random_state=self.random_state)),
             ('outlier', HampelFilterComponent(random_state=self.random_state)),
-            ('imputation', ImputerComponent(random_state=self.random_state)),
+            ('shift', ShiftTransformerComponent(random_state=self.random_state)),
             ('reduction', ReductionComponent(random_state=self.random_state))
         ]
         return steps

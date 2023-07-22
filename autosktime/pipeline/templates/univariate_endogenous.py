@@ -25,7 +25,7 @@ class UnivariateEndogenousPipeline(ConfigurableTransformedTargetForecaster):
         "X_inner_mtype": SUPPORTED_MTYPES,
         "ignores-exogeneous-X": False,
         "requires-fh-in-fit": False,
-        "handles-missing-data": False,
+        "handles-missing-data": True,
         "capability:pred_int": True,
         'X-y-must-have-same-index': True
     }
@@ -51,9 +51,9 @@ class UnivariateEndogenousPipeline(ConfigurableTransformedTargetForecaster):
 
     def _get_pipeline_steps(self) -> List[Tuple[str, AutoSktimeComponent]]:
         steps = [
+            ('imputation', ImputerComponent(random_state=self.random_state)),
             ('shift', ShiftTransformerComponent(random_state=self.random_state)),
             ('outlier', HampelFilterComponent(random_state=self.random_state)),
-            ('imputation', ImputerComponent(random_state=self.random_state)),
             ('normalizer', NormalizerChoice(random_state=self.random_state)),
             ('forecaster', ForecasterChoice(random_state=self.random_state))
         ]

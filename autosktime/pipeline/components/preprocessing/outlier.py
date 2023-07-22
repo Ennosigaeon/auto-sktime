@@ -8,6 +8,7 @@ from autosktime.constants import IGNORES_EXOGENOUS_X, HANDLES_UNIVARIATE, HANDLE
     HANDLES_PANEL
 from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import COMPONENT_PROPERTIES, AutoSktimeTransformer
+from autosktime.pipeline.components.preprocessing.impute import ImputerComponent
 from autosktime.pipeline.util import Int64Index
 
 
@@ -25,6 +26,8 @@ class HampelFilterComponent(AutoSktimeTransformer):
     def _fit(self, X: Union[pd.Series, pd.DataFrame], y: pd.Series = None):
         self.estimator = self._estimator_class(window_length=self.window_length, n_sigma=self.n_sigma)
         self.estimator.fit(X=X, y=y)
+        self.imputer = ImputerComponent(method='ffill', random_state=self.random_state)
+        self.imputer.fit(X=X, y=y)
         return self
 
     def _transform(self, X: Union[pd.Series, pd.DataFrame], y: pd.Series = None):
@@ -36,6 +39,7 @@ class HampelFilterComponent(AutoSktimeTransformer):
         X.index = pd.RangeIndex(start=0, stop=len(index))
         res = self.estimator.transform(X, y=y)
         res.index = index
+        res = self.imputer.transform(res, y=y)
         return res
 
     @staticmethod
