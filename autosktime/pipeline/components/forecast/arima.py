@@ -86,14 +86,14 @@ class ARIMAComponent(AutoSktimePredictor):
     @staticmethod
     def get_hyperparameter_search_space(dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
         # order
-        p = UniformIntegerHyperparameter('p', lower=0, upper=5, default_value=1)
-        d = UniformIntegerHyperparameter('d', lower=0, upper=2, default_value=0)
-        q = UniformIntegerHyperparameter('q', lower=0, upper=2, default_value=0)
+        p = CategoricalHyperparameter('p', [0, 1, 2, 3, 4, 5, 7, 12], default_value=0)
+        d = CategoricalHyperparameter('d', [0, 1, 2, 3], default_value=1)
+        q = CategoricalHyperparameter('q', [0, 1, 2, 3, 4, 5, 7, 12], default_value=0)
 
         # seasonal_order
-        P = UniformIntegerHyperparameter('P', lower=0, upper=2, default_value=0)
-        D = UniformIntegerHyperparameter('D', lower=0, upper=1, default_value=0)
-        Q = UniformIntegerHyperparameter('Q', lower=0, upper=2, default_value=0)
+        # P = UniformIntegerHyperparameter('P', lower=0, upper=2, default_value=0)
+        # D = UniformIntegerHyperparameter('D', lower=0, upper=1, default_value=0)
+        # Q = UniformIntegerHyperparameter('Q', lower=0, upper=2, default_value=0)
         sp = CategoricalHyperparameter('sp', choices=frequency_to_sp(dataset_properties.frequency))
 
         # P_depends_on_sp = InCondition(P, sp, [2, 4, 7, 12])
@@ -107,7 +107,7 @@ class ARIMAComponent(AutoSktimePredictor):
         with_intercept = Constant('with_intercept', 'True')
 
         cs = ConfigurationSpace()
-        cs.add_hyperparameters([p, d, q, P, D, Q, sp, maxiter, with_intercept])
+        cs.add_hyperparameters([p, d, q, sp, maxiter, with_intercept])
         # cs.add_conditions([P_depends_on_sp, D_depends_on_sp, Q_depends_on_sp])
         cs.add_forbidden_clauses([p_must_be_smaller_than_sp, q_must_be_smaller_than_sp])
 
