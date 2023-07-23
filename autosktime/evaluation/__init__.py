@@ -23,12 +23,25 @@ TaFuncResult = Tuple[float, Dict[str, Any]]
 
 
 def fit_predict_try_except_decorator(
-        ta: Callable,
-        seed: int = 0,
+        config: Configuration,
+        context: 'ExecuteTaFunc',
         budget: float = 0.0,
         **kwargs: Any) -> TaFuncResult:
     try:
-        return ta(seed=seed, budget=budget, **kwargs)
+        return context.eval_function(
+            config=config,
+            budget=budget,
+            splitter=context.splitter,
+            random_state=context.random_state,
+            budget_type=context.budget_type,
+            verbose=context.verbose,
+            num_run=config.config_id,
+            backend=context.backend,
+            metric=context.metric,
+            seed=context.seed,
+            refit=context.refit,
+            **kwargs
+        )
     except Exception as e:
         if isinstance(e, (MemoryError, pynisher.TimeoutException)):
             # Re-raise the memory error to let the pynisher handle that correctly
@@ -54,44 +67,46 @@ class ExecuteTaFunc(TargetFunctionRunner):
             ta: Optional[Callable] = None,
             verbose: bool = False
     ):
-        if ta is None:
-            from autosktime.evaluation.train_evaluator import evaluate
-            eval_function = evaluate
-        else:
-            eval_function = ta
-
-        def eval_function_(config: Configuration, budget: float, **kwargs):
-            kwargs['config'] = config
-            return fit_predict_try_except_decorator(
-                ta=eval_function,
-                splitter=splitter,
-                random_state=random_state,
-                budget_type=budget_type,
-                verbose=verbose,
-                num_run=config.config_id,
-                backend=backend,
-                metric=metric,
-                seed=self.seed,
-                budget=budget,
-                refit=refit,
-                **kwargs
-            )
-
         super().__init__(
             scenario=scenario,
-            target_function=eval_function_,
+            target_function=fit_predict_try_except_decorator,
             required_arguments=['budget', 'kwargs']
         )
-
         self.backend = backend
         self.seed = seed
+        self.random_state = random_state
+        self.splitter = splitter
         self.metric = metric
         self.budget_type = budget_type
+        self.refit = refit
         self.use_pynisher = use_pynisher
+        self.verbose = verbose
         self.num_run = 0
+
+        if ta is None:
+            from autosktime.evaluation.train_evaluator import evaluate
+            self.eval_function = evaluate
+        else:
+            self.eval_function = ta
 
         self.dataset_properties = self.backend.load_datamanager().dataset_properties
         self.logger: logging.Logger = logging.getLogger('TAE')
+
+    def __call__(
+            self,
+            config: Configuration,
+            algorithm: Callable,
+            algorithm_kwargs: dict[str, Any],
+    ) -> (
+            float
+            | list[float]
+            | dict[str, float]
+            | tuple[float, dict]
+            | tuple[list[float], dict]
+            | tuple[dict[str, float], dict]
+    ):
+        """Calls the algorithm, which is processed in the ``run`` method."""
+        return algorithm(config, context=self, **algorithm_kwargs)
 
     def run_wrapper(
             self,

@@ -35,7 +35,7 @@ class TestEvaluator(AbstractEvaluator):
         test_pred = fit_and_predict(y, X)
         if pd.isna(test_pred).any():
             test_pred = y
-        loss = self._loss(y, test_pred, error='raise')
+        loss = self._loss(y, test_pred, error='worst')
 
         if os.path.exists(self.backend.get_numrun_directory(self.seed, self.num_run, self.budget)):
             os.rename(
