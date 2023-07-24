@@ -3,13 +3,14 @@ import shutil
 
 import numpy as np
 import pandas as pd
-from hyperts import make_experiment
-from hyperts.framework.compete import TSPipeline
 
 from scripts.benchmark.util import generate_fh
 
 
 def evaluate_hyperts(y: pd.Series, fh: int, max_duration: int, name: str, seed: int):
+    from hyperts import make_experiment
+    from hyperts.framework.compete import TSPipeline
+
     fh = pd.DataFrame(generate_fh(y.index, fh).to_timestamp(), columns=['index'])
     fh.index += y.shape[0]
     y = y.reset_index()

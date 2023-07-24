@@ -3,10 +3,11 @@ import shutil
 
 import numpy as np
 import pandas as pd
-from autogluon.timeseries import TimeSeriesDataFrame, TimeSeriesPredictor
 
 
 def evaluate_autogluon(y: pd.Series, fh: int, max_duration: int, name: str, seed: int):
+    from autogluon.timeseries import TimeSeriesDataFrame, TimeSeriesPredictor
+
     if os.path.exists('./AutogluonModels'):
         shutil.rmtree('./AutogluonModels')
 

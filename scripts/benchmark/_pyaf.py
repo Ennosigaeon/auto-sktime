@@ -1,8 +1,9 @@
 import pandas as pd
-import pyaf
 
 
 def evaluate_pyaf(y: pd.Series, fh: int, max_duration: int, name: str, seed: int):
+    import pyaf
+
     y = y.reset_index()
 
     engine = pyaf.ForecastEngine.cForecastEngine()
