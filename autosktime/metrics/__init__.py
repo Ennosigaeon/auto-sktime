@@ -27,6 +27,7 @@ def calculate_loss(
         prediction: SUPPORTED_Y_TYPES,
         task_type: int,
         metric: BaseForecastingErrorMetric,
+        drop_nan: bool = True,
         **kwargs
 ) -> float:
     """
@@ -52,8 +53,15 @@ def calculate_loss(
         The loss value
     """
 
+    # Try to remove nan values before calculating score
+    _solution, _prediction = solution, prediction
+    if drop_nan and solution is not None and prediction is not None:
+        nan = pd.isna(solution) | pd.isna(prediction)
+        if nan.any():
+            _solution, _prediction = solution[~nan], prediction[~nan]
+
     if task_type in FORECAST_TASK:
-        score = metric(solution, prediction, **kwargs)
+        score = metric(_solution, _prediction, **kwargs)
     else:
         raise NotImplementedError('Scoring of non FORECAST_TASK not supported')
 
