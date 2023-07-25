@@ -243,14 +243,16 @@ class AutoMLSMBO:
         return smac
 
     def get_initial_configs(self, y: pd.Series) -> Optional[List[Configuration]]:
-        if self.num_metalearning_configs < 0:
-            return None
+        initial_configs = [self.config_space.get_default_configuration()]
+
+        if self.num_metalearning_configs < 1:
+            return initial_configs
         try:
             metabase = self._get_metabase()
-            return metabase.suggest_configs(y, self.num_metalearning_configs)
+            return initial_configs + metabase.suggest_configs(y, self.num_metalearning_configs)
         except FileNotFoundError:
             self.logger.warning(f'Failed to find metadata in \'{self.metadata_directory}\'. Skipping meta-learning...')
-            return None
+            return initial_configs
 
     def get_hp_priors(self, y: pd.Series) -> Optional[Dict[str, Prior]]:
         if not self.hp_priors:
