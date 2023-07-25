@@ -3,7 +3,8 @@ from typing import Union
 import numpy as np
 import pandas as pd
 
-from ConfigSpace import ConfigurationSpace, UniformIntegerHyperparameter, UniformFloatHyperparameter
+from ConfigSpace import ConfigurationSpace, UniformIntegerHyperparameter, UniformFloatHyperparameter, \
+    CategoricalHyperparameter, EqualsCondition
 from autosktime.constants import IGNORES_EXOGENOUS_X, HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, SUPPORTED_INDEX_TYPES, \
     HANDLES_PANEL
 from autosktime.data import DatasetProperties
@@ -17,8 +18,15 @@ class HampelFilterComponent(AutoSktimeTransformer):
 
     _estimator_class = HampelFilter
 
-    def __init__(self, window_length: int = 10, n_sigma: float = 3., random_state: np.random.RandomState = None):
+    def __init__(
+            self,
+            skip: bool = True,
+            window_length: int = 10,
+            n_sigma: float = 3.,
+            random_state: np.random.RandomState = None
+    ):
         super().__init__()
+        self.skip = skip
         self.window_length = window_length
         self.n_sigma = n_sigma
         self.random_state = random_state
@@ -33,6 +41,9 @@ class HampelFilterComponent(AutoSktimeTransformer):
     def _transform(self, X: Union[pd.Series, pd.DataFrame], y: pd.Series = None):
         if self.estimator is None:
             raise NotImplementedError
+
+        if self.skip:
+            return X
 
         # hampel filter implementation uses integers to access index
         index = X.index
@@ -54,11 +65,18 @@ class HampelFilterComponent(AutoSktimeTransformer):
 
     @staticmethod
     def get_hyperparameter_search_space(dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
+        skip = CategoricalHyperparameter('skip', [True, False])
         window_length = UniformIntegerHyperparameter('window_length', lower=3, log=True,
                                                      upper=min(dataset_properties.series_length - 1, 100),
                                                      default_value=min(dataset_properties.series_length - 1, 5))
         n_sigma = UniformFloatHyperparameter('n_sigma', lower=2, upper=5, default_value=3)
 
         cs = ConfigurationSpace()
-        cs.add_hyperparameters([window_length, n_sigma])
+        cs.add_hyperparameters([skip, window_length, n_sigma])
+
+        window_cond = EqualsCondition(window_length, skip, False)
+        cs.add_condition(window_cond)
+        n_sigma_cond = EqualsCondition(n_sigma, skip, False)
+        cs.add_condition(n_sigma_cond)
+
         return cs
