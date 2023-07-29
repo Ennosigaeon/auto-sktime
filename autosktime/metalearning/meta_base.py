@@ -70,13 +70,14 @@ class MetaBase:
 
         return configurations[:num_initial_configurations]
 
-    def _get_neighbors(self, y: pd.Series, k: int = -1) -> Tuple[List[str], List[float]]:
+    def _get_neighbors(self, y: pd.Series, k: int = -1) -> Tuple[np.ndarray, np.ndarray]:
         if self._kND is None:
             self._kND = KNearestDataSets(metric=self.distance_measure, logger=self.logger)
             self._kND.fit(self._timeseries)
 
         names, distances = self._kND.kneighbors(y, k=k)
-        return names, distances
+        mask = ~np.isinf(distances) & (distances < 10000)
+        return names[mask], distances[mask]
 
     def _get_configuration(self, dataset: str, index: int) -> Configuration:
         dataset_configs = self._configs.loc[
@@ -88,6 +89,9 @@ class MetaBase:
 
     def suggest_univariate_prior(self, y: pd.Series, num_datasets: int, cutoff: float = 0.2) -> Dict[str, Prior]:
         neighbors, distances = self._get_neighbors(y, num_datasets)
+
+        if len(neighbors) == 0:
+            return {}
 
         configs = []
         for neighbor, distance in zip(neighbors, distances):
@@ -104,20 +108,23 @@ class MetaBase:
         for hp_name in df:
             if hp_name == 'weights':
                 continue
-            hp = self.configuration_space.get_hyperparameter(hp_name)
+            try:
+                hp = self.configuration_space.get_hyperparameter(hp_name)
 
-            observations = df[hp_name]
-            filled_values = (~pd.isna(observations)).sum()
-            if filled_values < 2:
-                prior = UniformPrior(hp)
-            else:
-                try:
-                    prior = KdePrior(hp, observations, weights=df['weights'])
-                except RuntimeError as ex:
-                    self.logger.warning(f'Failed to fit KdePrior: `{ex}`. Using UniformPrior as fallback')
+                observations = df[hp_name]
+                filled_values = (~pd.isna(observations)).sum()
+                if filled_values < 2:
                     prior = UniformPrior(hp)
+                else:
+                    try:
+                        prior = KdePrior(hp, observations, weights=df['weights'])
+                    except RuntimeError as ex:
+                        self.logger.warning(f'Failed to fit KdePrior: `{ex}`. Using UniformPrior as fallback')
+                        prior = UniformPrior(hp)
 
-            priors[hp_name] = prior
+                priors[hp_name] = prior
+            except KeyError:
+                continue
         return priors
 
     def _get_configuration_array(self, dataset: str, cutoff: float) -> pd.DataFrame:

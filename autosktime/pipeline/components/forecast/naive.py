@@ -42,6 +42,8 @@ class NaiveForecasterComponent(AutoSktimePredictor):
             # NaiveForecaster uses the last self.sp terms for forecasting. In case that the training
             # data are predicted again, the first self.sp terms are missing and set to nan
             prediction = prediction.backfill()
+            # Not sure why this is necessary but latest values could also be nan
+            prediction = prediction.ffill()
 
         return prediction
 

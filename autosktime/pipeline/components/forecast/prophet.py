@@ -1,12 +1,11 @@
-from typing import Union
-
 import numpy as np
 import pandas as pd
+from ConfigSpace import ConfigurationSpace, UniformIntegerHyperparameter, CategoricalHyperparameter, Constant, \
+    UniformFloatHyperparameter
 from sktime.forecasting.base import ForecastingHorizon
 # noinspection PyProtectedMember
 from sktime.utils.validation._dependencies import _check_soft_dependencies
 
-from ConfigSpace import ConfigurationSpace, UniformIntegerHyperparameter, CategoricalHyperparameter, Constant
 from autosktime.constants import IGNORES_EXOGENOUS_X, HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, SUPPORTED_INDEX_TYPES, \
     HANDLES_PANEL
 from autosktime.data import DatasetProperties
@@ -20,40 +19,31 @@ class ProphetComponent(AutoSktimePredictor):
 
     def __init__(
             self,
+            freq: str = None,
             growth: str = 'linear',
             n_changepoints: int = 25,
-            yearly_seasonality: Union[bool, str] = 'auto',
-            weekly_seasonality: Union[bool, str] = 'auto',
-            daily_seasonality: Union[bool, str] = 'auto',
+            changepoint_prior_scale: float = 0.05,
+            seasonality_prior_scale: float = 10,
             seasonality_mode: str = 'additive',
             random_state: np.random.RandomState = None
     ):
         super().__init__()
+        self.freq = freq
         self.growth = growth
         self.n_changepoints = n_changepoints
-        self.yearly_seasonality = yearly_seasonality
-        self.weekly_seasonality = weekly_seasonality
-        self.daily_seasonality = daily_seasonality
+        self.changepoint_prior_scale = changepoint_prior_scale
+        self.seasonality_prior_scale = seasonality_prior_scale
         self.seasonality_mode = seasonality_mode
         self.random_state = random_state
 
     def _fit(self, y, X: pd.DataFrame = None, fh: ForecastingHorizon = None):
-        def as_bool(value: Union[str, bool]) -> bool:
-            try:
-                return bool(value)
-            except ValueError:
-                return value
-
-        yearly_seasonality = as_bool(self.yearly_seasonality)
-        weekly_seasonality = as_bool(self.weekly_seasonality)
-        daily_seasonality = as_bool(self.daily_seasonality)
-
         self.estimator = self._estimator_class(
+            freq=self.freq,
             growth=self.growth,
             n_changepoints=self.n_changepoints,
-            yearly_seasonality=yearly_seasonality,
-            weekly_seasonality=weekly_seasonality,
-            daily_seasonality=daily_seasonality,
+            changepoint_prior_scale=self.changepoint_prior_scale,
+            seasonality_prior_scale=self.seasonality_prior_scale,
+            seasonality_mode=self.seasonality_mode,
             verbose=False
         )
 
@@ -74,22 +64,22 @@ class ProphetComponent(AutoSktimePredictor):
     def get_hyperparameter_search_space(dataset_properties: DatasetProperties = None) -> ConfigurationSpace:
         # TODO capacity is required for logistic growth, see
         #  https://facebook.github.io/prophet/docs/saturating_forecasts.html
-        # growth = CategoricalHyperparameter('growth', ['linear', 'logistic'])
         growth = Constant('growth', 'linear')
-        n_changepoints = UniformIntegerHyperparameter('n_changepoints', 0, 50, default_value=25)
+        freq = Constant('freq', dataset_properties.frequency)
 
-        yearly_seasonality = CategoricalHyperparameter('yearly_seasonality', ['auto', 'True', 'False'])
-        weekly_seasonality = CategoricalHyperparameter('weekly_seasonality', ['auto', 'True', 'False'])
-        daily_seasonality = CategoricalHyperparameter('daily_seasonality', ['auto', 'True', 'False'])
+        changepoint_prior_scale = UniformFloatHyperparameter('changepoint_prior_scale', 0.001, 0.5, default_value=0.05)
+        seasonality_prior_scale = UniformFloatHyperparameter('seasonality_prior_scale', 0.001, 10, default_value=10)
+        changepoint_range = UniformFloatHyperparameter('changepoint_range', 0.8, 0.95, default_value=0.8)
+
+        n_changepoints = UniformIntegerHyperparameter('n_changepoints', 0, 50, default_value=25)
 
         seasonality_mode = CategoricalHyperparameter('seasonality_mode', ['additive', 'multiplicative'])
 
         cs = ConfigurationSpace()
         cs.add_hyperparameters([
-            growth, n_changepoints, yearly_seasonality, weekly_seasonality, daily_seasonality, seasonality_mode
+            freq, growth, n_changepoints, changepoint_prior_scale, seasonality_prior_scale, changepoint_range,
+            seasonality_mode
         ])
-        cs.add_conditions([])
-        cs.add_forbidden_clauses([])
 
         return cs
 

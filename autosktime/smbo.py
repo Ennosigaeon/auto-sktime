@@ -259,7 +259,10 @@ class AutoMLSMBO:
             return None
         try:
             metabase = self._get_metabase()
-            return metabase.suggest_univariate_prior(y, self.num_metalearning_configs)
+            priors = metabase.suggest_univariate_prior(y, self.num_metalearning_configs)
+            if len(priors) == 0:
+                return None
+            return priors
         except FileNotFoundError:
             self.logger.warning(f'Failed to find metadata in \'{self.metadata_directory}\'. Skipping meta-learning...')
             return None

@@ -2,8 +2,7 @@ from typing import Union
 
 import numpy as np
 import pandas as pd
-from ConfigSpace import ConfigurationSpace, UniformIntegerHyperparameter, CategoricalHyperparameter, \
-    Constant, ForbiddenGreaterThanRelation
+from ConfigSpace import ConfigurationSpace, CategoricalHyperparameter, Constant, ForbiddenGreaterThanRelation
 from sktime.forecasting.base import ForecastingHorizon
 
 from autosktime.constants import IGNORES_EXOGENOUS_X, HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, SUPPORTED_INDEX_TYPES, \
@@ -27,6 +26,7 @@ class ARIMAComponent(AutoSktimePredictor):
             D: int = 0,
             Q: int = 0,
             sp: int = 0,
+            trend: str = None,
             maxiter: int = 50,
             with_intercept: Union[bool, str] = True,
             random_state: np.random.RandomState = None
@@ -39,6 +39,7 @@ class ARIMAComponent(AutoSktimePredictor):
         self.D = D
         self.Q = Q
         self.sp = sp
+        self.trend = trend
         self.maxiter = maxiter
         self.with_intercept = with_intercept
         self.random_state = random_state
@@ -56,6 +57,7 @@ class ARIMAComponent(AutoSktimePredictor):
         self.estimator = self._estimator_class(
             order=(self.p, self.d, self.q),
             seasonal_order=(self.P, self.D, self.Q, self.sp),
+            trend=None if self.trend == '' else self.trend,
             maxiter=self.maxiter,
             with_intercept=with_intercept
         )
@@ -90,6 +92,8 @@ class ARIMAComponent(AutoSktimePredictor):
         d = CategoricalHyperparameter('d', [0, 1, 2, 3], default_value=1)
         q = CategoricalHyperparameter('q', [0, 1, 2, 3, 4, 5, 7, 12], default_value=0)
 
+        trend = CategoricalHyperparameter('trend', ['', 'n', 'c', 't'])
+
         # seasonal_order
         # P = UniformIntegerHyperparameter('P', lower=0, upper=2, default_value=0)
         # D = UniformIntegerHyperparameter('D', lower=0, upper=1, default_value=0)
@@ -107,7 +111,7 @@ class ARIMAComponent(AutoSktimePredictor):
         with_intercept = Constant('with_intercept', 'True')
 
         cs = ConfigurationSpace()
-        cs.add_hyperparameters([p, d, q, sp, maxiter, with_intercept])
+        cs.add_hyperparameters([p, d, q, sp, trend, maxiter, with_intercept])
         # cs.add_conditions([P_depends_on_sp, D_depends_on_sp, Q_depends_on_sp])
         cs.add_forbidden_clauses([p_must_be_smaller_than_sp, q_must_be_smaller_than_sp])
 

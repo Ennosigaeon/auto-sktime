@@ -49,3 +49,8 @@ class ForecasterChoice(AutoSktimeChoice, AutoSktimePredictor):
             raise NotImplementedError
         # noinspection PyUnresolvedReferences
         return self.estimator.fit(y, X=X, fh=fh)
+
+    def update(self, y: pd.Series, X: pd.DataFrame, update_params: bool = True):
+        # noinspection PyUnresolvedReferences
+        self.estimator.update(y, X)
+        return self

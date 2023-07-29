@@ -295,6 +295,8 @@ class AutoML(NotVectorizedMixin, AutoSktimePredictor):
                                      f'2 models in each process.')
 
             use_multi_fidelity = self._budget and len(y) > MIN_SEQUENCE_LENGTH
+            if self._budget and not use_multi_fidelity:
+                self._logger.warning('Disabling multi-fidelity approximations because input data is too short')
 
             _proc_smac = AutoMLSMBO(
                 config_space=self.configuration_space,
