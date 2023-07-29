@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 
 
-def evaluate_autogluon(y: pd.Series, fh: int, max_duration: int, name: str, seed: int):
+def evaluate_autogluon(y: pd.Series, fh: int, max_duration: int, name: str, seed: int, hpo: bool = False):
     from autogluon.timeseries import TimeSeriesDataFrame, TimeSeriesPredictor
 
     if os.path.exists('./AutogluonModels'):
@@ -32,10 +32,10 @@ def evaluate_autogluon(y: pd.Series, fh: int, max_duration: int, name: str, seed
 
     predictor.fit(
         train_data,
-        presets="best_quality",
+        presets="best_quality" if hpo else None,
         time_limit=max_duration,
         random_seed=seed,
-        hyperparameter_tune_kwargs={'num_trials': 10000, 'scheduler': 'local', 'searcher': 'auto'}
+        hyperparameter_tune_kwargs={'num_trials': 10000, 'scheduler': 'local', 'searcher': 'auto'} if hpo else None
     )
 
     predictions = predictor.predict(train_data)
