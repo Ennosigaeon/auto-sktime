@@ -7,7 +7,7 @@ from autots import AutoTS
 # This code is not debuggable due to
 # https://stackoverflow.com/questions/70929565/in-debug-using-pandas-before-importing-from-scipy-generates-type-error-on-impor
 
-def evaluate_autots(y: pd.Series, fh: int, max_duration: int, name: str, seed: int):
+def evaluate_autots(y: pd.Series, fh: int, max_duration: int, name: str, seed: int, random: bool = True):
     df = y.to_frame()
 
     model = CustomAutoTS(
@@ -16,7 +16,8 @@ def evaluate_autots(y: pd.Series, fh: int, max_duration: int, name: str, seed: i
         max_generations=500,
         num_validations=0,
         generation_timeout=max(1, max_duration // 60),
-        random_seed=seed
+        random_seed=seed,
+        initial_template='Random' if random else 'General+Random'
     )
     model = model.fit(df)
     output = model.predict()
