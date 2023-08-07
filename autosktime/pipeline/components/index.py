@@ -22,6 +22,9 @@ class AddIndexComponent(AutoSktimePreprocessingAlgorithm):
         if isinstance(index, pd.MultiIndex):
             index = index.droplevel(0)
 
+        if not isinstance(index, pd.RangeIndex):
+            index = pd.RangeIndex(len(index))
+
         Xt = X.copy()
         Xt['__index__'] = index
 

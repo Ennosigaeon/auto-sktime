@@ -457,14 +457,25 @@ class SwappedInput(AutoSktimePreprocessingAlgorithm, AutoSktimeTransformer):
         self.estimator = estimator
 
     def transform(self, X, y=None, **fit_params):
-        yt = super(SwappedInput, self).transform(y)
+        if y is None:
+            Xt = super(SwappedInput, self).transform(X)
 
-        if isinstance(y, pd.Series) and not isinstance(yt, pd.Series):
-            yt = pd.Series(yt, index=y.index, name=y.name)
-        elif isinstance(y, pd.DataFrame) and not isinstance(yt, pd.DataFrame):
-            yt = pd.DataFrame(yt, index=y.index, columns=y.columns)
+            if isinstance(X, pd.Series) and not isinstance(Xt, pd.Series):
+                Xt = pd.Series(Xt, index=X.index, name=X.name)
+            elif isinstance(X, pd.DataFrame) and not isinstance(Xt, pd.DataFrame):
+                Xt = pd.DataFrame(Xt, index=X.index, columns=X.columns)
 
-        return X, yt
+            return Xt, y
+
+        else:
+            yt = super(SwappedInput, self).transform(y)
+
+            if isinstance(y, pd.Series) and not isinstance(yt, pd.Series):
+                yt = pd.Series(yt, index=y.index, name=y.name)
+            elif isinstance(y, pd.DataFrame) and not isinstance(yt, pd.DataFrame):
+                yt = pd.DataFrame(yt, index=y.index, columns=y.columns)
+
+            return X, yt
 
     def fit_transform(self, X, y=None, **fit_params):
         return self.fit(y, X).transform(X, y)

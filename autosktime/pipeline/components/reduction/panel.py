@@ -49,7 +49,7 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
         super(NotVectorizedMixin, self).__init__(estimator, window_length, transformers)
         self.step_size = step_size
         # Just to make type explicit for type checker
-        self.transformers: List[Tuple[str, AutoSktimeTransformer]] = transformers
+        self.transformers: List[Tuple[str, AutoSktimeTransformer]] = transformers if transformers is not None else []
         self.dataset_properties = dataset_properties
         self.random_state = random_state
         self.config_id = config_id
@@ -70,6 +70,9 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
     def _fit(self, y, X=None, fh=None):
         self.step_size_ = max(1, int(self.window_length * self.step_size))
 
+        self._y = y.copy()
+        self._X = X.copy() if X is not None else None
+
         transformers = self.transformers
         yt = y
         Xt = X
@@ -89,7 +92,10 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
         if y is None and X is None:
             raise ValueError('Provide either X or y')
         elif y is None:
+            y_None = True
             y = pd.Series(np.zeros(X.shape[0]), X.index)
+        else:
+            y_None = False
 
         if isinstance(y.index, pd.MultiIndex):
             Xt_complete = []
@@ -113,14 +119,14 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
 
             return yt_complete, Xt_complete
         else:
-            yt, Xt = super()._transform(y, X)
+            if y_None:
+                yt, Xt = super()._transform(X, None)
+            else:
+                yt, Xt = super()._transform(y, X)
 
             if self.dataset_properties.task == PANEL_INDIRECT_FORECAST:
                 # Remove encoded y data
                 Xt = Xt[:, self.window_length:]
-
-            # Reshape to (num_samples, seq_length, num_features)
-            Xt = Xt.T.reshape(X.shape[1], self.window_length, -1).T
 
             return yt[::self.step_size_], Xt[::self.step_size_]
 
@@ -141,7 +147,10 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
 
             return pd.concat(y_pred_complete, keys=keys)
         else:
-            Xt = X
+            if X is None:
+                Xt = self._y[-len(self.fh):]
+            else:
+                Xt = X
             for _, t in self.transformers:
                 # Skip down-sampling for predictions
                 if isinstance(t, DownsamplerChoice) or isinstance(t, BaseDownSampling):
@@ -165,7 +174,7 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
     def _get_last_window(self, X: pd.DataFrame) -> np.ndarray:
         """Select last window."""
         # Get the start and end points of the last window.
-        cutoff = self.cutoff
+        cutoff = self.cutoff[0]
         start = _shift(cutoff, by=-self.window_length_ + 1)
 
         # Get the last window of the endogenous variable.
@@ -179,14 +188,14 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
         if X is None:
             raise ValueError('`X` must be passed to `predict`.')
 
-            # Get last window of available data.
+        # Get last window of available data.
         X_last = self._get_last_window(X)
 
         # Pre-allocate arrays.
         if X is None:
             n_columns = 1
         else:
-            n_columns = X.shape[1] + 1
+            n_columns = X.shape[1]
         window_length = self.window_length_
         fh_max = fh.to_relative(self.cutoff)[-1]
 
@@ -194,21 +203,21 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
         last = np.zeros((1, n_columns, window_length + fh_max))
 
         # Fill pre-allocated arrays with available data.
-        last[:, 0, :window_length] = np.zeros(1, window_length)
         if X is not None:
-            last[:, 1:, :window_length] = X_last.T
-            last[:, 1:, window_length:] = X.T
+            last[:, 0:, (window_length - X_last.shape[0]):window_length] = X_last.T
+            # TODO: exogenous data is lost
+            # last[:, 0:, window_length:] = X.T
 
         # Recursively generate predictions by iterating over forecasting horizon.
         for i in range(fh_max):
             # Slice prediction window.
             X_pred = last[:, :, i: window_length + i]
 
-            # Reshape data into tabular array.
-            X_pred = X_pred.reshape(1, -1)
+            # # Reshape data into tabular array.
+            # X_pred = X_pred.reshape(1, -1)
 
             # Generate predictions.
-            y_pred[i] = self.estimator_.predict(X_pred)
+            y_pred[i] = self.estimator_.predict(X_pred[0])[-1]
 
             # Update last window with previous prediction.
             last[:, 0, window_length + i] = y_pred[i]
@@ -222,7 +231,7 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
             y_return = y_pred.iloc[fh_idx]
         else:
             y_return = y_pred[fh_idx]
-            if self._y_mtype_last_seen == 'pd-multiindex':
+            if self._y_mtype_last_seen == 'pd-multiindex' or self._y_mtype_last_seen == 'pd.DataFrame':
                 y_return = pd.DataFrame(y_return, columns=self._y.columns, index=fh.to_pandas())
             else:
                 y_return = pd.Series(y_return, name=self._y.name, index=fh.to_pandas())
@@ -259,7 +268,7 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
             head_padding = np.ones(fh.to_pandas().shape[0] - y_pred.shape[0] - tail_length) * y_pred[0]
             y_pred = np.concatenate((head_padding, y_pred, tail_padding))
 
-        if self._y_mtype_last_seen == 'pd-multiindex':
+        if self._y_mtype_last_seen == 'pd-multiindex' or self._y_mtype_last_seen == 'pd.DataFrame':
             return pd.DataFrame(y_pred, columns=self._y.columns, index=fh.to_pandas())
         else:
             return pd.Series(y_pred, name=self._y.name, index=fh.to_pandas())

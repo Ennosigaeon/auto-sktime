@@ -11,6 +11,7 @@ from autosktime.constants import HANDLES_UNIVARIATE, HANDLES_MULTIVARIATE, IGNOR
 from autosktime.data import DatasetProperties
 from autosktime.pipeline.components.base import AutoSktimePredictor, COMPONENT_PROPERTIES
 from autosktime.pipeline.templates.base import ConfigurableTransformedTargetForecaster
+from autosktime.pipeline.templates.nn_regression import NNRegressionPipeline
 from autosktime.pipeline.templates.panel_regression import PanelRegressionPipeline
 from autosktime.pipeline.templates.nn_panel_regression import NNPanelRegressionPipeline
 from autosktime.pipeline.templates.preconstructed.cnn import CNNRegressionPipeline
@@ -157,6 +158,7 @@ class TemplateChoice(NotVectorizedMixin, AutoSktimePredictor):
         return {
             'statistical': UnivariateEndogenousPipeline,
             'regression': RegressionPipeline,
+            'nn-regression': NNRegressionPipeline,
             'panel-regression': PanelRegressionPipeline,
             'nn-panel-regression': NNPanelRegressionPipeline,
         }
