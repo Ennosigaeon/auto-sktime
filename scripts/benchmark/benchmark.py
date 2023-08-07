@@ -25,6 +25,11 @@ from _hyperts import evaluate_hyperts
 from _pyaf import evaluate_pyaf
 from _sktime import evaluate_arima, evaluate_prophet
 
+pd.set_option('display.max_columns', None)
+pd.set_option('display.max_rows', None)
+pd.set_option('display.width', 10000)
+pd.set_option("display.precision", 4)
+
 methods = {
     'pmdarima': evaluate_arima,
     'prophet': evaluate_prophet,
