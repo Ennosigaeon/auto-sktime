@@ -1,5 +1,6 @@
 import os
 import shutil
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -7,12 +8,28 @@ import pandas as pd
 from scripts.benchmark.util import generate_fh
 
 
-def evaluate_hyperts(y: pd.Series, fh: int, max_duration: int, name: str, seed: int):
+def evaluate_hyperts(
+        y: pd.Series,
+        X_train: Optional[pd.DataFrame],
+        X_test: Optional[pd.DataFrame],
+        fh: int,
+        max_duration: int,
+        name: str,
+        seed: int
+):
     from hyperts import make_experiment
     from hyperts.framework.compete import TSPipeline
 
     fh = pd.DataFrame(generate_fh(y.index, fh).to_timestamp(), columns=['index'])
     fh.index += y.shape[0]
+
+    if X_test is not None:
+        for col in X_test:
+            fh[col] = X_test[col].values
+
+    if X_train is not None:
+        y = pd.concat((y, X_train), axis=1)
+
     y = y.reset_index()
 
     model: TSPipeline = make_experiment(
@@ -22,7 +39,8 @@ def evaluate_hyperts(y: pd.Series, fh: int, max_duration: int, name: str, seed: 
         max_trials=500000,
         early_stopping_rounds=500000,
         early_stopping_time_limit=max_duration,
-        random_state=seed
+        random_state=seed,
+        covariates=list(X_train.columns) if X_train is not None else None
     ).run()
 
     y_pred = model.predict(fh).set_index('index')

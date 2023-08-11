@@ -1,4 +1,5 @@
 import shutil
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -9,6 +10,8 @@ from scripts.benchmark.util import generate_fh, fix_frequency
 
 def evaluate_autosktime(
         y: pd.Series,
+        X_train: Optional[pd.DataFrame],
+        X_test: Optional[pd.DataFrame],
         fh: int,
         max_duration: int,
         name: str,
@@ -20,7 +23,7 @@ def evaluate_autosktime(
     from autosktime.constants import Budget
     from autosktime.metrics import MeanAbsolutePercentageError
 
-    fix_frequency(y)
+    fix_frequency(y, X_train, X_test)
     fh_ = ForecastingHorizon(generate_fh(y.index, fh), is_relative=False)
 
     workdir = f'results/{name}_{multi_fidelity}_{warm_starting}/fold_{seed}'
@@ -49,8 +52,8 @@ def evaluate_autosktime(
         cache_dir=f'results/.cache/auto-sktime/'
     )
 
-    automl.fit(y, dataset_name=name)
-    y_pred = automl.predict(fh_)
+    automl.fit(y, X_train, dataset_name=name)
+    y_pred = automl.predict(fh_, X_test)
     # y_pred_ints = automl.predict_interval()
     y_pred_ints = pd.DataFrame(
         np.tile(y_pred.values, (2, 1)).T,
@@ -61,13 +64,40 @@ def evaluate_autosktime(
     return y_pred, y_pred_ints
 
 
-def evaluate_autosktime_templates(y: pd.Series, fh: int, max_duration: int, name: str, seed: int):
-    return evaluate_autosktime(y, fh, max_duration, name, seed, multi_fidelity=False, warm_starting=False)
+def evaluate_autosktime_templates(
+        y: pd.Series,
+        X_train: Optional[pd.DataFrame],
+        X_test: Optional[pd.DataFrame],
+        fh: int,
+        max_duration: int,
+        name: str,
+        seed: int
+):
+    return evaluate_autosktime(y, X_train, X_test, fh, max_duration, name, seed, multi_fidelity=False,
+                               warm_starting=False)
 
 
-def evaluate_autosktime_warm_starting(y: pd.Series, fh: int, max_duration: int, name: str, seed: int):
-    return evaluate_autosktime(y, fh, max_duration, name, seed, multi_fidelity=False, warm_starting=True)
+def evaluate_autosktime_warm_starting(
+        y: pd.Series,
+        X_train: Optional[pd.DataFrame],
+        X_test: Optional[pd.DataFrame],
+        fh: int,
+        max_duration: int,
+        name: str,
+        seed: int
+):
+    return evaluate_autosktime(y, X_train, X_test, fh, max_duration, name, seed, multi_fidelity=False,
+                               warm_starting=True)
 
 
-def evaluate_autosktime_multi_fidelity(y: pd.Series, fh: int, max_duration: int, name: str, seed: int):
-    return evaluate_autosktime(y, fh, max_duration, name, seed, multi_fidelity=True, warm_starting=False)
+def evaluate_autosktime_multi_fidelity(
+        y: pd.Series,
+        X_train: Optional[pd.DataFrame],
+        X_test: Optional[pd.DataFrame],
+        fh: int,
+        max_duration: int,
+        name: str,
+        seed: int
+):
+    return evaluate_autosktime(y, X_train, X_test, fh, max_duration, name, seed, multi_fidelity=True,
+                               warm_starting=False)

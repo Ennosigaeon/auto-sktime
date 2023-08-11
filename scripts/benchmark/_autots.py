@@ -1,4 +1,5 @@
 import inspect
+from typing import Optional
 
 import pandas as pd
 from autots import AutoTS
@@ -7,8 +8,21 @@ from autots import AutoTS
 # This code is not debuggable due to
 # https://stackoverflow.com/questions/70929565/in-debug-using-pandas-before-importing-from-scipy-generates-type-error-on-impor
 
-def evaluate_autots(y: pd.Series, fh: int, max_duration: int, name: str, seed: int, random: bool = True):
-    df = y.to_frame()
+def evaluate_autots(
+        y: pd.Series,
+        X_train: Optional[pd.DataFrame],
+        X_test: Optional[pd.DataFrame],
+        fh: int,
+        max_duration: int,
+        name: str,
+        seed: int,
+        random: bool = True
+):
+    df = y.to_frame().reset_index()
+
+    if X_train is not None:
+        for col in X_train:
+            df[col] = X_train[col].values
 
     model = CustomAutoTS(
         forecast_length=fh,
@@ -19,7 +33,7 @@ def evaluate_autots(y: pd.Series, fh: int, max_duration: int, name: str, seed: i
         random_seed=seed,
         initial_template='Random' if random else 'General+Random'
     )
-    model = model.fit(df)
+    model = model.fit(df, date_col='index', value_col='y')
     output = model.predict()
 
     print(model)

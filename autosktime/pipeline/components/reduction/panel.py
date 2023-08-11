@@ -189,24 +189,26 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
             raise ValueError('`X` must be passed to `predict`.')
 
         # Get last window of available data.
-        X_last = self._get_last_window(X)
+        X_last = self._get_last_window(self._X) if self._X is not None else None
+        y_last = self._get_last_window(self._y)
 
         # Pre-allocate arrays.
-        if X is None:
+        if X_last is None:
             n_columns = 1
         else:
-            n_columns = X.shape[1]
+            n_columns = X.shape[1] + 1
         window_length = self.window_length_
+        start = (window_length - y_last.shape[0])
         fh_max = fh.to_relative(self.cutoff)[-1]
 
         y_pred = np.zeros(fh_max)
         last = np.zeros((1, n_columns, window_length + fh_max))
 
         # Fill pre-allocated arrays with available data.
-        if X is not None:
-            last[:, 0:, (window_length - X_last.shape[0]):window_length] = X_last.T
-            # TODO: exogenous data is lost
-            # last[:, 0:, window_length:] = X.T
+        last[:, 0, start:window_length] = y_last.T
+        if X_last is not None:
+            last[:, 1:, start:window_length] = X_last.T
+            last[:, 1:, window_length:] = X.T
 
         # Recursively generate predictions by iterating over forecasting horizon.
         for i in range(fh_max):
@@ -214,10 +216,10 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
             X_pred = last[:, :, i: window_length + i]
 
             # # Reshape data into tabular array.
-            # X_pred = X_pred.reshape(1, -1)
+            X_pred = X_pred.reshape(1, -1)
 
             # Generate predictions.
-            y_pred[i] = self.estimator_.predict(X_pred[0])[-1]
+            y_pred[i] = self.estimator_.predict(X_pred)[-1]
 
             # Update last window with previous prediction.
             last[:, 0, window_length + i] = y_pred[i]
@@ -245,10 +247,11 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
         start = max(_shift(fh.to_pandas()[0], by=-self.window_length_ + 1), X.index[0])
         cutoff = fh.to_pandas()[-1] + 1
 
-        X = X.loc[start: cutoff, :]
+        X = X.loc[start:cutoff, :]
+        y = self._y[start:cutoff] if self._X is not None else None
 
         # noinspection PyTypeChecker
-        _, Xt = self._transform(None, X)
+        _, Xt = self._transform(y, X)
         y_pred = self.estimator_.predict(Xt)
 
         if self.step_size_ > 1:

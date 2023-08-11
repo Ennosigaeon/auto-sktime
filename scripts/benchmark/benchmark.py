@@ -6,7 +6,7 @@ import pathlib
 import time
 import traceback
 from datetime import datetime
-from typing import Callable
+from typing import Callable, Optional
 
 logging.getLogger('numba').setLevel(logging.WARNING)
 logging.getLogger('graphviz').setLevel(logging.WARNING)
@@ -57,10 +57,24 @@ metric = MeanAbsolutePercentageError(symmetric=True)
 results = {'method': [], 'seed': [], 'dataset': [], 'smape': [], 'duration': []}
 
 
-def test_framework(y_train: pd.Series, y_test: pd.Series, evaluate: Callable, **kwargs):
+def test_framework(
+        y_train: pd.Series,
+        y_test: pd.Series,
+        X_train: Optional[pd.DataFrame],
+        X_test: Optional[pd.DataFrame],
+        evaluate: Callable,
+        **kwargs
+):
     start = time.time()
     try:
-        y_pred, y_pred_ints = evaluate(y_train.copy(), args.fh, args.max_duration, **kwargs)
+        y_pred, y_pred_ints = evaluate(
+            y_train.copy(),
+            X_train.copy() if X_train is not None else None,
+            X_test.copy() if X_test is not None else None,
+            args.fh,
+            args.max_duration,
+            **kwargs
+        )
         y_pred.index, y_pred_ints.index = y_test.index, y_test.index
 
         score = metric(y_test, y_pred)
@@ -85,8 +99,23 @@ def benchmark(plot: bool = False):
 
         print(f'{path.name} - {i}/{len(files)}')
 
-        y = pd.read_csv(file, index_col='index', parse_dates=['index'])['y']
-        y_train, y_test = temporal_train_test_split(y, test_size=args.fh)
+        df = pd.read_csv(file, parse_dates=['index'])
+        if 'series' in df.columns:
+            pass
+        else:
+            df.index = df['index']
+            df = df.drop(columns=['index'])
+
+            if 'y' in df.columns:
+                y = df['y']
+                y_train, y_test = temporal_train_test_split(y, test_size=args.fh)
+                if len(df.columns) == 1:
+                    X_train, X_test = None, None
+                else:
+                    df = df.drop(columns=['y'])
+                    X_train, X_test = temporal_train_test_split(df, test_size=args.fh)
+            else:
+                pass
 
         for name, evaluate in methods.items():
             if args.method is not None and name != args.method:
@@ -94,7 +123,7 @@ def benchmark(plot: bool = False):
 
             for seed in range(args.repetitions):
                 y_pred, y_pred_ints, score, duration = test_framework(
-                    y_train, y_test, evaluate,
+                    y_train, y_test, X_train, X_test, evaluate,
                     name=path.name, seed=seed
                 )
                 if y_pred is not None and plot:

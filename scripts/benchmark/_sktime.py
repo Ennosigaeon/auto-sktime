@@ -1,5 +1,5 @@
 import warnings
-from typing import Type
+from typing import Type, Optional
 
 import pandas as pd
 from sktime.forecasting.arima import AutoARIMA
@@ -11,22 +11,45 @@ from scripts.benchmark.util import generate_fh, fix_frequency
 warnings.filterwarnings("ignore")
 
 
-def evaluate(y: pd.Series, clazz: Type[BaseForecaster], fh_: int, max_duration: int):
-    fix_frequency(y)
+def _evaluate(
+        y: pd.Series,
+        X_train: Optional[pd.DataFrame],
+        X_test: Optional[pd.DataFrame],
+        clazz: Type[BaseForecaster],
+        fh_: int,
+        max_duration: int
+):
+    fix_frequency(y, X_train, X_test)
     fh = ForecastingHorizon(generate_fh(y.index, fh_), is_relative=False)
 
     forecaster = clazz()
-    forecaster.fit(y)
+    forecaster.fit(y, X_train)
 
-    y_pred = forecaster.predict(fh)
-    y_pred_ints = forecaster.predict_interval(coverage=0.5)
+    y_pred = forecaster.predict(fh, X_test)
+    y_pred_ints = forecaster.predict_interval(X=X_test, coverage=0.5)
 
     return y_pred, y_pred_ints
 
 
-def evaluate_arima(y: pd.Series, fh: int, max_duration: int, name: str, seed: int):
-    return evaluate(y, AutoARIMA, fh_=fh, max_duration=max_duration)
+def evaluate_arima(
+        y: pd.Series,
+        X_train: Optional[pd.DataFrame],
+        X_test: Optional[pd.DataFrame],
+        fh: int,
+        max_duration: int,
+        name: str,
+        seed: int,
+):
+    return _evaluate(y, X_train, X_test, AutoARIMA, fh_=fh, max_duration=max_duration)
 
 
-def evaluate_prophet(y: pd.Series, fh: int, max_duration: int, name: str, seed: int):
-    return evaluate(y, Prophet, fh_=fh, max_duration=max_duration)
+def evaluate_prophet(
+        y: pd.Series,
+        X_train: Optional[pd.DataFrame],
+        X_test: Optional[pd.DataFrame],
+        fh: int,
+        max_duration: int,
+        name: str,
+        seed: int,
+):
+    return _evaluate(y, X_train, X_test, Prophet, fh_=fh, max_duration=max_duration)

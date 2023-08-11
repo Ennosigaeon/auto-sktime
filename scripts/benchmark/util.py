@@ -1,8 +1,15 @@
+from typing import Optional
+
 import pandas as pd
 
 
-def fix_frequency(y: pd.Series):
-    y.index = y.index.to_period(infer_frequency(y.index))
+def fix_frequency(y: pd.Series, X_train: Optional[pd.DataFrame], X_test: Optional[pd.DataFrame]):
+    freq = infer_frequency(y.index)
+    y.index = y.index.to_period(freq)
+    if X_train is not None:
+        X_train.index = X_train.index.to_period(freq)
+    if X_test is not None:
+        X_test.index = X_test.index.to_period(freq)
 
 
 def infer_frequency(index: pd.Index) -> str:
