@@ -19,7 +19,7 @@ from sktime.utils.plotting import plot_series
 
 from _autogluon import evaluate_autogluon
 from _autosktime import evaluate_autosktime, evaluate_autosktime_multi_fidelity, \
-    evaluate_autosktime_warm_starting, evaluate_autosktime_vanilla
+    evaluate_autosktime_warm_starting, evaluate_autosktime_templates
 from _autots import evaluate_autots
 from _hyperts import evaluate_hyperts
 from _pyaf import evaluate_pyaf
@@ -31,6 +31,10 @@ pd.set_option('display.width', 10000)
 pd.set_option("display.precision", 4)
 
 methods = {
+    'auto-sktime_templates': evaluate_autosktime_templates,
+    'auto-sktime_multi_fidelity': evaluate_autosktime_multi_fidelity,
+    'auto-sktime_warm_starting': evaluate_autosktime_warm_starting,
+    'auto-sktime': evaluate_autosktime,
     'pmdarima': evaluate_arima,
     'prophet': evaluate_prophet,
     'pyaf': evaluate_pyaf,
