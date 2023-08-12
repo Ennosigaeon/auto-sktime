@@ -17,10 +17,10 @@ from sktime.forecasting.model_selection import temporal_train_test_split
 from sktime.performance_metrics.forecasting import MeanAbsolutePercentageError
 from sktime.utils.plotting import plot_series
 
-from _autogluon import evaluate_autogluon
+from _autogluon import evaluate_autogluon, evaluate_autogluon_hpo
 from _autosktime import evaluate_autosktime, evaluate_autosktime_multi_fidelity, \
     evaluate_autosktime_warm_starting, evaluate_autosktime_templates
-from _autots import evaluate_autots
+from _autots import evaluate_autots, evaluate_autots_random
 from _hyperts import evaluate_hyperts
 from _pyaf import evaluate_pyaf
 from _sktime import evaluate_arima, evaluate_prophet
@@ -40,7 +40,9 @@ methods = {
     'pyaf': evaluate_pyaf,
     'hyperts': evaluate_hyperts,
     'autogluon': evaluate_autogluon,
-    'autots': evaluate_autots
+    'autogluon_hpo': evaluate_autogluon_hpo,
+    'autots': evaluate_autots,
+    'autots_random': evaluate_autots_random,
 }
 
 parser = argparse.ArgumentParser()

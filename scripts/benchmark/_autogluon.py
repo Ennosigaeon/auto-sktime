@@ -12,8 +12,9 @@ def evaluate_autogluon(
         X_test: Optional[pd.DataFrame],
         fh: int,
         max_duration: int,
-        name: str, seed: int,
-        hpo: bool = False
+        name: str,
+        seed: int,
+        hpo: bool = True
 ):
     from autogluon.timeseries import TimeSeriesDataFrame, TimeSeriesPredictor
 
@@ -69,3 +70,16 @@ def evaluate_autogluon(
         index=predictions.index
     )
     return predictions['mean'], y_pred_ints
+
+
+def evaluate_autogluon_hpo(
+        y: pd.Series,
+        X_train: Optional[pd.DataFrame],
+        X_test: Optional[pd.DataFrame],
+        fh: int,
+        max_duration: int,
+        name: str,
+        seed: int,
+        hpo: bool = True
+):
+    return evaluate_autogluon(y, X_train, X_test, fh, max_duration, name, seed, hpo)

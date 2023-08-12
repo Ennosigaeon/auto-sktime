@@ -16,7 +16,7 @@ def evaluate_autots(
         max_duration: int,
         name: str,
         seed: int,
-        random: bool = True
+        random: bool = False
 ):
     df = y.to_frame().reset_index()
 
@@ -46,6 +46,19 @@ def evaluate_autots(
     )
 
     return predictions, y_pred_ints
+
+
+def evaluate_autots_random(
+        y: pd.Series,
+        X_train: Optional[pd.DataFrame],
+        X_test: Optional[pd.DataFrame],
+        fh: int,
+        max_duration: int,
+        name: str,
+        seed: int,
+        random: bool = True
+):
+    return evaluate_autots(y, X_train, X_test, fh, max_duration, name, seed, random)
 
 
 import datetime
