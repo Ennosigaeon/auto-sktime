@@ -25,7 +25,7 @@ def evaluate_pyaf(
     engine.train(
         iInputDS=y,
         iTime='index',
-        iSignal='y',
+        iSignal='y' if 'y' in y.columns else list(set(y.columns) - {'index', 'series'}),
         iHorizon=fh,
         iExogenousData=(X_train, set(X_train.columns) - {'index', 'series'}) if X_train is not None else None
     )
@@ -34,10 +34,16 @@ def evaluate_pyaf(
     print('#########')
 
     y_pred = engine.forecast(iInputDS=y, iHorizon=fh)
+
     y_pred_ints = pd.DataFrame(
-        y_pred[['y_Forecast_Lower_Bound', 'y_Forecast_Upper_Bound']].values,
-        columns=pd.MultiIndex.from_tuples([('Coverage', 0.5, 'lower'), ('Coverage', 0.5, 'upper')]),
+        y_pred[
+            [f'{col}_Forecast_Lower_Bound' for col in y.columns if col not in ('index', 'series')] +
+            [f'{col}_Forecast_Upper_Bound' for col in y.columns if col not in ('index', 'series')]
+            ].values,
+        columns=pd.MultiIndex.from_tuples(
+            [(f'Coverage_{col}', 0.5, 'lower') for col in y.columns if col not in ('index', 'series')] +
+            [(f'Coverage_{col}', 0.5, 'upper') for col in y.columns if col not in ('index', 'series')]
+        ),
         index=y_pred.index
     ).tail(fh)
-
-    return y_pred['y_Forecast'].tail(fh), y_pred_ints
+    return y_pred[[f'{col}_Forecast' for col in y.columns if col not in ('index', 'series')]].tail(fh), y_pred_ints

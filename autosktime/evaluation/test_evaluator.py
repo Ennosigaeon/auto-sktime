@@ -33,7 +33,7 @@ class TestEvaluator(AbstractEvaluator):
             fit_and_predict = self._fit_and_predict_standard
 
         test_pred = fit_and_predict(y, X)
-        if pd.isna(test_pred).any():
+        if pd.isna(test_pred).any(axis=None):
             test_pred = y
         loss = self._loss(y, test_pred, error='worst')
 

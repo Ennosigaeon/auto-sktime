@@ -45,6 +45,11 @@ class NaiveForecasterComponent(AutoSktimePredictor):
             # Not sure why this is necessary but latest values could also be nan
             prediction = prediction.ffill()
 
+        # Not sure why this is necessary but predictions can all be nan
+        if pd.isna(prediction).any().any():
+            last = self.estimator._y[-1]
+            prediction = prediction.fillna(last)
+
         return prediction
 
     @staticmethod

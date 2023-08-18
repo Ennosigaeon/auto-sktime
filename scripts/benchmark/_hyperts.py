@@ -34,7 +34,7 @@ def evaluate_hyperts(
 
     model: TSPipeline = make_experiment(
         y,
-        task='univariate-forecast',
+        task='univariate-forecast' if 'y' in y.columns else 'multivariate-forecast',
         timestamp='index',
         max_trials=500000,
         early_stopping_rounds=500000,
@@ -46,11 +46,14 @@ def evaluate_hyperts(
     y_pred = model.predict(fh).set_index('index')
     y_pred_ints = pd.DataFrame(
         np.tile(y_pred.values, 2),
-        columns=pd.MultiIndex.from_tuples([('Coverage', 0.5, 'lower'), ('Coverage', 0.5, 'upper')]),
+        columns=pd.MultiIndex.from_tuples(
+            [(f'Coverage_{col}', 0.5, 'lower') for col in y_pred.columns] +
+            [(f'Coverage_{col}', 0.5, 'upper') for col in y_pred.columns]
+        ),
         index=y_pred.index
     )
 
     if os.path.exists('/tmp/workdir'):
         shutil.rmtree('/tmp/workdir')
 
-    return y_pred['y'], y_pred_ints
+    return y_pred, y_pred_ints

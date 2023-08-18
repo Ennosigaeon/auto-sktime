@@ -24,7 +24,7 @@ from autosktime.pipeline.util import Int64Index
 
 class NNRegressionPipeline(ConfigurableTransformedTargetForecaster):
     _tags = {
-        "scitype:y": "both",
+        "scitype:y": "univariate",
         "y_inner_mtype": SUPPORTED_MTYPES,
         "X_inner_mtype": SUPPORTED_MTYPES,
         "ignores-exogeneous-X": False,
@@ -62,7 +62,7 @@ class NNRegressionPipeline(ConfigurableTransformedTargetForecaster):
     def get_properties(dataset_properties: DatasetProperties = None) -> COMPONENT_PROPERTIES:
         return {
             HANDLES_UNIVARIATE: True,
-            HANDLES_MULTIVARIATE: True,
+            HANDLES_MULTIVARIATE: False,
             # sktime reduction can not handle multi-index as of 0.12.x
             HANDLES_PANEL: False,
             IGNORES_EXOGENOUS_X: False,

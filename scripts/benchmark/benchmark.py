@@ -117,7 +117,8 @@ def benchmark(plot: bool = False):
                     df = df.drop(columns=['y'])
                     X_train, X_test = temporal_train_test_split(df, test_size=args.fh)
             else:
-                pass
+                y_train, y_test = temporal_train_test_split(df, test_size=args.fh)
+                X_train, X_test = None, None
 
         for name, evaluate in methods.items():
             if args.method is not None and name != args.method:

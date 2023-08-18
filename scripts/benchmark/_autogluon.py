@@ -21,6 +21,10 @@ def evaluate_autogluon(
     if os.path.exists('./AutogluonModels'):
         shutil.rmtree('./AutogluonModels')
 
+    if isinstance(y, pd.DataFrame):
+        columns = y.columns.copy()
+    else:
+        columns = [y.name]
     y = y.reset_index()
     y['item_id'] = 0
 
@@ -41,35 +45,43 @@ def evaluate_autogluon(
             timestamp_column="index"
         )
 
-    predictor = TimeSeriesPredictor(
-        prediction_length=fh,
-        quantile_levels=[0.25, 0.75],
-        target="y",
-        eval_metric="sMAPE",
-        known_covariates_names=set(X_train.columns) - {'index', 'series'} if X_train is not None else None
-    )
-
     # Disable CUDA due to SIGSEV
     os.environ['CUDA_VISIBLE_DEVICES'] = ''
 
-    predictor.fit(
-        train_data,
-        presets="best_quality" if hpo else None,
-        time_limit=max_duration,
-        random_seed=seed,
-        hyperparameter_tune_kwargs={'num_trials': 10000, 'scheduler': 'local', 'searcher': 'auto'} if hpo else None
-    )
+    res = []
+    res_ints = []
 
-    predictions = predictor.predict(train_data, known_covariates=X_test)
-    predictions = predictions.loc[0]
-    predictions.index = np.arange(y.index[-1], y.index[-1] + fh) + 1
+    for col in columns:
+        predictor = TimeSeriesPredictor(
+            prediction_length=fh,
+            quantile_levels=[0.25, 0.75],
+            target=col,
+            eval_metric="sMAPE",
+            known_covariates_names=set(X_train.columns) - {'index', 'series'} if X_train is not None else None
+        )
 
-    y_pred_ints = pd.DataFrame(
-        predictions[['0.25', '0.75']].values,
-        columns=pd.MultiIndex.from_tuples([('Coverage', 0.5, 'lower'), ('Coverage', 0.5, 'upper')]),
-        index=predictions.index
-    )
-    return predictions['mean'], y_pred_ints
+        predictor.fit(
+            train_data,
+            presets="best_quality" if hpo else None,
+            time_limit=max_duration,
+            random_seed=seed,
+            hyperparameter_tune_kwargs={'num_trials': 10000, 'scheduler': 'local', 'searcher': 'auto'} if hpo else None
+        )
+
+        predictions = predictor.predict(train_data, known_covariates=X_test)
+        predictions = predictions.loc[0]
+        predictions.index = np.arange(y.index[-1], y.index[-1] + fh) + 1
+
+        y_pred_ints = pd.DataFrame(
+            predictions[['0.25', '0.75']].values,
+            columns=pd.MultiIndex.from_tuples([(f'Coverage_{col}', 0.5, 'lower'), (f'Coverage_{col}', 0.5, 'upper')]),
+            index=predictions.index
+        )
+
+        res.append(predictions[['mean']].rename(columns={'mean': col}))
+        res_ints.append(y_pred_ints)
+
+    return pd.concat(res, axis=1), pd.concat(res_ints, axis=1)
 
 
 def evaluate_autogluon_hpo(

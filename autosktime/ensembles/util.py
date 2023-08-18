@@ -37,8 +37,11 @@ class PrefittedEnsembleForecaster(NotVectorizedMixin, EnsembleForecaster, AutoSk
 
         return y_pred
 
-    def _predict_forecasters(self, fh: ForecastingHorizon = None, X: pd.DataFrame = None) -> Tuple[
-        pd.Series, List[int]]:
+    def _predict_forecasters(
+            self,
+            fh: ForecastingHorizon = None,
+            X: pd.DataFrame = None
+    ) -> Tuple[pd.DataFrame, List[int]]:
         res = []
         valid = []
 
@@ -65,7 +68,7 @@ class PrefittedEnsembleForecaster(NotVectorizedMixin, EnsembleForecaster, AutoSk
             fh: ForecastingHorizon = None,
             X: pd.DataFrame = None,
             coverage: float = 0.90
-    ) -> Tuple[pd.Series, List[int]]:
+    ) -> Tuple[pd.DataFrame, List[int]]:
         res = []
         valid = []
 
@@ -82,14 +85,20 @@ class PrefittedEnsembleForecaster(NotVectorizedMixin, EnsembleForecaster, AutoSk
 
 
 def _aggregate(y: SUPPORTED_Y_TYPES, aggfunc: str, weights: Optional[List[float]]) -> SUPPORTED_Y_TYPES:
-    if weights is None:
-        aggfunc = _check_aggfunc(aggfunc, weighted=False)
-        y_agg = aggfunc(y, axis=1)
-    else:
-        aggfunc = _check_aggfunc(aggfunc, weighted=True)
-        y_agg = aggfunc(y, axis=1, weights=np.array(weights))
+    columns = y.columns.unique()
+    res = np.empty((y.shape[0], len(columns)))
+
+    for i, col in enumerate(columns):
+        if weights is None:
+            aggfunc_ = _check_aggfunc(aggfunc, weighted=False)
+            res[:, i] = aggfunc_(y[col], axis=1)
+        else:
+            aggfunc_ = _check_aggfunc(aggfunc, weighted=True)
+            res[:, i] = aggfunc_(y[col], axis=1, weights=np.array(weights))
+
+    y_agg = pd.DataFrame(res, columns=columns, index=y.index)
 
     if isinstance(y, pd.Series):
-        return pd.Series(y_agg, index=y.index, name=y.name)
+        return y_agg[y.name]
     elif isinstance(y, pd.DataFrame):
-        return pd.DataFrame(y_agg, index=y.index, columns=y.columns[[0]])
+        return y_agg

@@ -18,34 +18,42 @@ def evaluate_autots(
         seed: int,
         random: bool = False
 ):
-    df = y.to_frame().reset_index()
+    if isinstance(y, pd.Series):
+        y = y.to_frame()
+    df = y.reset_index()
 
     if X_train is not None:
         for col in X_train:
             df[col] = X_train[col].values
 
-    model = CustomAutoTS(
-        forecast_length=fh,
-        prediction_interval=0.5,
-        max_generations=500,
-        num_validations=0,
-        generation_timeout=max(1, max_duration // 60),
-        random_seed=seed,
-        initial_template='Random' if random else 'General+Random'
-    )
-    model = model.fit(df, date_col='index', value_col='y')
-    output = model.predict()
+    res = []
+    res_ints = []
 
-    print(model)
+    for col in y.columns:
+        model = CustomAutoTS(
+            forecast_length=fh,
+            prediction_interval=0.5,
+            max_generations=500,
+            num_validations=0,
+            generation_timeout=max(1, max_duration // 60 // len(y.columns)),
+            random_seed=seed,
+            initial_template='Random' if random else 'General+Random'
+        )
+        model = model.fit(df, date_col='index', value_col=col)
+        output = model.predict()
 
-    predictions = output.forecast
-    y_pred_ints = pd.DataFrame(
-        output.upper_forecast.join(output.lower_forecast, rsuffix='r').values,
-        columns=pd.MultiIndex.from_tuples([('Coverage', 0.5, 'lower'), ('Coverage', 0.5, 'upper')]),
-        index=predictions.index
-    )
+        predictions = output.forecast
 
-    return predictions, y_pred_ints
+        y_pred_ints = pd.DataFrame(
+            output.upper_forecast.join(output.lower_forecast, rsuffix='r').values,
+            columns=pd.MultiIndex.from_tuples([(f'Coverage_{col}', 0.5, 'lower'), (f'Coverage_{col}', 0.5, 'upper')]),
+            index=predictions.index
+        )
+
+        res.append(predictions)
+        res_ints.append(y_pred_ints)
+
+    return pd.concat(res, axis=1), pd.concat(res_ints, axis=1)
 
 
 def evaluate_autots_random(

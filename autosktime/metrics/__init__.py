@@ -56,7 +56,8 @@ def calculate_loss(
     # Try to remove nan values before calculating score
     _solution, _prediction = solution, prediction
     if drop_nan and solution is not None and prediction is not None:
-        nan = pd.isna(solution) | pd.isna(prediction)
+        nan = pd.isna(solution).any(axis=len(solution.shape) - 1) | pd.isna(prediction).any(
+            axis=len(prediction.shape) - 1)
         if nan.any():
             _solution, _prediction = solution[~nan], prediction[~nan]
 

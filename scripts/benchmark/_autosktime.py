@@ -55,11 +55,22 @@ def evaluate_autosktime(
     automl.fit(y, X_train, dataset_name=name)
     y_pred = automl.predict(fh_, X_test)
     # y_pred_ints = automl.predict_interval()
-    y_pred_ints = pd.DataFrame(
-        np.tile(y_pred.values, (2, 1)).T,
-        columns=pd.MultiIndex.from_tuples([('Coverage', 0.5, 'lower'), ('Coverage', 0.5, 'upper')]),
-        index=y_pred.index
-    )
+
+    if isinstance(y_pred, pd.Series):
+        y_pred_ints = pd.DataFrame(
+            np.tile(y_pred.values, (2, 1)).T,
+            columns=pd.MultiIndex.from_tuples([('Coverage', 0.5, 'lower'), ('Coverage', 0.5, 'upper')]),
+            index=y_pred.index
+        )
+    else:
+        y_pred_ints = pd.DataFrame(
+            np.tile(y_pred.values, 2),
+            columns=pd.MultiIndex.from_tuples(
+                [(f'Coverage_{col}', 0.5, 'lower') for col in y_pred.columns] +
+                [(f'Coverage_{col}', 0.5, 'upper') for col in y_pred.columns]
+            ),
+            index=y_pred.index
+        )
 
     return y_pred, y_pred_ints
 
