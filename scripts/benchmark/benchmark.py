@@ -1,19 +1,18 @@
 import argparse
-import glob
 import logging
 import math
-import pathlib
 import time
 import traceback
 from datetime import datetime
 from typing import Callable, Optional
+
+from autosktime.data.benchmark.timeseries import load_timeseries
 
 logging.getLogger('numba').setLevel(logging.WARNING)
 logging.getLogger('graphviz').setLevel(logging.WARNING)
 
 import pandas as pd
 from matplotlib import pyplot as plt
-from sktime.forecasting.model_selection import temporal_train_test_split
 from sktime.performance_metrics.forecasting import MeanAbsolutePercentageError
 from sktime.utils.plotting import plot_series
 
@@ -91,35 +90,11 @@ def test_framework(
 
 def benchmark(plot: bool = False):
     result_file = datetime.now().strftime("%Y%m%d-%H%M%S")
-    files = sorted(glob.glob('../data/univariate/real/*.csv'), key=str.casefold)
-    for i, file in enumerate(files):
+    for i, (y_train, y_test, X_train, X_test, ds_name) in enumerate(load_timeseries(args.fh)):
         if (args.start_index is not None and i < args.start_index) or \
                 (args.end_index is not None and i >= args.end_index):
             continue
-
-        path = pathlib.Path(file)
-
-        print(f'{path.name} - {i}/{len(files)}')
-
-        df = pd.read_csv(file, parse_dates=['index'])
-        if 'series' in df.columns:
-            df.index = pd.MultiIndex.from_frame(df[['series', 'index']])
-            df = df.drop(columns=['series', 'index'])
-        else:
-            df.index = df['index']
-            df = df.drop(columns=['index'])
-
-        if 'y' in df.columns:
-            y = df[['y']]
-            y_train, y_test = temporal_train_test_split(y, test_size=args.fh)
-            if len(df.columns) == 1:
-                X_train, X_test = None, None
-            else:
-                df = df.drop(columns=['y'])
-                X_train, X_test = temporal_train_test_split(df, test_size=args.fh)
-        else:
-            y_train, y_test = temporal_train_test_split(df, test_size=args.fh)
-            X_train, X_test = None, None
+        print(ds_name)
 
         for name, evaluate in methods.items():
             if args.method is not None and name != args.method:
@@ -128,17 +103,17 @@ def benchmark(plot: bool = False):
             for seed in range(args.repetitions):
                 y_pred, y_pred_ints, score, duration = test_framework(
                     y_train, y_test, X_train, X_test, evaluate,
-                    name=path.name, seed=seed
+                    name=ds_name, seed=seed
                 )
                 if y_pred is not None and plot:
                     fig, ax = plot_series(y_train, y_test, y_pred, labels=["y_train", "y_test", "y_pred"],
-                                          pred_interval=y_pred_ints, title=f'{path.name} - {name}')
+                                          pred_interval=y_pred_ints, title=f'{ds_name} - {name}')
                     plt.show()
                     plt.close(fig)
 
                 results['method'].append(name)
                 results['seed'].append(seed)
-                results['dataset'].append(path.name)
+                results['dataset'].append(ds_name)
                 results['smape'].append(score)
                 results['duration'].append(duration)
 
