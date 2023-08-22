@@ -24,7 +24,7 @@ class DatasetProperties(MutableMapping):
             index_type=type(index_type),
             task=task,
             series_length=series_length,
-            freq=index_type.freq
+            freq=index_type.freq if hasattr(index_type, 'freq') else None
         )
 
     @property

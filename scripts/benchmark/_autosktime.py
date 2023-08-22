@@ -24,7 +24,10 @@ def evaluate_autosktime(
     from autosktime.metrics import MeanAbsolutePercentageError
 
     fix_frequency(y, X_train, X_test)
-    fh_ = ForecastingHorizon(generate_fh(y.index, fh), is_relative=False)
+    if isinstance(y.index, pd.MultiIndex):
+        fh_ = ForecastingHorizon(np.arange(1, fh + 1), is_relative=True)
+    else:
+        fh_ = ForecastingHorizon(generate_fh(y.index, fh), is_relative=False)
 
     workdir = f'results/{name}_{multi_fidelity}_{warm_starting}/fold_{seed}'
     try:

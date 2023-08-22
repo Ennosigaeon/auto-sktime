@@ -91,10 +91,10 @@ def _aggregate(y: SUPPORTED_Y_TYPES, aggfunc: str, weights: Optional[List[float]
     for i, col in enumerate(columns):
         if weights is None:
             aggfunc_ = _check_aggfunc(aggfunc, weighted=False)
-            res[:, i] = aggfunc_(y[col], axis=1)
+            res[:, i] = aggfunc_(y[[col]], axis=1)
         else:
             aggfunc_ = _check_aggfunc(aggfunc, weighted=True)
-            res[:, i] = aggfunc_(y[col], axis=1, weights=np.array(weights))
+            res[:, i] = aggfunc_(y[[col]], axis=1, weights=np.array(weights))
 
     y_agg = pd.DataFrame(res, columns=columns, index=y.index)
 

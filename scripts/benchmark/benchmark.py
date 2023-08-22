@@ -103,22 +103,23 @@ def benchmark(plot: bool = False):
 
         df = pd.read_csv(file, parse_dates=['index'])
         if 'series' in df.columns:
-            pass
+            df.index = pd.MultiIndex.from_frame(df[['series', 'index']])
+            df = df.drop(columns=['series', 'index'])
         else:
             df.index = df['index']
             df = df.drop(columns=['index'])
 
-            if 'y' in df.columns:
-                y = df['y']
-                y_train, y_test = temporal_train_test_split(y, test_size=args.fh)
-                if len(df.columns) == 1:
-                    X_train, X_test = None, None
-                else:
-                    df = df.drop(columns=['y'])
-                    X_train, X_test = temporal_train_test_split(df, test_size=args.fh)
-            else:
-                y_train, y_test = temporal_train_test_split(df, test_size=args.fh)
+        if 'y' in df.columns:
+            y = df[['y']]
+            y_train, y_test = temporal_train_test_split(y, test_size=args.fh)
+            if len(df.columns) == 1:
                 X_train, X_test = None, None
+            else:
+                df = df.drop(columns=['y'])
+                X_train, X_test = temporal_train_test_split(df, test_size=args.fh)
+        else:
+            y_train, y_test = temporal_train_test_split(df, test_size=args.fh)
+            X_train, X_test = None, None
 
         for name, evaluate in methods.items():
             if args.method is not None and name != args.method:

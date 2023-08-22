@@ -71,8 +71,8 @@ def sub_configuration(params: Dict[str, Any], init_params: Dict[str, Any]) -> Tu
 
 
 def frequency_to_sp(freq: Optional[pd.offsets.BaseOffset]) -> List[int]:
-    if freq.name is None:
-        return [1, 4, 5, 7, 12, 24, 365]
+    if freq is None or freq.name is None:
+        return [1, 4, 5, 7, 12, 24, 30, 96, 365]
 
     if freq.name in ('D', 'C'):
         return [7, 1, 30, 96, 365]

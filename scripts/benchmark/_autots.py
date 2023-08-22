@@ -39,13 +39,29 @@ def evaluate_autots(
             random_seed=seed,
             initial_template='Random' if random else 'General+Random'
         )
-        model = model.fit(df, date_col='index', value_col=col)
+        model = model.fit(
+            df,
+            date_col='index',
+            value_col=col,
+            id_col='series' if isinstance(y.index, pd.MultiIndex) else None
+        )
         output = model.predict()
 
-        predictions = output.forecast
+        if isinstance(y.index, pd.MultiIndex):
+            predictions = pd.melt(output.forecast.reset_index(), id_vars='index', value_vars=output.forecast.columns).set_index(['variable', 'index'])
+            lower_forecast = pd.melt(output.lower_forecast.reset_index(), id_vars='index',
+                                     value_vars=output.lower_forecast.columns).set_index(['variable', 'index'])
+            upper_forecast = pd.melt(output.upper_forecast.reset_index(), id_vars='index',
+                                     value_vars=output.upper_forecast.columns).set_index(['variable', 'index'])
+        else:
+            predictions = output.forecast
+            lower_forecast = output.lower_forecast
+            upper_forecast = output.upper_forecast
+
+        predictions = predictions.rename(columns={'value': col})
 
         y_pred_ints = pd.DataFrame(
-            output.upper_forecast.join(output.lower_forecast, rsuffix='r').values,
+            upper_forecast.join(lower_forecast, rsuffix='r').values,
             columns=pd.MultiIndex.from_tuples([(f'Coverage_{col}', 0.5, 'lower'), (f'Coverage_{col}', 0.5, 'upper')]),
             index=predictions.index
         )

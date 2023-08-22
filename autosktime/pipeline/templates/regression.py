@@ -43,8 +43,7 @@ class RegressionPipeline(ConfigurableTransformedTargetForecaster):
         return {
             HANDLES_UNIVARIATE: True,
             HANDLES_MULTIVARIATE: True,
-            # sktime reduction can not handle multi-index as of 0.12.x
-            HANDLES_PANEL: False,
+            HANDLES_PANEL: True,
             IGNORES_EXOGENOUS_X: False,
             SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.DatetimeIndex, pd.PeriodIndex, Int64Index]
         }

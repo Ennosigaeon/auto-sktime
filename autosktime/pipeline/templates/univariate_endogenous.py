@@ -64,7 +64,7 @@ class UnivariateEndogenousPipeline(ConfigurableTransformedTargetForecaster):
         return {
             HANDLES_UNIVARIATE: True,
             HANDLES_MULTIVARIATE: True,
-            HANDLES_PANEL: False,
+            HANDLES_PANEL: True,
             IGNORES_EXOGENOUS_X: False,
             SUPPORTED_INDEX_TYPES: [pd.RangeIndex, pd.DatetimeIndex, pd.PeriodIndex, Int64Index]
         }

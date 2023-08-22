@@ -1,6 +1,7 @@
 import warnings
 from typing import Type, Optional
 
+import numpy as np
 import pandas as pd
 from sktime.forecasting.arima import AutoARIMA
 from sktime.forecasting.base import BaseForecaster, ForecastingHorizon
@@ -20,7 +21,10 @@ def _evaluate(
         max_duration: int
 ):
     fix_frequency(y, X_train, X_test)
-    fh = ForecastingHorizon(generate_fh(y.index, fh_), is_relative=False)
+    if isinstance(y.index, pd.MultiIndex):
+        fh = ForecastingHorizon(np.arange(1, fh_ + 1), is_relative=True)
+    else:
+        fh = ForecastingHorizon(generate_fh(y.index, fh_), is_relative=False)
 
     forecaster = clazz()
     forecaster.fit(y, X_train)

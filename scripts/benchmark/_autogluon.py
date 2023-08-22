@@ -26,11 +26,12 @@ def evaluate_autogluon(
     else:
         columns = [y.name]
     y = y.reset_index()
-    y['item_id'] = 0
+    if 'series' not in y.columns:
+        y['series'] = 0
 
     train_data = TimeSeriesDataFrame.from_data_frame(
         y,
-        id_column="item_id",
+        id_column="series",
         timestamp_column="index"
     )
     if X_train is not None:
@@ -38,10 +39,11 @@ def evaluate_autogluon(
             train_data[col] = X_train[col].values
     if X_test is not None:
         X_test = X_test.reset_index()
-        X_test['item_id'] = 0
+        if 'series' not in X_test.columns:
+            X_test['series'] = 0
         X_test = TimeSeriesDataFrame.from_data_frame(
             X_test,
-            id_column="item_id",
+            id_column="series",
             timestamp_column="index"
         )
 
@@ -69,8 +71,7 @@ def evaluate_autogluon(
         )
 
         predictions = predictor.predict(train_data, known_covariates=X_test)
-        predictions = predictions.loc[0]
-        predictions.index = np.arange(y.index[-1], y.index[-1] + fh) + 1
+        predictions = predictions.reset_index(drop=True)
 
         y_pred_ints = pd.DataFrame(
             predictions[['0.25', '0.75']].values,

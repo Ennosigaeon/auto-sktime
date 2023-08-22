@@ -159,8 +159,8 @@ class TemplateChoice(NotVectorizedMixin, AutoSktimePredictor):
             'statistical': UnivariateEndogenousPipeline,
             'regression': RegressionPipeline,
             'nn-regression': NNRegressionPipeline,
-            'panel-regression': PanelRegressionPipeline,
-            'nn-panel-regression': NNPanelRegressionPipeline,
+            # 'panel-regression': PanelRegressionPipeline,
+            # 'nn-panel-regression': NNPanelRegressionPipeline,
         }
 
     @staticmethod

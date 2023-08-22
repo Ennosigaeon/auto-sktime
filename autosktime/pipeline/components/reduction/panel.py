@@ -131,19 +131,22 @@ class RecursivePanelReducer(NotVectorizedMixin, RecursiveTabularRegressionForeca
             return yt[::self.step_size_], Xt[::self.step_size_]
 
     def _predict(self, fh: ForecastingHorizon, X: pd.DataFrame = None):
-        if X is not None and isinstance(X.index, pd.MultiIndex):
+        if (X is not None and isinstance(X.index, pd.MultiIndex)) or (X is None and isinstance(self._y.index, pd.MultiIndex)):
             y_pred_complete = []
-            keys = X.index.remove_unused_levels().levels[0]
+
+            keys = self._y.index.remove_unused_levels().levels[0]
 
             for idx in keys:
-                X_ = X.loc[idx]
-                original_cutoff = self._cutoff
+                X_ = X.loc[idx] if X is not None else self._y.loc[idx][-len(self.fh):]
+                original = self._cutoff, self._y
                 self._set_cutoff(X_.index[[-1]])
+                self._y = self._y.loc[idx]
 
                 y_pred = self._predict(fh, X_)
                 y_pred_complete.append(y_pred)
 
-                self._set_cutoff(original_cutoff)
+                self._set_cutoff(original[0])
+                self._y = original[1]
 
             return pd.concat(y_pred_complete, keys=keys)
         else:
