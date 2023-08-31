@@ -15,6 +15,7 @@ def analyse_results(with_timeout: bool = True, with_missing_values: bool = True)
 
     for time in (300, 60):
         benchmark = {
+            'auto-pytorch': pd.read_csv(f'results/auto-pytorch-{time}.csv'),
             'auto-sktime': pd.read_csv(f'results/auto-sktime-{time}.csv'),
             'autogluon': pd.read_csv('results/autogluon.csv'),
             # 'autogluon_hpo': pd.read_csv('results/autogluon.hpo.csv'),
@@ -30,7 +31,7 @@ def analyse_results(with_timeout: bool = True, with_missing_values: bool = True)
             'auto-sktime_templates': pd.read_csv(f'results/auto-sktime_templates-{time}.csv'),
             'auto-sktime_multi_fidelity': pd.read_csv(f'results/auto-sktime_multi_fidelity-{time}.csv'),
             'auto-sktime_warm_starting': pd.read_csv(f'results/auto-sktime_warm_starting-{time}.csv'),
-            'hyperts': pd.read_csv(f'results/hyperts-{time}.csv'),
+            'auto-pytorch': pd.read_csv(f'results/auto-pytorch-{time}.csv'),
         }
 
         for results in (ablation_study, benchmark):
@@ -61,16 +62,7 @@ def analyse_results(with_timeout: bool = True, with_missing_values: bool = True)
 
             print(mean.groupby('method').mean(numeric_only=True), end='\n\n\n')
 
-            for idx, row in mean.groupby('method').mean(numeric_only=True).iterrows():
-                print(
-                    idx,
-                    f'{row["smape"]:.3f} \\(\\pm\\) {row["smape_std"]:.3f}',
-                    f'{row["performance_rank"]:.2f}',
-                    f'{row["duration"]:.2f} \\(\\pm\\) {row["duration_std"]:.2f}'
-                )
-
             wide = mean[['dataset', 'method', 'smape']].pivot(index='dataset', columns='method', values='smape')
-
             diagram = Diagram(
                 wide.to_numpy(),
                 treatment_names=wide.columns,

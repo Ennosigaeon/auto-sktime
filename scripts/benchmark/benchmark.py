@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import Callable, Optional
 
 from autosktime.data.benchmark.timeseries import load_timeseries
+from scripts.benchmark._autopytorch import evaluate_autopytorch
 
 logging.getLogger('numba').setLevel(logging.WARNING)
 logging.getLogger('graphviz').setLevel(logging.WARNING)
@@ -42,6 +43,7 @@ methods = {
     'autogluon_hpo': evaluate_autogluon_hpo,
     'autots': evaluate_autots,
     'autots_random': evaluate_autots_random,
+    'auto-pytorch': evaluate_autopytorch
 }
 
 parser = argparse.ArgumentParser()
