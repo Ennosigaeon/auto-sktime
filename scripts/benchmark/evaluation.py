@@ -3,11 +3,12 @@ import os
 import numpy as np
 import pandas as pd
 from critdd import Diagram
+from scipy.stats import ttest_ind
 
 pd.set_option('display.max_columns', None)
 pd.set_option('display.max_rows', None)
 pd.set_option('display.width', 10000)
-pd.set_option("display.precision", 4)
+pd.set_option("display.precision", 2)
 
 
 def analyse_results(with_timeout: bool = True, with_missing_values: bool = True):
@@ -52,17 +53,30 @@ def analyse_results(with_timeout: bool = True, with_missing_values: bool = True)
             print('Number of timeouts')
             print(df.loc[(df['duration'] > time + 60), 'method'].value_counts())
 
-            mean = df.groupby(['dataset', 'method']).mean(numeric_only=True).reset_index()
-            std = df.groupby(['dataset', 'method']).std(numeric_only=True).reset_index()
+            rank = df.groupby(['dataset', 'method']).mean(numeric_only=True).groupby('dataset').rank()[
+                'smape'].reset_index().rename(columns={'smape': 'performance_rank'})
+            df = pd.merge(df, rank, how='left', left_on=['method', 'dataset'], right_on=['method', 'dataset'])
 
-            mean['performance_rank'] = mean.groupby('dataset').rank()['smape']
-            mean['duration_rank'] = mean.groupby('dataset').rank()['duration']
-            mean['smape_std'] = std['smape']
-            mean['duration_std'] = std['duration']
+            for column in ('smape', 'duration', 'performance_rank'):
+                best = df[['method', column]].groupby('method').mean()[column].idxmin()
 
-            print(mean.groupby('method').mean(numeric_only=True), end='\n\n\n')
+                for method in df['method'].unique():
+                    t = ttest_ind(
+                        df[df['method'] == best][column].values,
+                        df[df['method'] == method][column].values
+                    )
+                    if t.pvalue * len(df['method'].unique()) > 0.05:
+                        print(column, method, t)
 
-            wide = mean[['dataset', 'method', 'smape']].pivot(index='dataset', columns='method', values='smape')
+            df = df.groupby(['dataset', 'method']).mean(numeric_only=True).reset_index()
+            aggregated = df.groupby('method').mean(numeric_only=True).join(
+                df.groupby('method').std(numeric_only=True),
+                lsuffix='_mean',
+                rsuffix='_std'
+            )
+            print(aggregated.sort_index(key=lambda col: col.str.lower()), end='\n\n\n')
+
+            wide = df[['dataset', 'method', 'smape']].pivot(index='dataset', columns='method', values='smape')
             diagram = Diagram(
                 wide.to_numpy(),
                 treatment_names=wide.columns,
