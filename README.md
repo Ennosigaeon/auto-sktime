@@ -8,7 +8,7 @@ For trouble shooting and detailed installation instructions, see the documentati
 
 ```
 Operating system: Linux
-Python version: Python 3.8, 3.9, and 3.10 (only 64 bit)
+Python version: Python 3.8, 3.9, 3.10 and 3.11 (only 64 bit)
 Package managers: pip
 ```
 
@@ -25,6 +25,43 @@ or, with maximum dependencies,
 ```bash
 pip install auto-sktime[all_extras]
 ```
+
+## auto-sktime: Automated Time Series Forecasting
+
+This section describes how to reproduce the results in the _auto-sktime_ paper. First, install _auto-sktime_ either via
+`pip` or from source as described above.
+
+Next, switch to the `scripts/benchmark` directory and use
+
+```bash
+python benchmark.py
+```
+
+to benchmark all available methods on all datasets. Alternatively, you can also only execute the benchmark for selected
+methods and/or datasets. For example, `pmdarima` can be benchmarked on the very first dataset using
+```bash
+python benchmark.py --method pmdarima --end-index 1
+```
+
+Check
+```bash
+python benchmark.py --help
+```
+for detailed information how to configure the benchmark.
+
+### Reproducing results
+To ensure fair comparisons due to parallel computing, the benchmark can and should be limited a single CPU core using
+
+```bash
+taskset --cpu-list 0 python benchmark.py
+```
+
+The raw results are going to be stored in CSV files on disk. To create the visualizations, use
+```bash
+python evaluation.py
+```
+after finishing the complete benchmark.
+
 
 ## Remaining Useful Life Predictions (AutoRUL)
 
@@ -81,5 +118,4 @@ To create a new release of `auto-sktime` you will have to install `build` and `t
 ```bash
 pip install build twine
 python -m build
-
 ```

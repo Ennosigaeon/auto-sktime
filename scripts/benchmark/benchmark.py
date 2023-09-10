@@ -48,7 +48,7 @@ methods = {
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--fh', type=int, default=12)
-parser.add_argument('--max_duration', type=int, default=60)
+parser.add_argument('--max_duration', type=int, default=300)
 parser.add_argument('--repetitions', type=int, default=5)
 parser.add_argument('--method', type=str, choices=methods.keys(), default=None)
 parser.add_argument('--start_index', type=int, default=None)
