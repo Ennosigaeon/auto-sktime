@@ -87,8 +87,24 @@ def analyse_results(with_timeout: bool = True, with_missing_values: bool = True)
             for suffix in ('.aux', '.log', '.tex'):
                 os.remove(filename.replace('.pdf', suffix))
 
+            raw = df.pivot_table(index='dataset', columns='method', values=['smape', 'duration', 'performance_rank'],
+                                 aggfunc='first')
+
+            methods = df['method'].unique()
+            for index, row in raw.iterrows():
+                print(index.replace('_', '\\_'), end='')
+                for method in methods:
+                    print(
+                        ' & '
+                        f'{row[("smape", method)]:.2f}', ' & ',
+                        # f'{row[("performance_rank", method)]:.2f}', ' & ',
+                        f'{row[("duration", method)]:.2f}',
+                        end=' '
+                    )
+                print('\\\\')
+            pass
+
 
 analyse_results(with_timeout=True, with_missing_values=True)
-analyse_results(with_timeout=False, with_missing_values=True)
 analyse_results(with_timeout=True, with_missing_values=False)
-analyse_results(with_timeout=False, with_missing_values=False)
+analyse_results(with_timeout=False, with_missing_values=True)
