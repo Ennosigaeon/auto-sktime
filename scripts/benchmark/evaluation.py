@@ -24,8 +24,9 @@ def analyse_results(with_timeout: bool = True, with_missing_values: bool = True)
             'autots': pd.read_csv(f'results/autots-{time}.csv'),
             'hyperts': pd.read_csv(f'results/hyperts-{time}.csv'),
             'pmdarima': pd.read_csv('results/pmdarima.csv'),
-            'prophet': pd.read_csv('results/prophet.csv'),
-            'pyaf': pd.read_csv('results/pyaf.csv')
+            # 'prophet': pd.read_csv('results/prophet.csv'),
+            'pyaf': pd.read_csv('results/pyaf.csv'),
+            'tft': pd.read_csv(f'results/tft-{time}.csv')
         }
         ablation_study = {
             'auto-sktime': pd.read_csv(f'results/auto-sktime-{time}.csv'),
@@ -91,6 +92,7 @@ def analyse_results(with_timeout: bool = True, with_missing_values: bool = True)
                                  aggfunc='first')
 
             methods = df['method'].unique()
+            print(methods)
             for index, row in raw.iterrows():
                 print(index.replace('_', '\\_'), end='')
                 for method in methods:

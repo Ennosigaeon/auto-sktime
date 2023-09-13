@@ -8,6 +8,7 @@ from typing import Callable, Optional
 
 from autosktime.data.benchmark.timeseries import load_timeseries
 from scripts.benchmark._autopytorch import evaluate_autopytorch
+from scripts.benchmark._tft import evaluate_temporal_fusion_transformer
 
 logging.getLogger('numba').setLevel(logging.WARNING)
 logging.getLogger('graphviz').setLevel(logging.WARNING)
@@ -37,6 +38,7 @@ methods = {
     'auto-sktime': evaluate_autosktime,
     'pmdarima': evaluate_arima,
     'prophet': evaluate_prophet,
+    'tft': evaluate_temporal_fusion_transformer,
     'pyaf': evaluate_pyaf,
     'hyperts': evaluate_hyperts,
     'autogluon': evaluate_autogluon,
