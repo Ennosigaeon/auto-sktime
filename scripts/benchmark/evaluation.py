@@ -54,6 +54,9 @@ def analyse_results(with_timeout: bool = True, with_missing_values: bool = True)
             print('Number of timeouts')
             print(df.loc[(df['duration'] > time + 60), 'method'].value_counts())
 
+            if with_timeout:
+                df['duration'] = df['duration'].clip(upper=time + 60)
+
             rank = df.groupby(['dataset', 'method']).mean(numeric_only=True).groupby('dataset').rank()[
                 'smape'].reset_index().rename(columns={'smape': 'performance_rank'})
             df = pd.merge(df, rank, how='left', left_on=['method', 'dataset'], right_on=['method', 'dataset'])
