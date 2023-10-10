@@ -71,6 +71,7 @@ def analyse_results(with_timeout: bool = True, with_missing_values: bool = True)
                     )
                     if t.pvalue * len(df['method'].unique()) > 0.05:
                         print(column, method, t)
+            raw = df.copy()
 
             df = df.groupby(['dataset', 'method']).mean(numeric_only=True).reset_index()
             aggregated = df.groupby('method').mean(numeric_only=True).join(
@@ -87,7 +88,14 @@ def analyse_results(with_timeout: bool = True, with_missing_values: bool = True)
                 maximize_outcome=False
             )
             filename = f'cd_{"benchmark" if results == benchmark else "ablation"}-{time}{"_timeout" if with_timeout else ""}{"_nan" if with_missing_values else ""}.pdf'
-            diagram.to_file(filename, alpha=.05, adjustment='holm', reverse_x=False)
+            # Patch calculated p values to use same method as used for tabular significance test
+            for i, j in np.argwhere(np.isfinite(diagram.P)):
+                diagram.P[i, j] = ttest_ind(
+                    raw[raw['method'] == diagram.treatment_names[i]]['smape'].values,
+                    raw[raw['method'] == diagram.treatment_names[j]]['smape'].values
+                ).pvalue * len(df['method'].unique()) / np.cumsum(np.arange(1, len(df['method'].unique())))[-1]
+
+            diagram.to_file(filename, alpha=.05, adjustment='bonferroni', reverse_x=False)
             for suffix in ('.aux', '.log', '.tex'):
                 os.remove(filename.replace('.pdf', suffix))
 
