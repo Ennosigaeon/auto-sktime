@@ -49,7 +49,7 @@ methods = {
 }
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--fh', type=int, default=12)
+parser.add_argument('--fh', type=int, default=None)
 parser.add_argument('--max_duration', type=int, default=300)
 parser.add_argument('--repetitions', type=int, default=5)
 parser.add_argument('--method', type=str, choices=methods.keys(), default=None)
@@ -68,6 +68,7 @@ def test_framework(
         X_train: Optional[pd.DataFrame],
         X_test: Optional[pd.DataFrame],
         evaluate: Callable,
+        fh: int,
         **kwargs
 ):
     start = time.time()
@@ -76,7 +77,7 @@ def test_framework(
             y_train.copy(),
             X_train.copy() if X_train is not None else None,
             X_test.copy() if X_test is not None else None,
-            args.fh,
+            fh,
             args.max_duration,
             **kwargs
         )
@@ -95,10 +96,11 @@ def test_framework(
 def benchmark(plot: bool = False):
     result_file = datetime.now().strftime("%Y%m%d-%H%M%S")
     for i, (y_train, y_test, X_train, X_test, ds_name) in enumerate(load_timeseries(args.fh)):
+    for i, (y_train, y_test, X_train, X_test, ds_name, fh) in enumerate(load_timeseries(args.fh)):
         if (args.start_index is not None and i < args.start_index) or \
                 (args.end_index is not None and i >= args.end_index):
             continue
-        print(ds_name)
+        print(ds_name, fh)
 
         for name, evaluate in methods.items():
             if args.method is not None and name != args.method:
@@ -106,7 +108,7 @@ def benchmark(plot: bool = False):
 
             for seed in range(args.repetitions):
                 y_pred, y_pred_ints, score, duration = test_framework(
-                    y_train, y_test, X_train, X_test, evaluate,
+                    y_train, y_test, X_train, X_test, evaluate, fh,
                     name=ds_name, seed=seed
                 )
                 if y_pred is not None and plot:
