@@ -1,6 +1,7 @@
 import argparse
 import logging
 import math
+import os
 import time
 import traceback
 from datetime import datetime
@@ -9,6 +10,8 @@ from typing import Callable, Optional
 from autosktime.data.benchmark.timeseries import load_timeseries
 from autosktime.metrics import MeanAbsoluteScaledError
 from scripts.benchmark._autopytorch import evaluate_autopytorch
+from scripts.benchmark._deepar import evaluate_deepar
+from scripts.benchmark._sktime import evaluate_naive, evaluate_ets
 from scripts.benchmark._tft import evaluate_temporal_fusion_transformer
 
 logging.getLogger('numba').setLevel(logging.WARNING)
@@ -36,14 +39,17 @@ methods = {
     'auto-sktime_multi_fidelity': evaluate_autosktime_multi_fidelity,
     'auto-sktime_warm_starting': evaluate_autosktime_warm_starting,
     'auto-sktime': evaluate_autosktime,
+    'ets': evaluate_ets,
     'pmdarima': evaluate_arima,
-    'prophet': evaluate_prophet,
+    # 'prophet': evaluate_prophet,
+    'naive': evaluate_naive,
     'tft': evaluate_temporal_fusion_transformer,
+    'deepar': evaluate_deepar,
     'pyaf': evaluate_pyaf,
     'hyperts': evaluate_hyperts,
     'autogluon': evaluate_autogluon,
-    'autogluon_hpo': evaluate_autogluon_hpo,
-    'autots': evaluate_autots,
+    # 'autogluon_hpo': evaluate_autogluon_hpo,
+    # 'autots': evaluate_autots,
     'autots_random': evaluate_autots_random,
     'auto-pytorch': evaluate_autopytorch
 }
@@ -95,7 +101,8 @@ def test_framework(
 
 def benchmark(plot: bool = False):
     result_file = datetime.now().strftime("%Y%m%d-%H%M%S")
-    for i, (y_train, y_test, X_train, X_test, ds_name) in enumerate(load_timeseries(args.fh)):
+    os.mkdir(f'results/{result_file}')
+
     for i, (y_train, y_test, X_train, X_test, ds_name, fh) in enumerate(load_timeseries(args.fh)):
         if (args.start_index is not None and i < args.start_index) or \
                 (args.end_index is not None and i >= args.end_index):
@@ -123,7 +130,9 @@ def benchmark(plot: bool = False):
                 results['mase'].append(score)
                 results['duration'].append(duration)
 
-                pd.DataFrame(results).to_csv(f'results/results-{result_file}.csv', index=False)
+                pd.DataFrame(results).to_csv(f'results/{result_file}/_result.csv', index=False)
+                if y_pred is not None:
+                    y_pred.to_csv(f'results/{result_file}/{ds_name[:-4]}-{name}-{seed}-prediction.csv')
 
     print(pd.DataFrame(results))
 
