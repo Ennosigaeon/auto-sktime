@@ -33,7 +33,7 @@ def evaluate_autopytorch(
             known_future_features=X_test.columns if X_test is not None else None,
             start_times=[y.index[0][1] if isinstance(y.index, pd.MultiIndex) else y.index[0]],
             series_idx=['series'] if isinstance(y.index, pd.MultiIndex) else None,
-            optimize_metric='mean_MAPE_forecasting',
+            optimize_metric='mean_MASE_forecasting',
             n_prediction_steps=fh,
             dataset_name=name,
             total_walltime_limit=max_duration,
@@ -50,7 +50,7 @@ def evaluate_autopytorch(
             start_times=[y.index[0][1] if isinstance(y.index, pd.MultiIndex) else y.index[0]],
             series_idx=['series'] if isinstance(y.index, pd.MultiIndex) else None,
             freq='1H',  # freq has to be provided as otherwise the code crashes for longer time series
-            optimize_metric='mean_MAPE_forecasting',
+            optimize_metric='mean_MASE_forecasting',
             n_prediction_steps=fh,
             dataset_name=name,
             total_walltime_limit=max_duration,

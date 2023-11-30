@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import Callable, Optional
 
 from autosktime.data.benchmark.timeseries import load_timeseries
+from autosktime.metrics import MeanAbsoluteScaledError
 from scripts.benchmark._autopytorch import evaluate_autopytorch
 from scripts.benchmark._tft import evaluate_temporal_fusion_transformer
 
@@ -15,7 +16,6 @@ logging.getLogger('graphviz').setLevel(logging.WARNING)
 
 import pandas as pd
 from matplotlib import pyplot as plt
-from sktime.performance_metrics.forecasting import MeanAbsolutePercentageError
 from sktime.utils.plotting import plot_series
 
 from _autogluon import evaluate_autogluon, evaluate_autogluon_hpo
@@ -57,9 +57,9 @@ parser.add_argument('--start_index', type=int, default=None)
 parser.add_argument('--end_index', type=int, default=None)
 args = parser.parse_args()
 
-metric = MeanAbsolutePercentageError(symmetric=True)
+metric = MeanAbsoluteScaledError()
 
-results = {'method': [], 'seed': [], 'dataset': [], 'smape': [], 'duration': []}
+results = {'method': [], 'seed': [], 'dataset': [], 'mase': [], 'duration': []}
 
 
 def test_framework(
@@ -83,7 +83,7 @@ def test_framework(
         )
         y_pred.index, y_pred_ints.index = y_test.index, y_test.index
 
-        score = metric(y_test, y_pred)
+        score = metric(y_test, y_pred, y_train=y_train)
 
         return y_pred, y_pred_ints, score, time.time() - start
     except KeyboardInterrupt:
@@ -120,7 +120,7 @@ def benchmark(plot: bool = False):
                 results['method'].append(name)
                 results['seed'].append(seed)
                 results['dataset'].append(ds_name)
-                results['smape'].append(score)
+                results['mase'].append(score)
                 results['duration'].append(duration)
 
                 pd.DataFrame(results).to_csv(f'results/results-{result_file}.csv', index=False)

@@ -12,7 +12,7 @@ from sktime.datatypes import VectorizedDF
 from sktime.performance_metrics.forecasting import (
     MeanAbsolutePercentageError as MeanAbsolutePercentageError_,
     MedianAbsolutePercentageError as MedianAbsolutePercentageError_,
-    MeanAbsoluteScaledError as MeanAbsoluteScaledError_
+    MeanAbsoluteScaledError as MeanAbsoluteScaledError_, mean_absolute_scaled_error
 )
 # noinspection PyProtectedMember
 from sktime.performance_metrics.forecasting._classes import BaseForecastingErrorMetric
@@ -334,7 +334,7 @@ class MeanAbsoluteScaledError(MeanAbsoluteScaledError_):
                     out_df.append(self._evaluate(y_true=y_true_, y_pred=y_pred_, **kwargs))
                 return float(np.mean(out_df))
             else:
-                return super().__call__(y_true, y_pred, horizon_weight=horizon_weight, **kwargs)
+                return mean_absolute_scaled_error(y_true, y_pred, self.sp, horizon_weight=None, **kwargs)
 
 
 class OverallWeightedAverage(BaseForecastingErrorMetric):
