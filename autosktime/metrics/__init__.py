@@ -323,9 +323,9 @@ class MeanAbsoluteScaledError(MeanAbsoluteScaledError_):
     ) -> float:
         with warnings.catch_warnings():
             warnings.simplefilter('ignore', FutureWarning)
+            y_train = kwargs.get('y_train', None)
             if hasattr(y_true, 'index') and isinstance(y_true.index, pd.MultiIndex):
                 out_df = []
-                y_train = kwargs.get('y_train', None)
                 for idx in y_true.index.remove_unused_levels().levels[0]:
                     y_true_ = y_true.loc[idx]
                     y_pred_ = y_pred.loc[idx]
@@ -334,7 +334,7 @@ class MeanAbsoluteScaledError(MeanAbsoluteScaledError_):
                     out_df.append(self._evaluate(y_true=y_true_, y_pred=y_pred_, **kwargs))
                 return float(np.mean(out_df))
             else:
-                return mean_absolute_scaled_error(y_true, y_pred, self.sp, horizon_weight=None, **kwargs)
+                return mean_absolute_scaled_error(y_true, y_pred, self.sp, horizon_weight=None, y_train=y_train.dropna())
 
 
 class OverallWeightedAverage(BaseForecastingErrorMetric):

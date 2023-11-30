@@ -79,6 +79,9 @@ def test_framework(
 ):
     start = time.time()
     try:
+        # Check if metric is calculable
+        metric(y_test, y_test, y_train=y_train)
+
         y_pred, y_pred_ints = evaluate(
             y_train.copy(),
             X_train.copy() if X_train is not None else None,
