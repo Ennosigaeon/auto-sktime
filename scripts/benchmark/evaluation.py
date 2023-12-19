@@ -25,7 +25,7 @@ def analyse_results(
         'auto-pytorch': pd.read_csv(f'results2/auto-pytorch/_result.csv'),
         'auto-sktime': pd.read_csv(f'results2/auto-sktime/_result.csv'),
         'autogluon': pd.read_csv('results2/autogluon/_result.csv'),
-        'autots': pd.read_csv(f'results2/autots_random/_result.csv'),
+        'autots_random': pd.read_csv(f'results2/autots_random/_result.csv'),
         'hyperts': pd.read_csv(f'results2/hyperts/_result.csv'),
         'pmdarima': pd.read_csv('results2/pmdarima/_result.csv'),
         'pyaf': pd.read_csv('results2/pyaf/_result.csv'),
@@ -119,11 +119,13 @@ def analyse_results(
         methods = df['method'].unique()
         print(methods)
         for index, row in raw.iterrows():
-            print(index.replace('_', '\\_')[:-4], end='')
+            m = index.replace('_', '\\_').replace('\\_utilization', '')[:-4]
+            print(f"{m:30s}", end='')
             for method in methods:
                 print(
-                    ' & '
-                    f'{row[(metric, method)]:.2f}', ' & ',
+                    ' & ',
+                    '--  ' if (results[method][results[method]['dataset'] == index][metric]).isna().all() else f'{row[(metric, method)]:.2f}',
+                    ' & ',
                     # f'{row[("performance_rank", method)]:.2f}', ' & ',
                     f'{int(row[("duration", method)])}',
                     end=' '
