@@ -44,6 +44,9 @@ class PriorAcquisitionFunction(AcqFunc):
 
         # Create grid of possible density values
         lower, upper = (0, prior.max_density())
+        if np.isnan(upper):
+            upper = 1
+
         bin_values = np.linspace(lower, upper, number_of_bins)
 
         bin_indices = np.clip(

@@ -5,7 +5,9 @@ import numpy as np
 import pandas as pd
 from sktime.forecasting.arima import AutoARIMA
 from sktime.forecasting.base import BaseForecaster, ForecastingHorizon
+from sktime.forecasting.ets import AutoETS
 from sktime.forecasting.fbprophet import Prophet
+from sktime.forecasting.naive import NaiveForecaster
 
 from scripts.benchmark.util import generate_fh, fix_frequency
 
@@ -57,3 +59,27 @@ def evaluate_prophet(
         seed: int,
 ):
     return _evaluate(y, X_train, X_test, Prophet, fh_=fh, max_duration=max_duration)
+
+
+def evaluate_naive(
+        y: pd.Series,
+        X_train: Optional[pd.DataFrame],
+        X_test: Optional[pd.DataFrame],
+        fh: int,
+        max_duration: int,
+        name: str,
+        seed: int,
+):
+    return _evaluate(y, X_train, X_test, NaiveForecaster, fh_=fh, max_duration=max_duration)
+
+
+def evaluate_ets(
+        y: pd.Series,
+        X_train: Optional[pd.DataFrame],
+        X_test: Optional[pd.DataFrame],
+        fh: int,
+        max_duration: int,
+        name: str,
+        seed: int,
+):
+    return _evaluate(y, X_train, X_test, AutoETS, fh_=fh, max_duration=max_duration)

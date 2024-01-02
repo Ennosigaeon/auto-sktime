@@ -465,6 +465,7 @@ class EnsembleBuilder:
                 model_loss.ens_loss = calculate_loss(solution=self.y_true_ensemble,
                                                      prediction=y_ensemble,
                                                      task_type=self.task_type,
+                                                     y_train=self.y_true_ensemble,
                                                      metric=self.metric)
 
                 # Try to load test predictions if available
@@ -473,6 +474,7 @@ class EnsembleBuilder:
                     model_loss.test_loss = calculate_loss(solution=self.y_true_test,
                                                           prediction=y_test,
                                                           task_type=self.task_type,
+                                                          y_train=self.y_true_ensemble,
                                                           metric=self.metric)
 
                 # It is not needed to create the object here. To save memory, we just compute the loss.

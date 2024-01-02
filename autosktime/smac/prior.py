@@ -127,6 +127,10 @@ class KdePrior(Prior):
             nan = pd.isna(vector).flatten()
             if ~np.all(nan):
                 res[~nan] = np.array([self.kde_.evaluate(xi) for xi in vector[~nan, 0]])
+
+            nan = pd.isna(res).flatten()
+            res[nan] = 0
+
             return res
         else:
             raise ValueError(f'Hyperparameter {type(self.hp)} not supported yet')

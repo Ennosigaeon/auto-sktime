@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 from sktime.forecasting.base import ForecastingHorizon
 
+from autosktime.metrics import MeanAbsoluteScaledError
 from scripts.benchmark.util import generate_fh, fix_frequency
 
 

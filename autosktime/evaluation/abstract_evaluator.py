@@ -150,9 +150,9 @@ class AbstractEvaluator:
     def _get_resampling_models(self, n: int) -> List[TemplateChoice]:
         return [self._get_model() for _ in range(n)]
 
-    def _loss(self, y_true: SUPPORTED_Y_TYPES, y_hat: SUPPORTED_Y_TYPES, error: str = 'raise') -> float:
+    def _loss(self, y_true: SUPPORTED_Y_TYPES, y_hat: SUPPORTED_Y_TYPES, error: str = 'raise', **kwargs) -> float:
         try:
-            return calculate_loss(y_true, y_hat, self.task_type, self.metric)
+            return calculate_loss(y_true, y_hat, self.task_type, self.metric, **kwargs)
         except (ValueError, TypeError):
             if error == 'raise':
                 raise

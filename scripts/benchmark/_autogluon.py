@@ -2,7 +2,6 @@ import os
 import shutil
 from typing import Optional
 
-import numpy as np
 import pandas as pd
 
 
@@ -58,7 +57,7 @@ def evaluate_autogluon(
             prediction_length=fh,
             quantile_levels=[0.25, 0.75],
             target=col,
-            eval_metric="sMAPE",
+            eval_metric="MASE",
             known_covariates_names=set(X_train.columns) - {'index', 'series'} if X_train is not None else None
         )
 

@@ -125,6 +125,7 @@ class EnsembleSelection(AbstractEnsemble):
                     solution=labels.values,
                     prediction=fant_ensemble_prediction,
                     task_type=self.task_type,
+                    y_train=labels.values,
                     metric=self.metric
                 )
 

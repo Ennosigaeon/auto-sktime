@@ -81,6 +81,6 @@ def evaluate_temporal_fusion_transformer(
     best_tft = TemporalFusionTransformer.load_from_checkpoint(best_model_path)
 
     predictions = best_tft.predict(test_dataloader)
-    predictions = np.array([y_hat.numpy().mean(axis=1)[-12:] for y_hat in predictions]).T
+    predictions = np.array([y_hat.numpy().mean(axis=1)[-fh:] for y_hat in predictions]).T
 
     return pd.DataFrame(predictions, columns=y.columns), pd.DataFrame(predictions, columns=y.columns)
