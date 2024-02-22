@@ -60,14 +60,16 @@ def analyse_results(
         df = df.drop(columns=['seed']).round(5)
         if imputation_method == 'worst':
             missing = pd.isna(df).any(axis=1)
-            worst = (1.05 * df[['dataset', metric]].dropna().groupby('dataset').max()).loc[df.loc[missing, 'dataset']]
-            worst.index = df.loc[missing, metric].index
-            df.loc[missing, metric] = worst
+            for m in ('mase', 'sMAPE', 'RMSE'):
+                worst = (1.05 * df[['dataset', m]].dropna().groupby('dataset').max()).loc[df.loc[missing, 'dataset']]
+                worst.index = df.loc[missing, m].index
+                df.loc[missing, m] = worst
         elif imputation_method == 'naive':
             imputation = df[df['method'] == 'naive']
             for method in df['method'].unique():
-                missing = df[df['method'] == method][metric] == np.inf
-                df.loc[(df['method'] == method) & (df[metric] == np.inf), metric] = imputation[missing][metric]
+                for m in ('mase', 'sMAPE', 'RMSE'):
+                    missing = df[df['method'] == method][m] == np.inf
+                    df.loc[(df['method'] == method) & (df[m] == np.inf), m] = imputation[missing][m]
 
         df = df[df['method'] != 'naive']
 
@@ -108,7 +110,7 @@ def analyse_results(
             maximize_outcome=False
         )
         filename = f'cd_{"benchmark" if results == benchmark else "ablation"}{"_timeout" if with_timeout else ""}{"_nan" if with_missing_values else ""}.pdf'
-        diagram.to_file(filename, alpha=.05, adjustment='bonferroni', reverse_x=False)
+        diagram.to_file(filename, alpha=5.0, adjustment='bonferroni', reverse_x=False)
         for suffix in ('.aux', '.log', '.tex'):
             os.remove(filename.replace('.pdf', suffix))
 
@@ -124,7 +126,8 @@ def analyse_results(
             for method in methods:
                 print(
                     ' & ',
-                    '--  ' if (results[method][results[method]['dataset'] == index][metric]).isna().all() else f'{row[(metric, method)]:.2f}',
+                    '--  ' if (results[method][results[method]['dataset'] == index][
+                        metric]).isna().all() else f'{row[(metric, method)]:.2f}',
                     ' & ',
                     # f'{row[("performance_rank", method)]:.2f}', ' & ',
                     f'{int(row[("duration", method)])}',
